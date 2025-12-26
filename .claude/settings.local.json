@@ -1,0 +1,8 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(dir \"C:\\Users\\kikikiju\\Desktop\\global internship\\project\\ai-calender\\app\\pages\")",
+      "Bash(dir \"C:\\Users\\kikikiju\\Desktop\\global internship\\project\\ai-calender\\*.py\")"
+    ]
+  }
+}

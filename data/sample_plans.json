@@ -1,0 +1,60 @@
+{
+  "exercise_plans": {
+    "beginner": {
+      "week_1": {
+        "monday": {"workout": "가벼운 산책 20분", "intensity": "low"},
+        "tuesday": {"workout": "스트레칭 15분", "intensity": "low"},
+        "wednesday": {"workout": "휴식", "intensity": "rest"},
+        "thursday": {"workout": "가벼운 산책 20분", "intensity": "low"},
+        "friday": {"workout": "맨몸 운동 (스쿼트, 푸시업 각 10회)", "intensity": "low"},
+        "saturday": {"workout": "자유 활동", "intensity": "low"},
+        "sunday": {"workout": "완전 휴식", "intensity": "rest"}
+      }
+    },
+    "intermediate": {
+      "week_1": {
+        "monday": {"workout": "유산소 30분 (조깅/자전거)", "intensity": "medium"},
+        "tuesday": {"workout": "상체 근력운동", "intensity": "medium"},
+        "wednesday": {"workout": "휴식 또는 스트레칭", "intensity": "low"},
+        "thursday": {"workout": "유산소 30분", "intensity": "medium"},
+        "friday": {"workout": "하체 근력운동", "intensity": "medium"},
+        "saturday": {"workout": "자유 운동 또는 산책", "intensity": "low"},
+        "sunday": {"workout": "완전 휴식", "intensity": "rest"}
+      }
+    }
+  },
+  "diet_plans": {
+    "weight_loss": {
+      "daily": {
+        "breakfast": "단백질 위주 아침 (계란, 닭가슴살 등)",
+        "lunch": "균형 잡힌 점심 (탄수화물 적당히)",
+        "dinner": "가벼운 저녁 (채소 위주)",
+        "snack": "과일 또는 견과류",
+        "water": "하루 2L 이상"
+      },
+      "avoid": ["야식", "단음료", "튀김류", "과자"]
+    },
+    "muscle_gain": {
+      "daily": {
+        "breakfast": "고단백 아침 + 탄수화물",
+        "lunch": "단백질 + 복합 탄수화물",
+        "dinner": "단백질 위주 저녁",
+        "snack": "단백질 쉐이크 또는 닭가슴살",
+        "water": "하루 2.5L 이상"
+      },
+      "focus": ["단백질 섭취량 늘리기", "운동 후 30분 이내 단백질 섭취"]
+    }
+  },
+  "sleep_plans": {
+    "standard": {
+      "target_sleep_time": "23:00",
+      "target_wake_time": "07:00",
+      "pre_sleep_routine": [
+        "취침 1시간 전 스마트폰 사용 줄이기",
+        "취침 30분 전 가벼운 스트레칭",
+        "취침 전 따뜻한 물 한 잔"
+      ],
+      "avoid_before_sleep": ["카페인 (오후 2시 이후)", "과식", "격한 운동 (취침 2시간 전)"]
+    }
+  }
+}

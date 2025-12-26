@@ -1,0 +1,73 @@
+{
+  "exercise_missions": [
+    {
+      "title": "유산소 운동 30분",
+      "description": "걷기, 조깅, 자전거 중 선택하여 30분간 운동하기",
+      "type": "exercise"
+    },
+    {
+      "title": "스트레칭 15분",
+      "description": "전신 스트레칭으로 몸 풀어주기",
+      "type": "exercise"
+    },
+    {
+      "title": "근력 운동",
+      "description": "상체 또는 하체 근력 운동 수행",
+      "type": "exercise"
+    },
+    {
+      "title": "만보 걷기",
+      "description": "하루 동안 10,000보 이상 걷기",
+      "type": "exercise"
+    }
+  ],
+  "diet_missions": [
+    {
+      "title": "물 2L 마시기",
+      "description": "하루 동안 물 2리터 이상 마시기",
+      "type": "diet"
+    },
+    {
+      "title": "아침 식사하기",
+      "description": "건강한 아침 식사 챙겨먹기",
+      "type": "diet"
+    },
+    {
+      "title": "야식 참기",
+      "description": "저녁 8시 이후 음식 섭취 자제",
+      "type": "diet"
+    },
+    {
+      "title": "채소 섭취",
+      "description": "점심, 저녁에 채소 반찬 포함하기",
+      "type": "diet"
+    },
+    {
+      "title": "단음료 피하기",
+      "description": "탄산음료, 과일주스 대신 물 마시기",
+      "type": "diet"
+    }
+  ],
+  "sleep_missions": [
+    {
+      "title": "11시 전 취침",
+      "description": "밤 11시 전에 잠자리에 들기",
+      "type": "sleep"
+    },
+    {
+      "title": "7시간 수면",
+      "description": "최소 7시간 이상 수면 취하기",
+      "type": "sleep"
+    },
+    {
+      "title": "기상 시간 지키기",
+      "description": "설정한 기상 시간에 일어나기",
+      "type": "sleep"
+    },
+    {
+      "title": "취침 전 스마트폰 금지",
+      "description": "취침 1시간 전부터 스마트폰 사용 자제",
+      "type": "sleep"
+    }
+  ]
+}
