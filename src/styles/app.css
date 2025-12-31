@@ -4619,6 +4619,26 @@ textarea.form-input {
   text-align: center;
 }
 
+.event-conflict-warning {
+  margin-top: 10px;
+  padding: 10px 12px;
+  background: #fff3cd;
+  border: 1px solid #ffc107;
+  border-radius: var(--border-radius);
+  font-size: 12px;
+  color: #856404;
+}
+
+.event-conflict-warning ul {
+  margin: 6px 0 0 0;
+  padding-left: 18px;
+}
+
+.event-conflict-warning li {
+  margin-top: 4px;
+  font-weight: 500;
+}
+
 .event-confirmation-actions {
   display: flex;
   gap: 8px;

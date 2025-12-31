@@ -288,7 +288,7 @@ ${JSON.stringify(calculateAvailableSlots(this.context.events, 9, 18, 3).slice(0,
   }
 
   /**
-   * 응답 메시지 생성
+   * 응답 메시지 생성 - 일정은 확인 후 추가되므로 제안 형태로 메시지 생성
    */
   private async generateResponse(context: {
     type: string;
@@ -310,7 +310,7 @@ ${JSON.stringify(calculateAvailableSlots(this.context.events, 9, 18, 3).slice(0,
         return `${dayName}요일 ${timeStr} - ${e.title}`;
       }).join('\n');
 
-      return `일정을 ${events.length}개 등록했어! 📅\n\n${scheduleList}\n\n캘린더에서 확인해봐!`;
+      return `아래와 같은 일정은 어떠세요? 📅\n\n${scheduleList}\n\n추가하고 싶은 일정을 선택해주세요!`;
     }
 
     // 간단한 템플릿 기반 응답
@@ -321,35 +321,36 @@ ${JSON.stringify(calculateAvailableSlots(this.context.events, 9, 18, 3).slice(0,
           const event = events[0];
           const dateStr = event.datetime ? new Date(event.datetime).toLocaleDateString('ko-KR') : '오늘';
           const timeStr = event.datetime ? new Date(event.datetime).toLocaleTimeString('ko-KR', { hour: '2-digit', minute: '2-digit' }) : '';
-          msg = `${dateStr} ${timeStr} "${event.title}" 등록했어!`;
+          msg = `${dateStr} ${timeStr}에 "${event.title}" 일정은 어떠세요?`;
         }
         if (todos.length > 0 && scheduled_items.length > 0) {
           const todoItem = scheduled_items[0];
           const scheduledTime = todoItem.scheduled_at
             ? new Date(todoItem.scheduled_at).toLocaleTimeString('ko-KR', { hour: '2-digit', minute: '2-digit' })
             : '';
-          msg += ` "${todos[0].title}"는 ${scheduledTime}에 잡아뒀어.`;
+          msg += ` "${todos[0].title}"는 ${scheduledTime}에 배치해드릴까요?`;
         }
-        return msg || '일정을 등록했어!';
+        return msg || '아래 일정을 확인해주세요!';
 
       case 'todo_created':
-        if (todos.length === 0) return '할 일을 추가했어!';
+        if (todos.length === 0) return '할 일을 확인해주세요!';
         const todoMsg = todos.map(t => `"${t.title}"`).join(', ');
-        return `${todoMsg} 추가했어! 시간은 내가 최적으로 배치해뒀어.`;
+        return `${todoMsg}을(를) 추가할까요? 시간은 최적으로 배치해드릴게요.`;
 
       case 'goal_planned':
-        if (events.length === 0 && todos.length === 0) return '목표 계획을 세웠어!';
-        let planMsg = '';
+        if (events.length === 0 && todos.length === 0) return '목표 계획을 세워봤어요!';
+        let planMsg = '아래와 같이 계획해봤어요:\n';
         if (events.length > 0) {
-          planMsg = `"${events[0].title}" 일정 등록!`;
+          planMsg += `"${events[0].title}" 일정`;
         }
         if (todos.length > 0) {
-          planMsg += ` 관련 할 일 ${todos.length}개도 추가했어.`;
+          planMsg += ` + 관련 할 일 ${todos.length}개`;
         }
+        planMsg += '\n\n추가하시겠어요?';
         return planMsg;
 
       default:
-        return '처리했어!';
+        return '확인해주세요!';
     }
   }
 

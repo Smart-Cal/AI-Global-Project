@@ -25,7 +25,7 @@ interface LocalMessage {
 const AssistantView: React.FC = () => {
   const { user } = useAuthStore();
   const { getActiveGoals } = useGoalStore();
-  const { loadEvents } = useEventStore();
+  const { loadEvents, events } = useEventStore();
 
   // Conversations state
   const [conversations, setConversations] = useState<Conversation[]>([]);
@@ -44,6 +44,8 @@ const AssistantView: React.FC = () => {
   const [currentEventIndex, setCurrentEventIndex] = useState(0);
   const [editingEvent, setEditingEvent] = useState<PendingEvent | null>(null);
   const [confirmedEvents, setConfirmedEvents] = useState<PendingEvent[]>([]);
+  const [processedIndexes, setProcessedIndexes] = useState<Set<number>>(new Set()); // 처리된 인덱스 추적
+  const [isSaving, setIsSaving] = useState(false); // 저장 중 상태
 
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const activeGoals = getActiveGoals();
@@ -156,6 +158,7 @@ const AssistantView: React.FC = () => {
         setPendingEvents(response.pending_events);
         setCurrentEventIndex(0);
         setConfirmedEvents([]);
+        setProcessedIndexes(new Set()); // 새 일정 목록이면 처리 상태 초기화
       }
     } catch (error) {
       console.error('Chat error:', error);
@@ -180,38 +183,68 @@ const AssistantView: React.FC = () => {
     }
   };
 
+  // 다음 미처리 일정으로 이동하는 헬퍼 함수
+  const moveToNextUnprocessed = (processed: Set<number>) => {
+    // 다음 미처리 일정 찾기
+    for (let i = currentEventIndex + 1; i < pendingEvents.length; i++) {
+      if (!processed.has(i)) {
+        setCurrentEventIndex(i);
+        return;
+      }
+    }
+    // 이전에 미처리 일정이 있는지 확인
+    for (let i = 0; i < currentEventIndex; i++) {
+      if (!processed.has(i)) {
+        setCurrentEventIndex(i);
+        return;
+      }
+    }
+    // 모든 일정 처리 완료
+    setPendingEvents([]);
+    setCurrentEventIndex(0);
+    setConfirmedEvents([]);
+    setProcessedIndexes(new Set());
+  };
+
   // Event confirmation handlers - 각 일정을 바로 저장
   const handleConfirmEvent = async () => {
+    // 이미 처리된 일정이거나 저장 중이면 무시
+    if (processedIndexes.has(currentEventIndex) || isSaving) return;
+
     const event = editingEvent || pendingEvents[currentEventIndex];
+    setIsSaving(true);
 
     try {
       await confirmEvents([event]);
       loadEvents();
       setConfirmedEvents(prev => [...prev, event]);
 
-      // 다음 일정으로 이동 또는 종료
+      // 현재 인덱스를 처리됨으로 표시
+      const newProcessed = new Set(processedIndexes);
+      newProcessed.add(currentEventIndex);
+      setProcessedIndexes(newProcessed);
+
+      // 다음 미처리 일정으로 이동 또는 종료
       setEditingEvent(null);
-      if (currentEventIndex < pendingEvents.length - 1) {
-        setCurrentEventIndex(prev => prev + 1);
-      } else {
-        setPendingEvents([]);
-        setCurrentEventIndex(0);
-        setConfirmedEvents([]);
-      }
+      moveToNextUnprocessed(newProcessed);
     } catch (error) {
       console.error('Failed to save event:', error);
+    } finally {
+      setIsSaving(false);
     }
   };
 
   const handleRejectEvent = () => {
+    // 이미 처리된 일정이면 무시
+    if (processedIndexes.has(currentEventIndex)) return;
+
+    // 현재 인덱스를 처리됨으로 표시
+    const newProcessed = new Set(processedIndexes);
+    newProcessed.add(currentEventIndex);
+    setProcessedIndexes(newProcessed);
+
     setEditingEvent(null);
-    if (currentEventIndex < pendingEvents.length - 1) {
-      setCurrentEventIndex(prev => prev + 1);
-    } else {
-      setPendingEvents([]);
-      setCurrentEventIndex(0);
-      setConfirmedEvents([]);
-    }
+    moveToNextUnprocessed(newProcessed);
   };
 
   const handleEditEvent = (field: keyof PendingEvent, value: string) => {
@@ -233,7 +266,38 @@ const AssistantView: React.FC = () => {
     return `${month}월 ${day}일 (${weekday}) ${hours}:${minutes}`;
   };
 
+  // 시간 충돌 검사 함수
+  const checkTimeConflict = (pendingEvent: PendingEvent) => {
+    const eventDate = pendingEvent.datetime.split('T')[0];
+    const eventStartTime = pendingEvent.datetime.split('T')[1]?.slice(0, 5) || '09:00';
+    const duration = typeof pendingEvent.duration === 'string'
+      ? parseInt(pendingEvent.duration)
+      : pendingEvent.duration || 60;
+
+    // pending event의 시작/종료 시간 (분 단위)
+    const [startH, startM] = eventStartTime.split(':').map(Number);
+    const pendingStart = startH * 60 + startM;
+    const pendingEnd = pendingStart + duration;
+
+    // 같은 날짜의 기존 일정들과 비교
+    const conflictingEvents = events.filter(existingEvent => {
+      if (existingEvent.event_date !== eventDate) return false;
+      if (!existingEvent.start_time || !existingEvent.end_time) return false;
+
+      const [existH, existM] = existingEvent.start_time.split(':').map(Number);
+      const [endH, endM] = existingEvent.end_time.split(':').map(Number);
+      const existingStart = existH * 60 + existM;
+      const existingEnd = endH * 60 + endM;
+
+      // 시간 겹침 검사: 시작이 기존 종료 전이고, 종료가 기존 시작 후이면 충돌
+      return pendingStart < existingEnd && pendingEnd > existingStart;
+    });
+
+    return conflictingEvents;
+  };
+
   const currentEvent = editingEvent || pendingEvents[currentEventIndex];
+  const conflictingEvents = currentEvent ? checkTimeConflict(currentEvent) : [];
 
   return (
     <div className="assistant-view-container">
@@ -368,6 +432,20 @@ const AssistantView: React.FC = () => {
               <div className="event-card-preview">
                 {formatEventDateTime(currentEvent.datetime)} ({currentEvent.duration}분)
               </div>
+
+              {/* 시간 충돌 경고 */}
+              {conflictingEvents.length > 0 && (
+                <div className="event-conflict-warning">
+                  ⚠️ 기존 일정과 시간이 겹칩니다:
+                  <ul>
+                    {conflictingEvents.map(conflict => (
+                      <li key={conflict.id}>
+                        {conflict.title} ({conflict.start_time} - {conflict.end_time})
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              )}
             </div>
 
             <div className="event-confirmation-actions">
@@ -378,11 +456,19 @@ const AssistantView: React.FC = () => {
               >
                 ← 이전
               </button>
-              <button className="event-action-btn reject" onClick={handleRejectEvent}>
-                거절
+              <button
+                className="event-action-btn reject"
+                onClick={handleRejectEvent}
+                disabled={processedIndexes.has(currentEventIndex) || isSaving}
+              >
+                {processedIndexes.has(currentEventIndex) ? '처리됨' : '거절'}
               </button>
-              <button className="event-action-btn confirm" onClick={handleConfirmEvent}>
-                추가
+              <button
+                className="event-action-btn confirm"
+                onClick={handleConfirmEvent}
+                disabled={processedIndexes.has(currentEventIndex) || isSaving}
+              >
+                {isSaving ? '저장 중...' : processedIndexes.has(currentEventIndex) ? '추가됨' : '추가'}
               </button>
               <button
                 className="event-action-btn next"

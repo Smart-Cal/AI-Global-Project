@@ -13,13 +13,16 @@ interface EventDetailModalProps {
 export const EventDetailModal: React.FC<EventDetailModalProps> = ({
   isOpen,
   onClose,
-  event,
+  event: propEvent,
   onEdit,
 }) => {
-  const { removeEvent, toggleComplete } = useEventStore();
+  const { events, removeEvent, toggleComplete } = useEventStore();
   const { getCategoryById } = useCategoryStore();
 
-  if (!isOpen || !event) return null;
+  if (!isOpen || !propEvent) return null;
+
+  // store에서 최신 이벤트 상태 가져오기 (완료 상태 즉각 반영)
+  const event = events.find(e => e.id === propEvent.id) || propEvent;
 
   const category = event.category_id ? getCategoryById(event.category_id) : null;
   const categoryColor = category?.color || DEFAULT_CATEGORY_COLOR;
