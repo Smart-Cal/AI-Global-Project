@@ -24,7 +24,7 @@ export interface Category {
   created_at?: string;
 }
 
-// Event types (PALM 아키텍처 기준)
+// Event types (API 응답용)
 export interface Event {
   id: string;
   user_id: string;
@@ -34,6 +34,23 @@ export interface Event {
   datetime: string; // ISO datetime
   duration: number; // 분 단위
   type: 'fixed' | 'personal' | 'goal';
+  location?: string;
+  is_completed: boolean;
+  completed_at?: string;
+  created_at?: string;
+}
+
+// DB Event types (실제 DB 스키마와 일치)
+export interface DBEvent {
+  id: string;
+  user_id: string;
+  category_id?: string;
+  title: string;
+  description?: string;
+  event_date: string; // YYYY-MM-DD
+  start_time?: string; // HH:MM
+  end_time?: string; // HH:MM
+  is_all_day: boolean;
   location?: string;
   is_completed: boolean;
   completed_at?: string;

@@ -48,9 +48,10 @@ router.post('/optimize', authenticate, async (req: AuthRequest, res: Response) =
     }
 
     // Scheduler Agent 호출
+    // Note: DBEvent[] -> Event[] 변환 필요 (실제로는 헬퍼 함수 사용 권장)
     const result = await scheduleTodos(
       todosToSchedule,
-      events as Event[],
+      events as unknown as Event[],
       preferences
     );
 
@@ -90,7 +91,7 @@ router.get('/available-slots', authenticate, async (req: AuthRequest, res: Respo
       work_end = '18'
     } = req.query;
 
-    const events = await getEventsByUser(userId) as Event[];
+    const events = await getEventsByUser(userId) as unknown as Event[];
 
     const slots = calculateAvailableSlots(
       events,

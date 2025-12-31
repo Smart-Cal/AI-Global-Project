@@ -1,11 +1,6 @@
 import { create } from 'zustand';
 import type { Goal } from '../types';
-import {
-  createGoal as createGoalApi,
-  updateGoal as updateGoalApi,
-  deleteGoal as deleteGoalApi,
-  getGoalsByUser,
-} from '../services/supabase';
+import * as api from '../services/api';
 
 interface GoalState {
   goals: Goal[];
@@ -13,7 +8,7 @@ interface GoalState {
   isLoading: boolean;
   setCurrentUser: (userId: string | null) => void;
   fetchGoals: () => Promise<void>;
-  addGoal: (goal: Omit<Goal, 'id' | 'created_at' | 'updated_at'>) => Promise<Goal>;
+  addGoal: (goal: Omit<Goal, 'id' | 'created_at' | 'updated_at' | 'user_id'>) => Promise<Goal>;
   updateGoal: (id: string, updates: Partial<Goal>) => Promise<void>;
   deleteGoal: (id: string) => Promise<void>;
   getActiveGoals: () => Goal[];
@@ -38,13 +33,10 @@ export const useGoalStore = create<GoalState>()((set, get) => ({
   },
 
   fetchGoals: async () => {
-    const userId = get().currentUserId;
-    if (!userId) return;
-
     set({ isLoading: true });
     try {
-      const goals = await getGoalsByUser(userId);
-      set({ goals });
+      const response = await api.getGoals();
+      set({ goals: response.goals });
     } catch (error) {
       console.error('Failed to fetch goals:', error);
     } finally {
@@ -53,33 +45,25 @@ export const useGoalStore = create<GoalState>()((set, get) => ({
   },
 
   addGoal: async (goalData) => {
-    const userId = get().currentUserId;
-    if (!userId) throw new Error('로그인이 필요합니다.');
-
-    const newGoal = await createGoalApi({ ...goalData, user_id: userId });
-    if (newGoal) {
-      set((state) => ({ goals: [newGoal, ...state.goals] }));
-      return newGoal;
-    }
-    throw new Error('목표 생성에 실패했습니다.');
+    const response = await api.createGoal(goalData);
+    const newGoal = response.goal;
+    set((state) => ({ goals: [newGoal, ...state.goals] }));
+    return newGoal;
   },
 
   updateGoal: async (id, updates) => {
-    const updated = await updateGoalApi(id, updates);
-    if (updated) {
-      set((state) => ({
-        goals: state.goals.map((goal) => (goal.id === id ? updated : goal)),
-      }));
-    }
+    const response = await api.updateGoal(id, updates);
+    const updated = response.goal;
+    set((state) => ({
+      goals: state.goals.map((goal) => (goal.id === id ? updated : goal)),
+    }));
   },
 
   deleteGoal: async (id) => {
-    const success = await deleteGoalApi(id);
-    if (success) {
-      set((state) => ({
-        goals: state.goals.filter((goal) => goal.id !== id),
-      }));
-    }
+    await api.deleteGoal(id);
+    set((state) => ({
+      goals: state.goals.filter((goal) => goal.id !== id),
+    }));
   },
 
   getActiveGoals: () => {
@@ -92,7 +76,11 @@ export const useGoalStore = create<GoalState>()((set, get) => ({
 
   updateProgress: async (id, progress) => {
     const clampedProgress = Math.min(100, Math.max(0, progress));
-    await get().updateGoal(id, { progress: clampedProgress });
+    const response = await api.updateGoalProgress(id, clampedProgress);
+    const updated = response.goal;
+    set((state) => ({
+      goals: state.goals.map((goal) => (goal.id === id ? updated : goal)),
+    }));
   },
 
   clearUserData: () => {

@@ -1,12 +1,6 @@
 import { create } from 'zustand';
 import type { Category } from '../types';
-import {
-  createCategory as createCategoryApi,
-  updateCategory as updateCategoryApi,
-  deleteCategory as deleteCategoryApi,
-  getCategoriesByUser,
-  createDefaultCategory,
-} from '../services/supabase';
+import * as api from '../services/api';
 
 interface CategoryState {
   categories: Category[];
@@ -39,15 +33,14 @@ export const useCategoryStore = create<CategoryState>()((set, get) => ({
   },
 
   fetchCategories: async () => {
-    const userId = get().currentUserId;
-    if (!userId) return;
-
     set({ isLoading: true });
     try {
-      // 먼저 기본 카테고리가 있는지 확인하고 없으면 생성
-      await createDefaultCategory(userId);
-
-      const categories = await getCategoriesByUser(userId);
+      // 백엔드 API를 통해 카테고리 조회 (기본 카테고리도 자동 생성됨)
+      const response = await api.getCategories();
+      const categories = response.categories.sort((a, b) => {
+        if (a.is_default !== b.is_default) return a.is_default ? -1 : 1;
+        return a.name.localeCompare(b.name);
+      });
       set({ categories });
     } catch (error) {
       console.error('Failed to fetch categories:', error);
@@ -57,35 +50,24 @@ export const useCategoryStore = create<CategoryState>()((set, get) => ({
   },
 
   addCategory: async (name, color) => {
-    const userId = get().currentUserId;
-    if (!userId) throw new Error('로그인이 필요합니다.');
+    const response = await api.createCategory(name, color);
+    const newCategory = response.category;
 
-    const newCategory = await createCategoryApi({
-      user_id: userId,
-      name,
-      color,
-      is_default: false,
-    });
-
-    if (newCategory) {
-      set((state) => ({
-        categories: [...state.categories, newCategory].sort((a, b) => {
-          if (a.is_default !== b.is_default) return a.is_default ? -1 : 1;
-          return a.name.localeCompare(b.name);
-        }),
-      }));
-      return newCategory;
-    }
-    throw new Error('카테고리 생성에 실패했습니다.');
+    set((state) => ({
+      categories: [...state.categories, newCategory].sort((a, b) => {
+        if (a.is_default !== b.is_default) return a.is_default ? -1 : 1;
+        return a.name.localeCompare(b.name);
+      }),
+    }));
+    return newCategory;
   },
 
   updateCategory: async (id, updates) => {
-    const updated = await updateCategoryApi(id, updates);
-    if (updated) {
-      set((state) => ({
-        categories: state.categories.map((cat) => (cat.id === id ? updated : cat)),
-      }));
-    }
+    const response = await api.updateCategory(id, updates);
+    const updated = response.category;
+    set((state) => ({
+      categories: state.categories.map((cat) => (cat.id === id ? updated : cat)),
+    }));
   },
 
   deleteCategory: async (id) => {
@@ -94,12 +76,10 @@ export const useCategoryStore = create<CategoryState>()((set, get) => ({
       throw new Error('기본 카테고리는 삭제할 수 없습니다.');
     }
 
-    const success = await deleteCategoryApi(id);
-    if (success) {
-      set((state) => ({
-        categories: state.categories.filter((cat) => cat.id !== id),
-      }));
-    }
+    await api.deleteCategory(id);
+    set((state) => ({
+      categories: state.categories.filter((cat) => cat.id !== id),
+    }));
   },
 
   getCategoryById: (id) => {
