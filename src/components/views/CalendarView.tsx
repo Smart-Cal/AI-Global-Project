@@ -79,17 +79,23 @@ const CalendarView: React.FC<CalendarViewProps> = ({
     return date.toISOString().split('T')[0];
   };
 
+  // 기본 카테고리 ID 가져오기
+  const getDefaultCategoryId = () => {
+    const defaultCat = categories.find(c => c.name === '기본');
+    return defaultCat?.id;
+  };
+
   const getEventsForDate = (dateStr: string) => {
     return events.filter(e => {
       const matchesDate = e.event_date === dateStr;
       // 카테고리 필터 체크:
       // - 필터가 초기화되지 않았으면 모두 표시
-      // - 카테고리가 없는 일정은 항상 표시
+      // - 카테고리가 없는 일정은 "기본" 카테고리로 취급
       // - 카테고리가 있으면 필터에 포함된 경우만 표시
-      let matchesCategory = true;
-      if (filtersInitialized && e.category_id) {
-        matchesCategory = categoryFilters.has(e.category_id);
-      }
+      if (!filtersInitialized) return matchesDate;
+
+      const categoryId = e.category_id || getDefaultCategoryId();
+      const matchesCategory = categoryId ? categoryFilters.has(categoryId) : true;
       return matchesDate && matchesCategory;
     });
   };
