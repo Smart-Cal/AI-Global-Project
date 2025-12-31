@@ -1,3 +1,14 @@
+import dotenv from 'dotenv';
+import path from 'path';
+import { fileURLToPath } from 'url';
+
+// ES module에서 __dirname 구하기
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+
+// .env 파일 경로를 명시적으로 지정
+dotenv.config({ path: path.resolve(__dirname, '../../.env') });
+
 import { createClient, SupabaseClient } from '@supabase/supabase-js';
 import { User, Event, Todo, Goal, Category } from '../types/index.js';
 
@@ -6,57 +17,31 @@ const supabaseKey = process.env.SUPABASE_SERVICE_KEY || '';
 
 if (!supabaseUrl || !supabaseKey) {
   console.warn('Warning: SUPABASE_URL or SUPABASE_SERVICE_KEY not set');
+  console.warn('Attempted to load from:', path.resolve(__dirname, '../../.env'));
 }
 
 export const supabase: SupabaseClient = createClient(supabaseUrl, supabaseKey);
 
 // ==============================================
-// User Operations (전화번호 기반)
+// User Operations (구글 로그인 전용)
 // ==============================================
-
-export async function createUser(phone: string, passwordHash: string, name: string, nickname?: string): Promise<User> {
-  const { data, error } = await supabase
-    .from('users')
-    .insert({
-      phone,
-      password_hash: passwordHash,
-      name,
-      nickname: nickname || name,
-      is_active: true
-    })
-    .select()
-    .single();
-
-  if (error) throw new Error(`Failed to create user: ${error.message}`);
-  return data;
-}
-
-export async function getUserByPhone(phone: string): Promise<(User & { password_hash: string }) | null> {
-  const { data, error } = await supabase
-    .from('users')
-    .select('*')
-    .eq('phone', phone)
-    .single();
-
-  if (error && error.code !== 'PGRST116') throw new Error(`Failed to get user: ${error.message}`);
-  return data;
-}
-
-export async function checkPhoneExists(phone: string): Promise<boolean> {
-  const { data } = await supabase
-    .from('users')
-    .select('id')
-    .eq('phone', phone)
-    .single();
-
-  return !!data;
-}
 
 export async function getUserById(id: string): Promise<User | null> {
   const { data, error } = await supabase
     .from('users')
     .select('*')
     .eq('id', id)
+    .single();
+
+  if (error && error.code !== 'PGRST116') throw new Error(`Failed to get user: ${error.message}`);
+  return data;
+}
+
+export async function getUserByEmail(email: string): Promise<User | null> {
+  const { data, error } = await supabase
+    .from('users')
+    .select('*')
+    .eq('email', email)
     .single();
 
   if (error && error.code !== 'PGRST116') throw new Error(`Failed to get user: ${error.message}`);
@@ -70,6 +55,30 @@ export async function updateUserLogin(userId: string): Promise<void> {
     .eq('id', userId);
 
   if (error) throw new Error(`Failed to update login: ${error.message}`);
+}
+
+export async function upsertGoogleUser(userData: {
+  id: string;
+  email: string;
+  name: string;
+  avatar_url?: string;
+}): Promise<User> {
+  const { data, error } = await supabase
+    .from('users')
+    .upsert({
+      id: userData.id,
+      email: userData.email,
+      name: userData.name,
+      nickname: userData.name,
+      avatar_url: userData.avatar_url,
+      is_active: true,
+      last_login_at: new Date().toISOString()
+    }, { onConflict: 'id' })
+    .select()
+    .single();
+
+  if (error) throw new Error(`Failed to upsert google user: ${error.message}`);
+  return data;
 }
 
 // ==============================================
@@ -136,7 +145,7 @@ export async function getTodosByUser(userId: string): Promise<Todo[]> {
     .from('todos')
     .select('*')
     .eq('user_id', userId)
-    .order('due_date', { ascending: true });
+    .order('created_at', { ascending: false });
 
   if (error) throw new Error(`Failed to get todos: ${error.message}`);
   return data || [];

@@ -1,9 +1,10 @@
-// User types
+// User types (구글 로그인 전용)
 export interface User {
   id: string;
-  phone: string;
+  email: string;
   name: string;
-  nickname: string;
+  nickname?: string;
+  avatar_url?: string;
   is_active: boolean;
   last_login_at?: string;
   created_at?: string;
