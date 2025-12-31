@@ -146,14 +146,33 @@ router.post('/', authenticate, async (req: AuthRequest, res: Response) => {
 router.put('/:id', authenticate, async (req: AuthRequest, res: Response) => {
   try {
     const { id } = req.params;
-    const updates = req.body;
+    const { datetime, duration, title, description, location, category_id, is_completed } = req.body;
 
-    // 수정 불가 필드 제거
-    delete updates.id;
-    delete updates.user_id;
-    delete updates.created_at;
+    // datetime을 event_date, start_time, end_time으로 변환
+    const dbUpdates: Record<string, any> = {};
 
-    const event = await updateEvent(id, updates);
+    if (title !== undefined) dbUpdates.title = title;
+    if (description !== undefined) dbUpdates.description = description;
+    if (location !== undefined) dbUpdates.location = location;
+    if (category_id !== undefined) dbUpdates.category_id = category_id;
+    if (is_completed !== undefined) dbUpdates.is_completed = is_completed;
+
+    if (datetime) {
+      const dt = new Date(datetime);
+      dbUpdates.event_date = dt.toISOString().split('T')[0];
+      dbUpdates.start_time = dt.toTimeString().slice(0, 5);
+
+      // duration으로 end_time 계산
+      if (duration) {
+        const endDt = new Date(dt.getTime() + duration * 60000);
+        dbUpdates.end_time = endDt.toTimeString().slice(0, 5);
+      }
+    }
+
+    const dbEvent = await updateEvent(id, dbUpdates);
+
+    // API 응답은 Event 형식으로 변환
+    const event = dbEventToApiEvent(dbEvent as unknown as DBEvent);
     res.json({ event });
   } catch (error) {
     console.error('Update event error:', error);
