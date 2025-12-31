@@ -299,6 +299,20 @@ ${JSON.stringify(calculateAvailableSlots(this.context.events, 9, 18, 3).slice(0,
   }): Promise<string> {
     const { type, events = [], todos = [], scheduled_items = [], suggestions = [] } = context;
 
+    // 여러 일정이 있는 경우 (계획/추천)
+    if (events.length > 1) {
+      const weekdays = ['일', '월', '화', '수', '목', '금', '토'];
+      const scheduleList = events.map(e => {
+        if (!e.datetime) return e.title;
+        const date = new Date(e.datetime);
+        const dayName = weekdays[date.getDay()];
+        const timeStr = date.toLocaleTimeString('ko-KR', { hour: '2-digit', minute: '2-digit' });
+        return `${dayName}요일 ${timeStr} - ${e.title}`;
+      }).join('\n');
+
+      return `일정을 ${events.length}개 등록했어! 📅\n\n${scheduleList}\n\n캘린더에서 확인해봐!`;
+    }
+
     // 간단한 템플릿 기반 응답
     switch (type) {
       case 'event_created':
