@@ -9,7 +9,9 @@
       "Bash(taskkill:*)",
       "Bash(curl:*)",
       "Bash(git checkout:*)",
-      "Bash(git push:*)"
+      "Bash(git push:*)",
+      "Bash(git add:*)",
+      "Bash(git commit:*)"
     ]
   }
 }

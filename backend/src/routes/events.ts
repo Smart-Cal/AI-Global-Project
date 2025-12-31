@@ -24,10 +24,18 @@ function dbEventToApiEvent(dbEvent: DBEvent): Event {
   }
 
   return {
-    ...dbEvent,
+    id: dbEvent.id,
+    user_id: dbEvent.user_id,
+    category_id: dbEvent.category_id,
+    title: dbEvent.title,
+    description: dbEvent.description,
     datetime,
     duration,
-    type: 'personal'
+    type: 'personal',
+    location: dbEvent.location,
+    is_completed: dbEvent.is_completed,
+    completed_at: dbEvent.completed_at,
+    created_at: dbEvent.created_at,
   };
 }
 
