@@ -1,7 +1,8 @@
 import React from 'react';
 import { Modal } from './Modal';
+import { useCategoryStore } from '../store/categoryStore';
 import type { CalendarEvent } from '../types';
-import { CATEGORIES } from '../types';
+import { DEFAULT_CATEGORY_COLOR } from '../types';
 
 interface DateEventsModalProps {
   isOpen: boolean;
@@ -20,6 +21,8 @@ export const DateEventsModal: React.FC<DateEventsModalProps> = ({
   onAddEvent,
   onEditEvent,
 }) => {
+  const { getCategoryById } = useCategoryStore();
+
   const formatDate = (dateStr: string) => {
     const d = new Date(dateStr);
     const days = ['일', '월', '화', '수', '목', '금', '토'];
@@ -47,7 +50,9 @@ export const DateEventsModal: React.FC<DateEventsModalProps> = ({
       ) : (
         <div>
           {events.map((event) => {
-            const category = CATEGORIES[event.category] || CATEGORIES.other;
+            const category = event.category_id ? getCategoryById(event.category_id) : null;
+            const categoryColor = category?.color || DEFAULT_CATEGORY_COLOR;
+            const categoryName = category?.name || '기본';
             return (
               <div
                 key={event.id}
@@ -60,10 +65,11 @@ export const DateEventsModal: React.FC<DateEventsModalProps> = ({
                   <div className="event-title">
                     <span
                       className="category-tag"
-                      style={{ background: event.color || category.color, color: 'white' }}
+                      style={{ background: categoryColor, color: 'white' }}
                     >
-                      {category.icon} {category.label}
+                      {categoryName}
                     </span>
+                    {event.is_completed && '✓ '}
                     {event.title}
                   </div>
                   {event.location && (

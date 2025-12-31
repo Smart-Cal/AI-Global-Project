@@ -1,34 +1,25 @@
 import React, { useState, useEffect } from 'react';
-import { useEventStore } from '../store/eventStore';
+import { useGoalStore } from '../store/goalStore';
 import { useAuthStore } from '../store/authStore';
 import { useCategoryStore } from '../store/categoryStore';
-import { type CalendarEvent, DEFAULT_CATEGORY_COLOR, CATEGORY_COLORS } from '../types';
+import { type Goal, CATEGORY_COLORS } from '../types';
 
-interface EventModalProps {
+interface GoalModalProps {
   isOpen: boolean;
   onClose: () => void;
-  event?: CalendarEvent | null;
-  defaultDate?: string;
+  editingGoal?: Goal | null;
 }
 
-export const EventModal: React.FC<EventModalProps> = ({
-  isOpen,
-  onClose,
-  event,
-  defaultDate,
-}) => {
+export const GoalModal: React.FC<GoalModalProps> = ({ isOpen, onClose, editingGoal }) => {
   const { user } = useAuthStore();
-  const { addEvent, editEvent, removeEvent } = useEventStore();
+  const { addGoal, updateGoal } = useGoalStore();
   const { categories, addCategory, getDefaultCategory } = useCategoryStore();
 
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
-  const [eventDate, setEventDate] = useState('');
-  const [startTime, setStartTime] = useState('');
-  const [endTime, setEndTime] = useState('');
-  const [isAllDay, setIsAllDay] = useState(false);
   const [categoryId, setCategoryId] = useState('');
-  const [location, setLocation] = useState('');
+  const [priority, setPriority] = useState<'high' | 'medium' | 'low'>('medium');
+  const [targetDate, setTargetDate] = useState('');
   const [isLoading, setIsLoading] = useState(false);
 
   // 새 카테고리 추가용 상태
@@ -36,73 +27,58 @@ export const EventModal: React.FC<EventModalProps> = ({
   const [newCategoryName, setNewCategoryName] = useState('');
   const [newCategoryColor, setNewCategoryColor] = useState(CATEGORY_COLORS[0]);
 
-  const isEditing = !!event;
-
   useEffect(() => {
-    if (event) {
-      setTitle(event.title);
-      setDescription(event.description || '');
-      setEventDate(event.event_date);
-      setStartTime(event.start_time || '');
-      setEndTime(event.end_time || '');
-      setIsAllDay(event.is_all_day);
-      setCategoryId(event.category_id || '');
-      setLocation(event.location || '');
+    if (editingGoal) {
+      setTitle(editingGoal.title);
+      setDescription(editingGoal.description || '');
+      setCategoryId(editingGoal.category_id || '');
+      setPriority(editingGoal.priority);
+      setTargetDate(editingGoal.target_date || '');
     } else {
       setTitle('');
       setDescription('');
-      setEventDate(defaultDate || new Date().toISOString().split('T')[0]);
-      setStartTime('');
-      setEndTime('');
-      setIsAllDay(false);
-      // 기본 카테고리 선택
       const defaultCat = getDefaultCategory();
       setCategoryId(defaultCat?.id || '');
-      setLocation('');
+      setPriority('medium');
+      setTargetDate('');
     }
     setShowNewCategory(false);
     setNewCategoryName('');
     setNewCategoryColor(CATEGORY_COLORS[0]);
-  }, [event, defaultDate, isOpen, getDefaultCategory]);
+  }, [editingGoal, isOpen, getDefaultCategory]);
 
   if (!isOpen) return null;
 
   const handleSubmit = async () => {
-    if (!title.trim() || !eventDate || !user) return;
+    if (!title.trim() || !user) return;
 
     setIsLoading(true);
     try {
-      const eventData = {
-        user_id: user.id,
-        title: title.trim(),
-        description: description.trim() || undefined,
-        event_date: eventDate,
-        start_time: isAllDay ? undefined : startTime || undefined,
-        end_time: isAllDay ? undefined : endTime || undefined,
-        is_all_day: isAllDay,
-        category_id: categoryId || undefined,
-        location: location.trim() || undefined,
-        is_completed: event?.is_completed || false,
-      };
-
-      if (isEditing && event?.id) {
-        await editEvent(event.id, eventData);
+      if (editingGoal?.id) {
+        await updateGoal(editingGoal.id, {
+          title: title.trim(),
+          description: description.trim() || undefined,
+          category_id: categoryId || undefined,
+          priority,
+          target_date: targetDate || undefined,
+        });
       } else {
-        await addEvent(eventData);
+        await addGoal({
+          user_id: user.id,
+          title: title.trim(),
+          description: description.trim() || undefined,
+          category_id: categoryId || undefined,
+          priority,
+          target_date: targetDate || undefined,
+          progress: 0,
+          is_active: true,
+        });
       }
       onClose();
     } catch (error) {
-      console.error('Failed to save event:', error);
+      console.error('Failed to save goal:', error);
     } finally {
       setIsLoading(false);
-    }
-  };
-
-  const handleDelete = async () => {
-    if (!event?.id) return;
-    if (confirm('이 일정을 삭제하시겠습니까?')) {
-      await removeEvent(event.id);
-      onClose();
     }
   };
 
@@ -120,78 +96,35 @@ export const EventModal: React.FC<EventModalProps> = ({
     }
   };
 
-  const selectedCategory = categories.find(c => c.id === categoryId);
-
   return (
     <div className="modal-overlay" onClick={onClose}>
-      <div className="modal large" onClick={(e) => e.stopPropagation()}>
+      <div className="modal" onClick={(e) => e.stopPropagation()}>
         <div className="modal-header">
-          <div className="modal-title">{isEditing ? '일정 수정' : '새 일정'}</div>
+          <div className="modal-title">{editingGoal ? '목표 수정' : '새 목표'}</div>
           <button className="modal-close" onClick={onClose}>×</button>
         </div>
 
         <div className="modal-body">
           <div className="form-group">
-            <label className="form-label">일정 제목 *</label>
+            <label className="form-label">목표 이름 *</label>
             <input
               type="text"
               className="form-input"
-              placeholder="일정 제목을 입력하세요"
+              placeholder="예: 토익 900점 달성, 10kg 감량"
               value={title}
               onChange={(e) => setTitle(e.target.value)}
             />
           </div>
 
           <div className="form-group">
-            <label className="form-label">날짜 *</label>
-            <input
-              type="date"
+            <label className="form-label">설명</label>
+            <textarea
               className="form-input"
-              value={eventDate}
-              onChange={(e) => setEventDate(e.target.value)}
+              placeholder="목표에 대한 상세 설명을 입력하세요"
+              value={description}
+              onChange={(e) => setDescription(e.target.value)}
             />
           </div>
-
-          <div className="form-group">
-            <label
-              style={{
-                display: 'flex',
-                alignItems: 'center',
-                gap: '12px',
-                cursor: 'pointer',
-                padding: '8px 0',
-              }}
-            >
-              <div
-                className={`todo-checkbox ${isAllDay ? 'checked' : ''}`}
-                onClick={() => setIsAllDay(!isAllDay)}
-              />
-              <span>종일</span>
-            </label>
-          </div>
-
-          {!isAllDay && (
-            <div className="form-row">
-              <div className="form-group">
-                <label className="form-label">시작 시간</label>
-                <input
-                  type="time"
-                  className="form-input"
-                  value={startTime}
-                  onChange={(e) => setStartTime(e.target.value)}
-                />
-              </div>
-              <div className="form-group">
-                <label className="form-label">종료 시간</label>
-                <input
-                  type="time"
-                  className="form-input"
-                  value={endTime}
-                  onChange={(e) => setEndTime(e.target.value)}
-                />
-              </div>
-            </div>
-          )}
 
           <div className="form-group">
             <label className="form-label">카테고리</label>
@@ -256,46 +189,50 @@ export const EventModal: React.FC<EventModalProps> = ({
           </div>
 
           <div className="form-group">
-            <label className="form-label">장소</label>
-            <input
-              type="text"
-              className="form-input"
-              placeholder="장소를 입력하세요"
-              value={location}
-              onChange={(e) => setLocation(e.target.value)}
-            />
+            <label className="form-label">우선순위</label>
+            <div className="priority-select">
+              <div
+                className={`priority-option ${priority === 'high' ? 'selected high' : ''}`}
+                onClick={() => setPriority('high')}
+              >
+                높음
+              </div>
+              <div
+                className={`priority-option ${priority === 'medium' ? 'selected medium' : ''}`}
+                onClick={() => setPriority('medium')}
+              >
+                보통
+              </div>
+              <div
+                className={`priority-option ${priority === 'low' ? 'selected low' : ''}`}
+                onClick={() => setPriority('low')}
+              >
+                낮음
+              </div>
+            </div>
           </div>
 
           <div className="form-group">
-            <label className="form-label">메모</label>
-            <textarea
+            <label className="form-label">목표 달성일</label>
+            <input
+              type="date"
               className="form-input"
-              placeholder="메모를 입력하세요"
-              value={description}
-              onChange={(e) => setDescription(e.target.value)}
+              value={targetDate}
+              onChange={(e) => setTargetDate(e.target.value)}
             />
           </div>
         </div>
 
         <div className="modal-footer">
-          {isEditing && (
-            <button
-              className="btn btn-danger"
-              onClick={handleDelete}
-              style={{ marginRight: 'auto' }}
-            >
-              삭제
-            </button>
-          )}
           <button className="btn btn-secondary" onClick={onClose}>
             취소
           </button>
           <button
             className="btn btn-primary"
             onClick={handleSubmit}
-            disabled={!title.trim() || !eventDate || isLoading}
+            disabled={!title.trim() || isLoading}
           >
-            {isLoading ? '저장 중...' : isEditing ? '수정' : '추가'}
+            {isLoading ? '저장 중...' : editingGoal ? '수정' : '추가'}
           </button>
         </div>
       </div>

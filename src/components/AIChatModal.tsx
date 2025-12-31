@@ -2,9 +2,10 @@ import React, { useState, useRef, useEffect } from 'react';
 import { Modal } from './Modal';
 import { useEventStore } from '../store/eventStore';
 import { useAuthStore } from '../store/authStore';
+import { useCategoryStore } from '../store/categoryStore';
 import { chatWithAI } from '../services/openai';
 import type { ChatMessage, ScheduleInfo } from '../types';
-import { CATEGORIES } from '../types';
+import { DEFAULT_CATEGORY_COLOR } from '../types';
 
 interface AIChatModalProps {
   isOpen: boolean;
@@ -14,6 +15,7 @@ interface AIChatModalProps {
 export const AIChatModal: React.FC<AIChatModalProps> = ({ isOpen, onClose }) => {
   const { user } = useAuthStore();
   const { events, addEvent } = useEventStore();
+  const { getCategoryByName, getDefaultCategory } = useCategoryStore();
   const messagesRef = useRef<HTMLDivElement>(null);
 
   const [messages, setMessages] = useState<ChatMessage[]>([]);
@@ -60,7 +62,11 @@ export const AIChatModal: React.FC<AIChatModalProps> = ({ isOpen, onClose }) => 
 
     setIsLoading(true);
     try {
-      const config = CATEGORIES[pendingSchedule.category] || CATEGORIES.other;
+      // Find category by name or use default
+      const category = pendingSchedule.category_name
+        ? getCategoryByName(pendingSchedule.category_name)
+        : getDefaultCategory();
+
       await addEvent({
         user_id: user.id,
         title: pendingSchedule.title,
@@ -68,8 +74,8 @@ export const AIChatModal: React.FC<AIChatModalProps> = ({ isOpen, onClose }) => 
         start_time: pendingSchedule.start_time,
         end_time: pendingSchedule.end_time,
         is_all_day: !pendingSchedule.start_time,
-        category: pendingSchedule.category,
-        color: pendingSchedule.color || config.color,
+        category_id: category?.id,
+        is_completed: false,
         location: pendingSchedule.location,
         description: pendingSchedule.description,
       });
@@ -108,7 +114,7 @@ export const AIChatModal: React.FC<AIChatModalProps> = ({ isOpen, onClose }) => 
             <div className="schedule-card-item">• 날짜: {pendingSchedule.date}</div>
             <div className="schedule-card-item">• 시간: {pendingSchedule.start_time || '미정'}</div>
             <div className="schedule-card-item">• 장소: {pendingSchedule.location || '미정'}</div>
-            <div className="schedule-card-item">• 카테고리: {CATEGORIES[pendingSchedule.category]?.label || '기타'}</div>
+            <div className="schedule-card-item">• 카테고리: {pendingSchedule.category_name || '기본'}</div>
             <div style={{ display: 'flex', gap: '12px', marginTop: '16px' }}>
               <button className="btn btn-primary" onClick={handleConfirm} disabled={isLoading} style={{ flex: 1 }}>
                 예, 추가합니다

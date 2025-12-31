@@ -1,5 +1,5 @@
 import OpenAI from 'openai';
-import type { CalendarEvent, ChatMessage, ScheduleInfo, EventCategory } from '../types';
+import type { CalendarEvent, ChatMessage, ScheduleInfo } from '../types';
 
 const OPENAI_API_KEY = import.meta.env.VITE_OPENAI_API_KEY || '';
 
@@ -114,11 +114,12 @@ const extractSchedule = (text: string): ScheduleInfo | undefined => {
       if (loc && loc !== '미정' && loc !== '-') schedule.location = loc;
     }
 
-    const catMatch = text.match(/카테고리:\s*(\w+)/);
+    const catMatch = text.match(/카테고리:\s*(.+?)(?:\n|$)/);
     if (catMatch) {
-      const cat = catMatch[1].toLowerCase();
-      const valid = ['social', 'work', 'health', 'study', 'class', 'task', 'personal', 'other'];
-      schedule.category = valid.includes(cat) ? (cat as EventCategory) : 'other';
+      const cat = catMatch[1].trim();
+      if (cat && cat !== '미정' && cat !== '-') {
+        schedule.category_name = cat;
+      }
     }
 
     const memoMatch = text.match(/메모:\s*(.+?)(?:\n|$)/);
