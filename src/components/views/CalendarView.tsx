@@ -3,7 +3,7 @@ import { useEventStore } from '../../store/eventStore';
 import { useCategoryStore } from '../../store/categoryStore';
 import { DEFAULT_CATEGORY_COLOR, type CalendarEvent } from '../../types';
 
-type ViewMode = 'month' | 'week' | 'day';
+type ViewMode = 'month' | 'week';
 
 interface CalendarViewProps {
   onDateClick: (date: string) => void;
@@ -24,7 +24,6 @@ const CalendarView: React.FC<CalendarViewProps> = ({
   const [viewMode, setViewMode] = useState<ViewMode>('month');
   const [currentDate, setCurrentDate] = useState(new Date());
   const [selectedWeekStart, setSelectedWeekStart] = useState<Date | null>(null);
-  const [selectedDayDate, setSelectedDayDate] = useState<string | null>(null);
   const [categoryFilters, setCategoryFilters] = useState<Set<string>>(new Set());
 
   useEffect(() => {
@@ -93,16 +92,13 @@ const CalendarView: React.FC<CalendarViewProps> = ({
       setSelectedWeekStart(date);
       setViewMode('week');
     } else if (viewMode === 'week') {
-      setSelectedDayDate(dateStr);
-      setViewMode('day');
+      // 주간 뷰에서 날짜 클릭 시 해당 날짜로 일정 추가
+      onAddEvent(dateStr);
     }
   };
 
   const handleBackClick = () => {
-    if (viewMode === 'day') {
-      setViewMode('week');
-      setSelectedDayDate(null);
-    } else if (viewMode === 'week') {
+    if (viewMode === 'week') {
       setViewMode('month');
       setSelectedWeekStart(null);
     }
@@ -190,6 +186,12 @@ const CalendarView: React.FC<CalendarViewProps> = ({
     );
   };
 
+  // 시간 문자열(HH:MM)을 분으로 변환
+  const timeToMinutes = (time: string): number => {
+    const [hours, minutes] = time.split(':').map(Number);
+    return hours * 60 + minutes;
+  };
+
   const renderWeekView = () => {
     const weekStart = selectedWeekStart || currentDate;
     const weekDays = getWeekDays(weekStart);
@@ -242,21 +244,26 @@ const CalendarView: React.FC<CalendarViewProps> = ({
 
                   {dayEvents.map((event, eventIdx) => {
                     const category = event.category_id ? getCategoryById(event.category_id) : null;
-                    const startHour = event.start_time
-                      ? parseInt(event.start_time.split(':')[0])
-                      : 9;
-                    const endHour = event.end_time
-                      ? parseInt(event.end_time.split(':')[0])
-                      : startHour + 1;
-                    const duration = endHour - startHour;
+
+                    // 10분 단위로 정밀하게 위치와 높이 계산
+                    const startMinutes = event.start_time
+                      ? timeToMinutes(event.start_time)
+                      : 9 * 60; // 기본 9시
+                    const endMinutes = event.end_time
+                      ? timeToMinutes(event.end_time)
+                      : startMinutes + 60; // 기본 1시간
+                    const durationMinutes = endMinutes - startMinutes;
+
+                    // 최소 높이 20px (약 20분) 보장
+                    const height = Math.max(durationMinutes, 20);
 
                     return (
                       <div
                         key={eventIdx}
                         className="calendar-week-event"
                         style={{
-                          top: `${startHour * 60}px`,
-                          height: `${duration * 60}px`,
+                          top: `${startMinutes}px`,
+                          height: `${height}px`,
                           backgroundColor: category?.color || DEFAULT_CATEGORY_COLOR,
                         }}
                         onClick={(e) => {
@@ -265,73 +272,10 @@ const CalendarView: React.FC<CalendarViewProps> = ({
                         }}
                       >
                         <div className="calendar-week-event-title">{event.title}</div>
-                        <div className="calendar-week-event-time">
-                          {event.start_time?.slice(0, 5)} - {event.end_time?.slice(0, 5)}
-                        </div>
-                      </div>
-                    );
-                  })}
-                </div>
-              </div>
-            );
-          })}
-        </div>
-      </div>
-    );
-  };
-
-  const renderDayView = () => {
-    if (!selectedDayDate) return null;
-
-    const date = new Date(selectedDayDate);
-    const dayEvents = getEventsForDate(selectedDayDate);
-    const hours = Array.from({ length: 24 }, (_, i) => i);
-
-    return (
-      <div className="calendar-day-view">
-        <div className="calendar-day-view-header">
-          <button onClick={handleBackClick} className="calendar-back-btn">
-            ← 주 보기
-          </button>
-          <h2>
-            {date.getMonth() + 1}월 {date.getDate()}일 {weekdays[(date.getDay() + 6) % 7]}요일
-          </h2>
-          <button
-            className="btn btn-primary btn-sm"
-            onClick={() => onAddEvent(selectedDayDate)}
-          >
-            + 일정 추가
-          </button>
-        </div>
-
-        <div className="calendar-day-schedule">
-          {hours.map(hour => {
-            const hourEvents = dayEvents.filter(e => {
-              if (!e.start_time) return hour === 9;
-              return parseInt(e.start_time.split(':')[0]) === hour;
-            });
-
-            return (
-              <div key={hour} className="calendar-hour-row">
-                <div className="calendar-hour-label">
-                  {hour.toString().padStart(2, '0')}:00
-                </div>
-                <div className="calendar-hour-content">
-                  {hourEvents.map((event, idx) => {
-                    const category = event.category_id ? getCategoryById(event.category_id) : null;
-                    return (
-                      <div
-                        key={idx}
-                        className="calendar-day-event"
-                        style={{ borderLeftColor: category?.color || DEFAULT_CATEGORY_COLOR }}
-                        onClick={() => onEventClick(event)}
-                      >
-                        <div className="calendar-day-event-title">{event.title}</div>
-                        <div className="calendar-day-event-time">
-                          {event.start_time?.slice(0, 5)} - {event.end_time?.slice(0, 5)}
-                        </div>
-                        {event.location && (
-                          <div className="calendar-day-event-location">📍 {event.location}</div>
+                        {height >= 40 && (
+                          <div className="calendar-week-event-time">
+                            {event.start_time?.slice(0, 5)} - {event.end_time?.slice(0, 5)}
+                          </div>
                         )}
                       </div>
                     );
@@ -369,7 +313,6 @@ const CalendarView: React.FC<CalendarViewProps> = ({
       <div className="calendar-main">
         {viewMode === 'month' && renderMonthView()}
         {viewMode === 'week' && renderWeekView()}
-        {viewMode === 'day' && renderDayView()}
       </div>
     </div>
   );
