@@ -10,7 +10,7 @@ const __dirname = path.dirname(__filename);
 dotenv.config({ path: path.resolve(__dirname, '../../.env') });
 
 import { createClient, SupabaseClient } from '@supabase/supabase-js';
-import { User, DBEvent, Todo, Goal, Category } from '../types/index.js';
+import { User, DBEvent, Todo, Goal, Category, Conversation, DBMessage } from '../types/index.js';
 
 const supabaseUrl = process.env.SUPABASE_URL || '';
 const supabaseKey = process.env.SUPABASE_SERVICE_KEY || '';
@@ -300,4 +300,116 @@ export async function getOrCreateDefaultCategory(userId: string): Promise<Catego
     color: '#9CA3AF',
     is_default: true
   });
+}
+
+// ==============================================
+// Conversation Operations
+// ==============================================
+
+export async function getConversationsByUser(userId: string): Promise<Conversation[]> {
+  const { data, error } = await supabase
+    .from('conversations')
+    .select('*')
+    .eq('user_id', userId)
+    .order('updated_at', { ascending: false });
+
+  if (error) throw new Error(`Failed to get conversations: ${error.message}`);
+  return data || [];
+}
+
+export async function getConversationById(id: string): Promise<Conversation | null> {
+  const { data, error } = await supabase
+    .from('conversations')
+    .select('*')
+    .eq('id', id)
+    .single();
+
+  if (error && error.code !== 'PGRST116') throw new Error(`Failed to get conversation: ${error.message}`);
+  return data;
+}
+
+export async function createConversation(userId: string, title?: string): Promise<Conversation> {
+  const { data, error } = await supabase
+    .from('conversations')
+    .insert({
+      user_id: userId,
+      title: title || '새 대화',
+      updated_at: new Date().toISOString()
+    })
+    .select()
+    .single();
+
+  if (error) throw new Error(`Failed to create conversation: ${error.message}`);
+  return data;
+}
+
+export async function updateConversation(id: string, updates: Partial<Conversation>): Promise<Conversation> {
+  const { data, error } = await supabase
+    .from('conversations')
+    .update({ ...updates, updated_at: new Date().toISOString() })
+    .eq('id', id)
+    .select()
+    .single();
+
+  if (error) throw new Error(`Failed to update conversation: ${error.message}`);
+  return data;
+}
+
+export async function deleteConversation(id: string): Promise<void> {
+  // 먼저 해당 대화의 메시지들 삭제
+  await supabase.from('messages').delete().eq('conversation_id', id);
+
+  const { error } = await supabase
+    .from('conversations')
+    .delete()
+    .eq('id', id);
+
+  if (error) throw new Error(`Failed to delete conversation: ${error.message}`);
+}
+
+// ==============================================
+// Message Operations
+// ==============================================
+
+export async function getMessagesByConversation(conversationId: string): Promise<DBMessage[]> {
+  const { data, error } = await supabase
+    .from('messages')
+    .select('*')
+    .eq('conversation_id', conversationId)
+    .order('created_at', { ascending: true });
+
+  if (error) throw new Error(`Failed to get messages: ${error.message}`);
+  return data || [];
+}
+
+export async function createMessage(message: {
+  conversation_id: string;
+  role: 'user' | 'assistant' | 'system';
+  content: string;
+  pending_events?: any;
+}): Promise<DBMessage> {
+  const { data, error } = await supabase
+    .from('messages')
+    .insert(message)
+    .select()
+    .single();
+
+  if (error) throw new Error(`Failed to create message: ${error.message}`);
+
+  // 대화 업데이트 시간 갱신
+  await supabase
+    .from('conversations')
+    .update({ updated_at: new Date().toISOString() })
+    .eq('id', message.conversation_id);
+
+  return data;
+}
+
+export async function updateMessagePendingEvents(messageId: string, pendingEvents: any): Promise<void> {
+  const { error } = await supabase
+    .from('messages')
+    .update({ pending_events: pendingEvents })
+    .eq('id', messageId);
+
+  if (error) throw new Error(`Failed to update message: ${error.message}`);
 }

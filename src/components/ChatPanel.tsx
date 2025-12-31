@@ -62,10 +62,10 @@ export const ChatPanel: React.FC<ChatPanelProps> = ({ onClose }) => {
 
     try {
       // 백엔드 API를 통해 AI와 대화
-      const apiResponse: ChatResponse = await sendChatMessage(userMessage.content, false);
+      const apiResponse: ChatResponse = await sendChatMessage(userMessage.content);
 
       // API 응답을 AgentMessage로 변환
-      const suggestedEvents: SuggestedEvent[] = (apiResponse.events || []).map((evt: any) => ({
+      const suggestedEvents: SuggestedEvent[] = (apiResponse.pending_events || []).map((evt: any) => ({
         title: evt.title || '',
         date: evt.datetime ? evt.datetime.split('T')[0] : new Date().toISOString().split('T')[0],
         start_time: evt.datetime ? evt.datetime.split('T')[1]?.slice(0, 5) : undefined,
@@ -94,7 +94,7 @@ export const ChatPanel: React.FC<ChatPanelProps> = ({ onClose }) => {
       setSliderIndexes((prev) => ({ ...prev, [response.id]: 0 }));
 
       // 이벤트가 생성되었으면 store 새로고침
-      if (apiResponse.events && apiResponse.events.length > 0) {
+      if (apiResponse.pending_events && apiResponse.pending_events.length > 0) {
         // 이벤트 목록 새로고침
         loadEvents();
       }

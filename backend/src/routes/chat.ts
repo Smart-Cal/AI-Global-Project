@@ -6,10 +6,17 @@ import {
   getGoalsByUser,
   getCategoriesByUser,
   createEvent,
-  createTodo
+  createTodo,
+  getConversationsByUser,
+  getConversationById,
+  createConversation,
+  updateConversation,
+  deleteConversation,
+  getMessagesByConversation,
+  createMessage
 } from '../services/database.js';
 import { AuthRequest, authenticate } from '../middleware/auth.js';
-import { ChatMessage, OrchestratorContext, Event, Todo, DBEvent } from '../types/index.js';
+import { ChatMessage, OrchestratorContext, Event, Todo, DBEvent, Conversation } from '../types/index.js';
 
 // DBEvent를 Event로 변환하는 헬퍼 함수
 function dbEventToEvent(dbEvent: DBEvent): Event {
@@ -66,22 +73,41 @@ function eventToDbEvent(event: Partial<Event>): Partial<DBEvent> {
 
 const router = Router();
 
-// 세션별 대화 기록 저장 (실제 환경에서는 Redis 사용 권장)
-const conversationHistory: Map<string, ChatMessage[]> = new Map();
-
 /**
  * POST /api/chat
  * AI 비서와 대화
  */
 router.post('/', authenticate, async (req: AuthRequest, res: Response) => {
   try {
-    const { message, auto_save = true } = req.body;
+    const { message, conversation_id } = req.body;
     const userId = req.userId!;
 
     if (!message) {
       res.status(400).json({ error: 'Message is required' });
       return;
     }
+
+    // 대화 세션 가져오기 또는 생성
+    let conversation: Conversation;
+    if (conversation_id) {
+      const existing = await getConversationById(conversation_id);
+      if (!existing) {
+        res.status(404).json({ error: 'Conversation not found' });
+        return;
+      }
+      conversation = existing;
+    } else {
+      // 새 대화 생성 (첫 메시지 기반 제목)
+      const title = message.length > 30 ? message.substring(0, 30) + '...' : message;
+      conversation = await createConversation(userId, title);
+    }
+
+    // 사용자 메시지 저장
+    await createMessage({
+      conversation_id: conversation.id,
+      role: 'user',
+      content: message
+    });
 
     // 사용자 데이터 로드
     const [dbEvents, todos, goals, categories] = await Promise.all([
@@ -94,8 +120,12 @@ router.post('/', authenticate, async (req: AuthRequest, res: Response) => {
     // DBEvent를 Event로 변환
     const events: Event[] = dbEvents.map(dbEventToEvent);
 
-    // 대화 기록 가져오기
-    const history = conversationHistory.get(userId) || [];
+    // 이전 대화 기록 로드 (최근 20개)
+    const dbMessages = await getMessagesByConversation(conversation.id);
+    const history: ChatMessage[] = dbMessages.slice(-20).map(m => ({
+      role: m.role,
+      content: m.content
+    }));
 
     // Orchestrator 컨텍스트 생성
     const context: OrchestratorContext = {
@@ -111,37 +141,22 @@ router.post('/', authenticate, async (req: AuthRequest, res: Response) => {
     const orchestrator = createOrchestrator(context);
     const response = await orchestrator.processMessage(message);
 
-    // 대화 기록 업데이트
-    history.push(
-      { role: 'user', content: message },
-      { role: 'assistant', content: response.message }
-    );
-    // 최근 20개만 유지
-    if (history.length > 40) {
-      history.splice(0, history.length - 40);
-    }
-    conversationHistory.set(userId, history);
+    // 일정이 있으면 pending_events로 저장 (바로 저장하지 않음)
+    const pendingEvents = response.events_to_create || [];
 
-    // 자동 저장이 활성화되어 있고, 생성할 항목이 있으면 저장
-    if (auto_save) {
-      if (response.events_to_create && response.events_to_create.length > 0) {
-        for (const event of response.events_to_create) {
-          // Event 형식을 DBEvent 형식으로 변환하여 저장
-          const dbEvent = eventToDbEvent(event as Partial<Event>);
-          await createEvent(dbEvent);
-        }
-      }
-
-      if (response.todos_to_create && response.todos_to_create.length > 0) {
-        for (const todo of response.todos_to_create) {
-          await createTodo(todo as any);
-        }
-      }
-    }
+    // AI 응답 메시지 저장 (pending_events 포함)
+    const assistantMessage = await createMessage({
+      conversation_id: conversation.id,
+      role: 'assistant',
+      content: response.message,
+      pending_events: pendingEvents.length > 0 ? pendingEvents : null
+    });
 
     res.json({
+      conversation_id: conversation.id,
+      message_id: assistantMessage.id,
       message: response.message,
-      events: response.events_to_create,
+      pending_events: pendingEvents, // 확인 대기 중인 일정들
       todos: response.todos_to_create,
       scheduled_items: response.todos_to_schedule,
       needs_user_input: response.needs_user_input,
@@ -154,34 +169,128 @@ router.post('/', authenticate, async (req: AuthRequest, res: Response) => {
 });
 
 /**
- * GET /api/chat/history
- * 대화 기록 조회
+ * POST /api/chat/confirm-events
+ * 확인된 일정들을 저장
  */
-router.get('/history', authenticate, async (req: AuthRequest, res: Response) => {
+router.post('/confirm-events', authenticate, async (req: AuthRequest, res: Response) => {
   try {
+    const { events } = req.body;
     const userId = req.userId!;
-    const history = conversationHistory.get(userId) || [];
 
-    res.json({ history });
+    if (!events || !Array.isArray(events)) {
+      res.status(400).json({ error: 'Events array is required' });
+      return;
+    }
+
+    const createdEvents: Event[] = [];
+
+    for (const event of events) {
+      const dbEvent = eventToDbEvent({ ...event, user_id: userId });
+      const created = await createEvent(dbEvent);
+      createdEvents.push(dbEventToEvent(created));
+    }
+
+    res.json({
+      message: `${createdEvents.length}개의 일정이 저장되었습니다.`,
+      events: createdEvents
+    });
   } catch (error) {
-    console.error('Get history error:', error);
-    res.status(500).json({ error: 'Failed to get chat history' });
+    console.error('Confirm events error:', error);
+    res.status(500).json({ error: 'Failed to save events' });
   }
 });
 
 /**
- * DELETE /api/chat/history
- * 대화 기록 초기화
+ * GET /api/chat/conversations
+ * 대화 목록 조회
  */
-router.delete('/history', authenticate, async (req: AuthRequest, res: Response) => {
+router.get('/conversations', authenticate, async (req: AuthRequest, res: Response) => {
   try {
     const userId = req.userId!;
-    conversationHistory.delete(userId);
+    const conversations = await getConversationsByUser(userId);
 
-    res.json({ message: 'Chat history cleared' });
+    res.json({ conversations });
   } catch (error) {
-    console.error('Clear history error:', error);
-    res.status(500).json({ error: 'Failed to clear chat history' });
+    console.error('Get conversations error:', error);
+    res.status(500).json({ error: 'Failed to get conversations' });
+  }
+});
+
+/**
+ * GET /api/chat/conversations/:id
+ * 특정 대화 조회 (메시지 포함)
+ */
+router.get('/conversations/:id', authenticate, async (req: AuthRequest, res: Response) => {
+  try {
+    const { id } = req.params;
+    const conversation = await getConversationById(id);
+
+    if (!conversation) {
+      res.status(404).json({ error: 'Conversation not found' });
+      return;
+    }
+
+    const messages = await getMessagesByConversation(id);
+
+    res.json({
+      conversation,
+      messages
+    });
+  } catch (error) {
+    console.error('Get conversation error:', error);
+    res.status(500).json({ error: 'Failed to get conversation' });
+  }
+});
+
+/**
+ * POST /api/chat/conversations
+ * 새 대화 생성
+ */
+router.post('/conversations', authenticate, async (req: AuthRequest, res: Response) => {
+  try {
+    const userId = req.userId!;
+    const { title } = req.body;
+
+    const conversation = await createConversation(userId, title);
+
+    res.json({ conversation });
+  } catch (error) {
+    console.error('Create conversation error:', error);
+    res.status(500).json({ error: 'Failed to create conversation' });
+  }
+});
+
+/**
+ * PUT /api/chat/conversations/:id
+ * 대화 제목 수정
+ */
+router.put('/conversations/:id', authenticate, async (req: AuthRequest, res: Response) => {
+  try {
+    const { id } = req.params;
+    const { title } = req.body;
+
+    const conversation = await updateConversation(id, { title });
+
+    res.json({ conversation });
+  } catch (error) {
+    console.error('Update conversation error:', error);
+    res.status(500).json({ error: 'Failed to update conversation' });
+  }
+});
+
+/**
+ * DELETE /api/chat/conversations/:id
+ * 대화 삭제
+ */
+router.delete('/conversations/:id', authenticate, async (req: AuthRequest, res: Response) => {
+  try {
+    const { id } = req.params;
+    await deleteConversation(id);
+
+    res.json({ message: 'Conversation deleted' });
+  } catch (error) {
+    console.error('Delete conversation error:', error);
+    res.status(500).json({ error: 'Failed to delete conversation' });
   }
 });
 
