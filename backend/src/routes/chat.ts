@@ -39,6 +39,31 @@ function dbEventToEvent(dbEvent: DBEvent): Event {
   };
 }
 
+// Event(datetime 형식)를 DBEvent(event_date/start_time/end_time 형식)로 변환
+function eventToDbEvent(event: Partial<Event>): Partial<DBEvent> {
+  const dbEvent: Partial<DBEvent> = {
+    user_id: event.user_id,
+    title: event.title,
+    description: event.description,
+    location: event.location,
+    is_completed: event.is_completed ?? false,
+    is_all_day: false,
+  };
+
+  if (event.datetime) {
+    const dt = new Date(event.datetime);
+    dbEvent.event_date = dt.toISOString().split('T')[0];
+    dbEvent.start_time = dt.toTimeString().slice(0, 5);
+
+    // duration으로 end_time 계산
+    const duration = event.duration || 60;
+    const endDt = new Date(dt.getTime() + duration * 60000);
+    dbEvent.end_time = endDt.toTimeString().slice(0, 5);
+  }
+
+  return dbEvent;
+}
+
 const router = Router();
 
 // 세션별 대화 기록 저장 (실제 환경에서는 Redis 사용 권장)
@@ -101,7 +126,9 @@ router.post('/', authenticate, async (req: AuthRequest, res: Response) => {
     if (auto_save) {
       if (response.events_to_create && response.events_to_create.length > 0) {
         for (const event of response.events_to_create) {
-          await createEvent(event as any);
+          // Event 형식을 DBEvent 형식으로 변환하여 저장
+          const dbEvent = eventToDbEvent(event as Partial<Event>);
+          await createEvent(dbEvent);
         }
       }
 
