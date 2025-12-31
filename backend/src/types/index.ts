@@ -2,12 +2,13 @@
 // PALM Backend Types
 // ==============================================
 
-// User types (전화번호 기반)
+// User types (구글 로그인 전용)
 export interface User {
   id: string;
-  phone: string;
+  email: string;
   name: string;
   nickname?: string;
+  avatar_url?: string;
   is_active?: boolean;
   last_login_at?: string;
   created_at?: string;
@@ -175,11 +176,8 @@ export interface ChatResponse {
   scheduled_items?: ScheduledItem[];
 }
 
-export interface AuthRequest {
-  phone: string;
-  password: string;
-  name?: string;
-  nickname?: string;
+export interface GoogleAuthRequest {
+  access_token: string;
 }
 
 export interface AuthResponse {

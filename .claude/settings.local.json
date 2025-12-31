@@ -3,7 +3,11 @@
     "allow": [
       "Bash(npm run build:*)",
       "Bash(cd:*)",
-      "Bash(dir \"C:\\Users\\kikikiju\\Desktop\\global internship\\project\\ai-calendar-app\\backend\\.env\")"
+      "Bash(dir \"C:\\Users\\kikikiju\\Desktop\\global internship\\project\\ai-calendar-app\\backend\\.env\")",
+      "Bash(netstat:*)",
+      "Bash(findstr:*)",
+      "Bash(taskkill:*)",
+      "Bash(curl:*)"
     ]
   }
 }

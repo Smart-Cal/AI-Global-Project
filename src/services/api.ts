@@ -49,41 +49,24 @@ async function apiRequest<T>(
 }
 
 // ==============================================
-// Auth API (전화번호 기반)
+// Auth API (구글 로그인 전용)
 // ==============================================
 
 export interface AuthResponse {
   user: {
     id: string;
-    phone: string;
+    email: string;
     name: string;
     nickname?: string;
+    avatar_url?: string;
     created_at?: string;
   };
   token: string;
 }
 
-export async function login(phone: string, password: string): Promise<AuthResponse> {
-  const response = await apiRequest<AuthResponse>('/auth/login', {
-    method: 'POST',
-    body: JSON.stringify({ phone, password }),
-  });
-  setAuthToken(response.token);
-  return response;
-}
-
-export async function register(
-  phone: string,
-  password: string,
-  name: string,
-  nickname?: string
-): Promise<AuthResponse> {
-  const response = await apiRequest<AuthResponse>('/auth/register', {
-    method: 'POST',
-    body: JSON.stringify({ phone, password, name, nickname }),
-  });
-  setAuthToken(response.token);
-  return response;
+export interface SupabaseConfig {
+  supabaseUrl: string;
+  supabaseAnonKey: string;
 }
 
 export async function logout(): Promise<void> {
@@ -93,6 +76,20 @@ export async function logout(): Promise<void> {
     // 로그아웃은 항상 성공으로 처리
   }
   setAuthToken(null);
+}
+
+// 구글 OAuth
+export async function getSupabaseConfig(): Promise<SupabaseConfig> {
+  return apiRequest<SupabaseConfig>('/auth/supabase-config');
+}
+
+export async function loginWithGoogle(accessToken: string): Promise<AuthResponse> {
+  const response = await apiRequest<AuthResponse>('/auth/google', {
+    method: 'POST',
+    body: JSON.stringify({ access_token: accessToken }),
+  });
+  setAuthToken(response.token);
+  return response;
 }
 
 // ==============================================

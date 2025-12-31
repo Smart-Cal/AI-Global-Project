@@ -14,6 +14,7 @@ import {
   TodoModal,
 } from './components';
 import AuthPage from './pages/AuthPage';
+import AuthCallback from './pages/AuthCallback';
 import { MenuIcon, PlusIcon, SparkleIcon } from './components/Icons';
 import type { SidebarView, CalendarView, CalendarEvent, Goal } from './types';
 
@@ -242,6 +243,7 @@ const App: React.FC = () => {
     <BrowserRouter>
       <Routes>
         <Route path="/auth" element={<AuthPage />} />
+        <Route path="/auth/callback" element={<AuthCallback />} />
         <Route
           path="/*"
           element={
