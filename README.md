@@ -1,172 +1,101 @@
-# 🗓️ AI 캘린더 MVP
+# AI Calendar App
 
-AI 기반 건강 습관 형성 플랫폼입니다. 운동, 식단, 수면 관리를 위한 맞춤형 플랜을 제공하고 일일 미션을 통해 목표 달성을 도와줍니다.
+AI 기반 스마트 일정 관리 애플리케이션
 
-## ✨ 주요 기능
+## 주요 기능
 
-- **🎯 맞춤 목표 설정** - 체중관리, 운동습관, 식단관리, 수면개선 중 선택
-- **📋 AI 플랜 생성** - PT, 영양사, 수면 코치 AI가 맞춤 플랜 제공
-- **📅 캘린더 관리** - 월간/주간 뷰로 일정 확인
-- **✅ 일일 미션** - 매일 해야 할 일을 체크하며 진행
-- **📊 주간 리뷰** - 성과 분석 및 AI 피드백
-- **👁️ 감시자 시스템** - 이탈 감지 및 자동 개입
+- **AI 일정 추가**: 자연어로 일정을 추가 (예: "내일 12시 강남역에서 점심약속")
+- **캘린더 뷰**: 월별 캘린더에서 일정 확인 및 관리
+- **카테고리 분류**: 약속, 회의, 운동, 공부, 수업, 과제, 개인, 기타
+- **일정 필터링**: 기간별(이번 주/이번 달/전체), 카테고리별 필터
+- **모바일 최적화**: 모바일 친화적 UI/UX
 
-## 🏗️ 기술 스택
+## 기술 스택
 
-- **Frontend**: Streamlit
-- **AI**: Claude API (Anthropic)
-- **Database**: Supabase (PostgreSQL)
-- **Language**: Python 3.10+
+- **Frontend**: React 18 + TypeScript + Vite
+- **상태관리**: Zustand
+- **Backend/DB**: Supabase
+- **AI**: OpenAI GPT-4o-mini
+- **라우팅**: React Router v6
 
-## 📁 프로젝트 구조
+## 프로젝트 구조
 
 ```
-ai-calendar/
-├── app/
-│   ├── main.py              # 메인 진입점
-│   ├── config.py            # 설정 관리
-│   ├── pages/               # Streamlit 멀티페이지
-│   │   ├── 1_🎯_onboarding.py
-│   │   ├── 2_📋_plan.py
-│   │   ├── 3_📅_calendar.py
-│   │   ├── 4_✅_daily.py
-│   │   └── 5_📊_review.py
-│   ├── agents/              # AI 에이전트
-│   │   ├── orchestrator.py
-│   │   ├── pt_agent.py
-│   │   ├── diet_agent.py
-│   │   ├── sleep_agent.py
-│   │   └── prompts.py
-│   ├── watcher/             # 감시자 시스템
-│   │   ├── detector.py
-│   │   ├── interventions.py
-│   │   └── tracker.py
-│   ├── database/            # 데이터베이스
-│   │   ├── connection.py
-│   │   ├── models.py
-│   │   └── queries.py
-│   ├── components/          # UI 컴포넌트
-│   │   ├── chat.py
-│   │   ├── calendar_view.py
-│   │   ├── mission_card.py
-│   │   └── progress_bar.py
-│   └── utils/               # 유틸리티
-│       ├── session.py
-│       ├── datetime_utils.py
-│       └── formatters.py
-├── data/                    # 샘플 데이터
-├── sql/                     # SQL 스키마
-├── docs/                    # 문서
-├── requirements.txt
-├── .env.example
-└── README.md
+src/
+├── components/          # UI 컴포넌트
+│   ├── AIChatModal.tsx  # AI 채팅 모달
+│   ├── EventModal.tsx   # 일정 추가/수정 모달
+│   ├── DateEventsModal.tsx
+│   ├── BottomNav.tsx    # 하단 네비게이션
+│   └── Modal.tsx        # 기본 모달
+├── pages/               # 페이지 컴포넌트
+│   ├── AuthPage.tsx     # 로그인/회원가입
+│   ├── HomePage.tsx     # 홈 (오늘/다가오는 일정)
+│   ├── CalendarPage.tsx # 캘린더 뷰
+│   └── SchedulePage.tsx # 일정 목록
+├── services/            # 외부 서비스 연동
+│   ├── supabase.ts      # Supabase 클라이언트 & API
+│   └── openai.ts        # OpenAI API
+├── store/               # Zustand 스토어
+│   ├── authStore.ts     # 인증 상태
+│   └── eventStore.ts    # 일정 상태
+├── types/               # TypeScript 타입 정의
+└── styles/              # CSS 스타일
 ```
 
-## 🚀 시작하기
-
-### 1. 환경 설정
+## 설치 및 실행
 
 ```bash
-# 프로젝트 클론
-git clone <repository-url>
-cd ai-calendar
+# 의존성 설치
+npm install
 
-# 가상환경 생성 및 활성화
-python -m venv venv
-source venv/bin/activate  # Windows: venv\Scripts\activate
+# 개발 서버 실행
+npm run dev
 
-# 패키지 설치
-pip install -r requirements.txt
+# 프로덕션 빌드
+npm run build
 ```
 
-### 2. 환경변수 설정
+## 환경 변수 설정
 
-```bash
-# .env 파일 생성
-cp .env.example .env
+`.env` 파일을 생성하고 아래 값을 설정:
+
+```env
+VITE_SUPABASE_URL=your-supabase-url
+VITE_SUPABASE_KEY=your-supabase-anon-key
+VITE_OPENAI_API_KEY=your-openai-api-key
 ```
 
-`.env` 파일을 열고 다음 값들을 설정합니다:
+## Supabase 테이블 구조
 
-```
-ANTHROPIC_API_KEY=sk-ant-your-api-key
-SUPABASE_URL=https://your-project.supabase.co
-SUPABASE_KEY=your-supabase-key
-```
+### users
+| 컬럼 | 타입 | 설명 |
+|------|------|------|
+| id | uuid | PK |
+| phone | text | 전화번호 (unique) |
+| password_hash | text | 비밀번호 해시 |
+| name | text | 이름 |
+| nickname | text | 닉네임 |
+| is_active | boolean | 활성 상태 |
+| last_login_at | timestamp | 마지막 로그인 |
+| created_at | timestamp | 생성일 |
 
-### 3. 데이터베이스 설정 (선택)
+### events
+| 컬럼 | 타입 | 설명 |
+|------|------|------|
+| id | uuid | PK |
+| user_id | uuid | FK (users.id) |
+| title | text | 일정 제목 |
+| description | text | 메모 |
+| event_date | date | 날짜 |
+| start_time | time | 시작 시간 |
+| end_time | time | 종료 시간 |
+| is_all_day | boolean | 종일 여부 |
+| category | text | 카테고리 |
+| location | text | 장소 |
+| color | text | 색상 코드 |
+| created_at | timestamp | 생성일 |
 
-Supabase 대시보드에서 `sql/schema.sql` 스크립트를 실행합니다.
+## 라이선스
 
-> **참고**: Supabase 설정 없이도 데모 모드로 앱을 사용할 수 있습니다.
-
-### 4. 앱 실행
-
-```bash
-cd app
-streamlit run main.py
-```
-
-브라우저에서 `http://localhost:8501`로 접속합니다.
-
-## 🔧 AI 에이전트 구조
-
-### Orchestrator (오케스트레이터)
-- 사용자 입력 분석 및 적절한 에이전트 라우팅
-- 여러 에이전트 응답 통합
-
-### PT Agent (운동 코치)
-- 체력 수준에 맞는 운동 플랜 생성
-- 주간 운동 루틴 제공
-
-### Diet Agent (영양 코치)
-- 목표에 맞는 식단 플랜 생성
-- 영양 조언 제공
-
-### Sleep Agent (수면 코치)
-- 수면 패턴 개선 플랜 생성
-- 취침 루틴 제안
-
-## 👁️ 감시자 시스템
-
-사용자의 이탈을 감지하고 적절히 개입합니다:
-
-1. **온보딩 정체 감지**: 3분 이상 목표 설정 미완료 시
-2. **플랜 불만족 감지**: 2회 이상 플랜 수정 요청 시
-3. **실행 이탈 감지**: 3일 연속 미션 미체크 시
-
-## 📊 데이터베이스 스키마
-
-- `users`: 사용자 정보
-- `goals`: 목표 설정
-- `plans`: AI 생성 플랜
-- `missions`: 일일 미션
-- `mission_logs`: 미션 체크 기록
-- `conversations`: 대화 기록
-- `watcher_interventions`: 감시자 개입 기록
-- `weekly_reviews`: 주간 리뷰
-
-## 🛠️ 개발 가이드
-
-### 새 에이전트 추가
-
-1. `app/agents/` 폴더에 새 에이전트 파일 생성
-2. `prompts.py`에 시스템 프롬프트 추가
-3. `orchestrator.py`에 라우팅 로직 추가
-
-### 새 페이지 추가
-
-1. `app/pages/` 폴더에 `번호_아이콘_이름.py` 형식으로 파일 생성
-2. 세션 상태 관리를 위해 `utils/session.py` 활용
-
-## 📝 라이선스
-
-MIT License
-
-## 🤝 기여하기
-
-1. Fork the repository
-2. Create your feature branch (`git checkout -b feature/amazing-feature`)
-3. Commit your changes (`git commit -m 'Add some amazing feature'`)
-4. Push to the branch (`git push origin feature/amazing-feature`)
-5. Open a Pull Request
+MIT
