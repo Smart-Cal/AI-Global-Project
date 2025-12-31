@@ -169,6 +169,47 @@ router.post('/', authenticate, async (req: AuthRequest, res: Response) => {
 });
 
 /**
+ * 카테고리 이름으로 가장 적합한 카테고리 ID 찾기
+ */
+function findCategoryId(categories: { id: string; name: string }[], categoryName?: string): string | undefined {
+  if (!categoryName || !categories.length) {
+    // 기본 카테고리 반환
+    const defaultCat = categories.find(c => c.name === '기본');
+    return defaultCat?.id;
+  }
+
+  // 정확히 매칭
+  const exactMatch = categories.find(c => c.name === categoryName);
+  if (exactMatch) return exactMatch.id;
+
+  // 부분 매칭 (카테고리 이름이 검색어를 포함하거나 검색어가 카테고리 이름을 포함)
+  const partialMatch = categories.find(c =>
+    c.name.includes(categoryName) || categoryName.includes(c.name)
+  );
+  if (partialMatch) return partialMatch.id;
+
+  // 키워드 기반 매칭
+  const categoryKeywords: { [key: string]: string[] } = {
+    '운동': ['운동', '건강', '헬스', '조깅', '요가', '체육'],
+    '업무': ['업무', '회의', '미팅', '출근', '프로젝트', '발표', '일'],
+    '공부': ['공부', '학습', '수업', '강의', '시험', '자격증', '독서'],
+    '약속': ['약속', '친구', '데이트', '모임', '파티', '만남'],
+    '개인': ['개인', '취미', '휴식', '영화', '쇼핑', '여행']
+  };
+
+  for (const category of categories) {
+    const keywords = categoryKeywords[category.name];
+    if (keywords && keywords.some(keyword => categoryName.includes(keyword))) {
+      return category.id;
+    }
+  }
+
+  // 기본 카테고리 반환
+  const defaultCat = categories.find(c => c.name === '기본');
+  return defaultCat?.id;
+}
+
+/**
  * POST /api/chat/confirm-events
  * 확인된 일정들을 저장
  */
@@ -182,10 +223,20 @@ router.post('/confirm-events', authenticate, async (req: AuthRequest, res: Respo
       return;
     }
 
+    // 사용자의 카테고리 목록 가져오기
+    const categories = await getCategoriesByUser(userId);
+
     const createdEvents: Event[] = [];
 
     for (const event of events) {
-      const dbEvent = eventToDbEvent({ ...event, user_id: userId });
+      // AI가 추천한 카테고리 이름으로 category_id 찾기
+      const categoryId = findCategoryId(categories, event.category);
+
+      const dbEvent = eventToDbEvent({
+        ...event,
+        user_id: userId,
+        category_id: categoryId
+      });
       const created = await createEvent(dbEvent);
       createdEvents.push(dbEventToEvent(created));
     }

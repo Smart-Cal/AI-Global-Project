@@ -180,40 +180,37 @@ const AssistantView: React.FC = () => {
     }
   };
 
-  // Event confirmation handlers
-  const handleConfirmEvent = () => {
+  // Event confirmation handlers - 각 일정을 바로 저장
+  const handleConfirmEvent = async () => {
     const event = editingEvent || pendingEvents[currentEventIndex];
-    setConfirmedEvents(prev => [...prev, event]);
-    goToNextEvent();
+
+    try {
+      await confirmEvents([event]);
+      loadEvents();
+      setConfirmedEvents(prev => [...prev, event]);
+
+      // 다음 일정으로 이동 또는 종료
+      setEditingEvent(null);
+      if (currentEventIndex < pendingEvents.length - 1) {
+        setCurrentEventIndex(prev => prev + 1);
+      } else {
+        setPendingEvents([]);
+        setCurrentEventIndex(0);
+        setConfirmedEvents([]);
+      }
+    } catch (error) {
+      console.error('Failed to save event:', error);
+    }
   };
 
   const handleRejectEvent = () => {
-    goToNextEvent();
-  };
-
-  const goToNextEvent = () => {
     setEditingEvent(null);
     if (currentEventIndex < pendingEvents.length - 1) {
       setCurrentEventIndex(prev => prev + 1);
     } else {
-      // All events processed
-      saveConfirmedEvents();
-    }
-  };
-
-  const saveConfirmedEvents = async () => {
-    if (confirmedEvents.length === 0) {
       setPendingEvents([]);
-      return;
-    }
-
-    try {
-      await confirmEvents(confirmedEvents);
-      loadEvents();
-      setPendingEvents([]);
+      setCurrentEventIndex(0);
       setConfirmedEvents([]);
-    } catch (error) {
-      console.error('Failed to save events:', error);
     }
   };
 

@@ -103,6 +103,7 @@ export interface PendingEvent {
   location?: string;
   description?: string;
   type: 'fixed' | 'personal' | 'goal';
+  category?: string; // AI가 추천한 카테고리 이름
 }
 
 export interface ChatResponse {

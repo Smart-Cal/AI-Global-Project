@@ -4033,7 +4033,9 @@ textarea.form-input {
   display: flex;
   flex-direction: column;
   height: 100%;
+  flex: 1;
   background: var(--bg-main);
+  min-width: 0;
 }
 
 .chat-welcome {
@@ -4387,6 +4389,7 @@ textarea.form-input {
 .assistant-view-container {
   display: flex;
   height: 100%;
+  width: 100%;
   position: relative;
 }
 

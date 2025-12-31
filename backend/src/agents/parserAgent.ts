@@ -46,6 +46,15 @@ export async function parseUserInput(
 - 미팅/약속: 오후 3시 (각 1시간)
 - 특정 요일 제외 요청 시 해당 요일 건너뛰기
 
+## 카테고리 분류 규칙 (category 필드)
+각 일정에 가장 적합한 카테고리를 지정하세요:
+- "운동/건강": 운동, 헬스, 조깅, 요가, 병원, 건강검진 등
+- "업무": 회의, 미팅, 출근, 업무, 프로젝트, 발표 등
+- "공부": 공부, 학습, 수업, 강의, 시험, 자격증 등
+- "약속": 친구 만남, 데이트, 모임, 파티 등
+- "개인": 취미, 휴식, 독서, 영화, 쇼핑 등
+- "기본": 분류가 어려운 경우
+
 ## 응답 JSON 형식
 {
   "type": "fixed" | "personal" | "goal" | "todo" | "unknown",
@@ -56,7 +65,8 @@ export async function parseUserInput(
       "duration": 60,
       "location": "장소 (선택)",
       "type": "fixed" | "personal" | "goal",
-      "description": "설명 (선택)"
+      "description": "설명 (선택)",
+      "category": "카테고리 이름"
     }
   ],
   "todos": [],
@@ -72,26 +82,26 @@ export async function parseUserInput(
 {
   "type": "personal",
   "events": [
-    {"title": "운동", "datetime": "${weekDates[0]}T19:00:00", "duration": 60, "type": "personal"},
-    {"title": "운동", "datetime": "${weekDates[1]}T19:00:00", "duration": 60, "type": "personal"},
-    {"title": "운동", "datetime": "${weekDates[2]}T19:00:00", "duration": 60, "type": "personal"},
-    {"title": "운동", "datetime": "${weekDates[3]}T19:00:00", "duration": 60, "type": "personal"},
-    {"title": "운동", "datetime": "${weekDates[5]}T19:00:00", "duration": 60, "type": "personal"}
+    {"title": "운동", "datetime": "${weekDates[0]}T19:00:00", "duration": 60, "type": "personal", "category": "운동/건강"},
+    {"title": "운동", "datetime": "${weekDates[1]}T19:00:00", "duration": 60, "type": "personal", "category": "운동/건강"},
+    {"title": "운동", "datetime": "${weekDates[2]}T19:00:00", "duration": 60, "type": "personal", "category": "운동/건강"},
+    {"title": "운동", "datetime": "${weekDates[3]}T19:00:00", "duration": 60, "type": "personal", "category": "운동/건강"},
+    {"title": "운동", "datetime": "${weekDates[5]}T19:00:00", "duration": 60, "type": "personal", "category": "운동/건강"}
   ],
   "todos": [],
   "intent": "이번 주 운동 계획 (금요일 제외)",
   "needs_clarification": false
 }
 
-입력: "유산소 운동 추천해줘"
+입력: "내일 팀 미팅"
 출력:
 {
-  "type": "personal",
+  "type": "fixed",
   "events": [
-    {"title": "유산소 운동 (달리기/자전거)", "datetime": "${weekDates[1]}T19:00:00", "duration": 45, "type": "personal", "description": "가벼운 조깅 또는 실내자전거 30-45분"}
+    {"title": "팀 미팅", "datetime": "${weekDates[1]}T15:00:00", "duration": 60, "type": "fixed", "category": "업무"}
   ],
   "todos": [],
-  "intent": "유산소 운동 일정 추천",
+  "intent": "팀 미팅 일정",
   "needs_clarification": false
 }
 

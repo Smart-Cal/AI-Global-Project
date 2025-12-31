@@ -110,6 +110,7 @@ export interface ParsedEvent {
   location?: string;
   type: 'fixed' | 'personal' | 'goal';
   description?: string;
+  category?: string; // AI가 추천한 카테고리 이름
 }
 
 export interface ParsedTodo {
