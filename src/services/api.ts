@@ -304,3 +304,99 @@ export async function applySchedule(
     body: JSON.stringify({ scheduled_items: scheduledItems }),
   });
 }
+
+// ==============================================
+// Categories API
+// ==============================================
+
+export interface Category {
+  id: string;
+  user_id: string;
+  name: string;
+  color: string;
+  is_default: boolean;
+  created_at?: string;
+}
+
+export async function getCategories(): Promise<{ categories: Category[] }> {
+  return apiRequest<{ categories: Category[] }>('/categories');
+}
+
+export async function createCategory(
+  name: string,
+  color: string
+): Promise<{ category: Category }> {
+  return apiRequest<{ category: Category }>('/categories', {
+    method: 'POST',
+    body: JSON.stringify({ name, color }),
+  });
+}
+
+export async function updateCategory(
+  id: string,
+  updates: Partial<Category>
+): Promise<{ category: Category }> {
+  return apiRequest<{ category: Category }>(`/categories/${id}`, {
+    method: 'PUT',
+    body: JSON.stringify(updates),
+  });
+}
+
+export async function deleteCategory(id: string): Promise<void> {
+  await apiRequest(`/categories/${id}`, { method: 'DELETE' });
+}
+
+// ==============================================
+// Goals API
+// ==============================================
+
+export interface Goal {
+  id: string;
+  user_id: string;
+  category_id?: string;
+  title: string;
+  description?: string;
+  target_date?: string;
+  priority: 'high' | 'medium' | 'low';
+  progress: number;
+  is_active: boolean;
+  created_at?: string;
+  updated_at?: string;
+}
+
+export async function getGoals(): Promise<{ goals: Goal[] }> {
+  return apiRequest<{ goals: Goal[] }>('/goals');
+}
+
+export async function createGoal(
+  goal: Omit<Goal, 'id' | 'user_id' | 'created_at' | 'updated_at'>
+): Promise<{ goal: Goal }> {
+  return apiRequest<{ goal: Goal }>('/goals', {
+    method: 'POST',
+    body: JSON.stringify(goal),
+  });
+}
+
+export async function updateGoal(
+  id: string,
+  updates: Partial<Goal>
+): Promise<{ goal: Goal }> {
+  return apiRequest<{ goal: Goal }>(`/goals/${id}`, {
+    method: 'PUT',
+    body: JSON.stringify(updates),
+  });
+}
+
+export async function updateGoalProgress(
+  id: string,
+  progress: number
+): Promise<{ goal: Goal }> {
+  return apiRequest<{ goal: Goal }>(`/goals/${id}/progress`, {
+    method: 'PATCH',
+    body: JSON.stringify({ progress }),
+  });
+}
+
+export async function deleteGoal(id: string): Promise<void> {
+  await apiRequest(`/goals/${id}`, { method: 'DELETE' });
+}

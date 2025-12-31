@@ -42,9 +42,10 @@ router.post('/', authenticate, async (req: AuthRequest, res: Response) => {
     const history = conversationHistory.get(userId) || [];
 
     // Orchestrator 컨텍스트 생성
+    // Note: DBEvent[] -> Event[] 변환 필요 (실제로는 헬퍼 함수 사용 권장)
     const context: OrchestratorContext = {
       user_id: userId,
-      events: events as Event[],
+      events: events as unknown as Event[],
       todos: todos as Todo[],
       goals,
       categories,

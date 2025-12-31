@@ -40,7 +40,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
   };
 
   const navItems = [
-    { id: 'dashboard' as SidebarView, icon: 'home', label: '대시보드' },
+    { id: 'dashboard' as SidebarView, icon: 'home', label: '비서' },
     { id: 'calendar' as SidebarView, icon: 'calendar', label: '캘린더' },
     { id: 'goals' as SidebarView, icon: 'target', label: '목표', badge: activeGoals.length || undefined },
     { id: 'todos' as SidebarView, icon: 'check', label: '할 일', badge: pendingTodos.length || undefined },

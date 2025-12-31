@@ -10,7 +10,7 @@ const __dirname = path.dirname(__filename);
 dotenv.config({ path: path.resolve(__dirname, '../../.env') });
 
 import { createClient, SupabaseClient } from '@supabase/supabase-js';
-import { User, Event, Todo, Goal, Category } from '../types/index.js';
+import { User, DBEvent, Todo, Goal, Category } from '../types/index.js';
 
 const supabaseUrl = process.env.SUPABASE_URL || '';
 const supabaseKey = process.env.SUPABASE_SERVICE_KEY || '';
@@ -85,7 +85,7 @@ export async function upsertGoogleUser(userData: {
 // Event Operations
 // ==============================================
 
-export async function getEventsByUser(userId: string, startDate?: string, endDate?: string): Promise<Event[]> {
+export async function getEventsByUser(userId: string, startDate?: string, endDate?: string): Promise<DBEvent[]> {
   let query = supabase
     .from('events')
     .select('*')
@@ -104,7 +104,7 @@ export async function getEventsByUser(userId: string, startDate?: string, endDat
   return data || [];
 }
 
-export async function createEvent(event: Partial<Event>): Promise<Event> {
+export async function createEvent(event: Partial<DBEvent>): Promise<DBEvent> {
   const { data, error } = await supabase
     .from('events')
     .insert(event)
@@ -115,7 +115,7 @@ export async function createEvent(event: Partial<Event>): Promise<Event> {
   return data;
 }
 
-export async function updateEvent(id: string, updates: Partial<Event>): Promise<Event> {
+export async function updateEvent(id: string, updates: Partial<DBEvent>): Promise<DBEvent> {
   const { data, error } = await supabase
     .from('events')
     .update(updates)

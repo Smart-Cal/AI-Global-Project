@@ -64,7 +64,6 @@ export const GoalModal: React.FC<GoalModalProps> = ({ isOpen, onClose, editingGo
         });
       } else {
         await addGoal({
-          user_id: user.id,
           title: title.trim(),
           description: description.trim() || undefined,
           category_id: categoryId || undefined,

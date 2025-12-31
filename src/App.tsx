@@ -4,19 +4,23 @@ import { useAuthStore } from './store/authStore';
 import {
   Sidebar,
   Calendar,
-  Dashboard,
   ChatPanel,
-  GoalsView,
-  TodosView,
   EventModal,
   EventDetailModal,
   GoalModal,
   TodoModal,
 } from './components';
+import AssistantView from './components/views/AssistantView';
+import CalendarView from './components/views/CalendarView';
+import ScheduleView from './components/views/ScheduleView';
+import GoalView from './components/views/GoalView';
 import AuthPage from './pages/AuthPage';
 import AuthCallback from './pages/AuthCallback';
 import { MenuIcon, PlusIcon, SparkleIcon } from './components/Icons';
-import type { SidebarView, CalendarView, CalendarEvent, Goal } from './types';
+import type { CalendarView as CalendarViewType, CalendarEvent, Goal } from './types';
+
+// View types (기존 SidebarView 대체)
+type AppView = 'assistant' | 'calendar' | 'schedule' | 'goal';
 
 const ProtectedRoute: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const { user, isLoading } = useAuthStore();
@@ -38,8 +42,8 @@ const ProtectedRoute: React.FC<{ children: React.ReactNode }> = ({ children }) =
 };
 
 const MainLayout: React.FC = () => {
-  const [currentView, setCurrentView] = useState<SidebarView>('dashboard');
-  const [calendarView, setCalendarView] = useState<CalendarView>('month');
+  const [currentView, setCurrentView] = useState<AppView>('assistant');
+  const [calendarView, setCalendarView] = useState<CalendarViewType>('month');
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [chatPanelOpen, setChatPanelOpen] = useState(false);
 
@@ -55,7 +59,7 @@ const MainLayout: React.FC = () => {
   const [editingGoal, setEditingGoal] = useState<Goal | null>(null);
   const [selectedDate, setSelectedDate] = useState<string | null>(null);
 
-  const handleViewChange = (view: SidebarView) => {
+  const handleViewChange = (view: AppView) => {
     setCurrentView(view);
   };
 
@@ -82,7 +86,8 @@ const MainLayout: React.FC = () => {
     setGoalModalOpen(true);
   };
 
-  const handleAddEvent = () => {
+  const handleAddEvent = (date?: string) => {
+    setSelectedDate(date || null);
     setEditingEvent(null);
     setEventModalOpen(true);
   };
@@ -102,14 +107,14 @@ const MainLayout: React.FC = () => {
 
   const getContentTitle = () => {
     switch (currentView) {
-      case 'dashboard':
-        return '대시보드';
+      case 'assistant':
+        return '비서';
       case 'calendar':
         return '캘린더';
-      case 'goals':
-        return '목표';
-      case 'todos':
-        return '할 일';
+      case 'schedule':
+        return '일정';
+      case 'goal':
+        return 'Goal';
       default:
         return '';
     }
@@ -117,39 +122,66 @@ const MainLayout: React.FC = () => {
 
   const renderContent = () => {
     switch (currentView) {
-      case 'dashboard':
-        return (
-          <Dashboard
-            onEventClick={handleEventClick}
-            onGoalClick={handleGoalClick}
-            onViewChange={(view) => setCurrentView(view)}
-            onOpenChat={handleOpenChat}
-          />
-        );
+      case 'assistant':
+        return <AssistantView />;
       case 'calendar':
         return (
-          <Calendar
+          <CalendarView
             onDateClick={handleDateClick}
             onEventClick={handleEventClick}
             selectedDate={selectedDate}
-            view={calendarView}
-            onViewChange={setCalendarView}
+            onAddEvent={handleAddEvent}
           />
         );
-      case 'goals':
-        return <GoalsView onAddGoal={handleAddGoal} />;
-      case 'todos':
-        return <TodosView onAddTodo={handleAddTodo} />;
+      case 'schedule':
+        return (
+          <ScheduleView
+            onEventClick={handleEventClick}
+            onAddEvent={handleAddEvent}
+            onAddTodo={handleAddTodo}
+          />
+        );
+      case 'goal':
+        return (
+          <GoalView
+            onGoalClick={handleGoalClick}
+            onAddGoal={handleAddGoal}
+          />
+        );
       default:
         return null;
+    }
+  };
+
+  // 사이드바용 뷰 매핑 (기존 SidebarView와 호환)
+  const sidebarViewMap: Record<string, AppView> = {
+    'dashboard': 'assistant',
+    'calendar': 'calendar',
+    'goals': 'goal',
+    'todos': 'schedule',
+  };
+
+  const handleSidebarViewChange = (view: string) => {
+    const mappedView = sidebarViewMap[view] || 'assistant';
+    setCurrentView(mappedView);
+  };
+
+  // 현재 뷰를 사이드바 뷰로 변환
+  const getSidebarView = () => {
+    switch (currentView) {
+      case 'assistant': return 'dashboard';
+      case 'calendar': return 'calendar';
+      case 'goal': return 'goals';
+      case 'schedule': return 'todos';
+      default: return 'dashboard';
     }
   };
 
   return (
     <div className="app-layout">
       <Sidebar
-        currentView={currentView}
-        onViewChange={handleViewChange}
+        currentView={getSidebarView() as any}
+        onViewChange={handleSidebarViewChange as any}
         isOpen={sidebarOpen}
         onClose={() => setSidebarOpen(false)}
         onAddGoal={handleAddGoal}
@@ -166,33 +198,35 @@ const MainLayout: React.FC = () => {
           <h1 className="content-title">{getContentTitle()}</h1>
           <div className="content-actions">
             {currentView === 'calendar' && (
-              <button className="btn btn-primary btn-sm" onClick={handleAddEvent}>
+              <button className="btn btn-primary btn-sm" onClick={() => handleAddEvent()}>
                 <PlusIcon size={14} /> 새 일정
               </button>
             )}
-            {currentView === 'goals' && (
+            {currentView === 'goal' && (
               <button className="btn btn-primary btn-sm" onClick={handleAddGoal}>
                 <PlusIcon size={14} /> 새 목표
               </button>
             )}
-            {currentView === 'todos' && (
+            {currentView === 'schedule' && (
               <button className="btn btn-primary btn-sm" onClick={handleAddTodo}>
                 <PlusIcon size={14} /> 새 할 일
               </button>
             )}
-            <button
-              className={`btn ${chatPanelOpen ? 'btn-primary' : 'btn-secondary'} btn-sm btn-ai`}
-              onClick={() => setChatPanelOpen(!chatPanelOpen)}
-            >
-              <SparkleIcon size={14} /> AI
-            </button>
+            {currentView !== 'assistant' && (
+              <button
+                className={`btn ${chatPanelOpen ? 'btn-primary' : 'btn-secondary'} btn-sm btn-ai`}
+                onClick={() => setChatPanelOpen(!chatPanelOpen)}
+              >
+                <SparkleIcon size={14} /> AI
+              </button>
+            )}
           </div>
         </header>
 
         <div className="content-body">
           <div style={{ flex: 1, overflow: 'auto' }}>{renderContent()}</div>
 
-          {chatPanelOpen && (
+          {chatPanelOpen && currentView !== 'assistant' && (
             <div className="right-panel">
               <ChatPanel onClose={() => setChatPanelOpen(false)} />
             </div>

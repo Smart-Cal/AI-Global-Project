@@ -6,8 +6,30 @@ import {
   deleteEvent
 } from '../services/database.js';
 import { AuthRequest, authenticate } from '../middleware/auth.js';
+import { DBEvent, Event } from '../types/index.js';
 
 const router = Router();
+
+// DB Event를 API Event 형식으로 변환하는 헬퍼 함수
+function dbEventToApiEvent(dbEvent: DBEvent): Event {
+  const datetime = `${dbEvent.event_date}T${dbEvent.start_time || '09:00'}:00`;
+
+  // start_time과 end_time으로 duration 계산
+  let duration = 60;
+  if (dbEvent.start_time && dbEvent.end_time) {
+    const start = new Date(`2000-01-01T${dbEvent.start_time}`);
+    const end = new Date(`2000-01-01T${dbEvent.end_time}`);
+    duration = Math.round((end.getTime() - start.getTime()) / 60000);
+    if (duration <= 0) duration = 60;
+  }
+
+  return {
+    ...dbEvent,
+    datetime,
+    duration,
+    type: 'personal'
+  };
+}
 
 /**
  * GET /api/events
@@ -18,11 +40,14 @@ router.get('/', authenticate, async (req: AuthRequest, res: Response) => {
     const userId = req.userId!;
     const { start_date, end_date } = req.query;
 
-    const events = await getEventsByUser(
+    const dbEvents = await getEventsByUser(
       userId,
       start_date as string | undefined,
       end_date as string | undefined
     );
+
+    // DB Event를 API Event 형식으로 변환
+    const events = dbEvents.map(dbEventToApiEvent);
 
     res.json({ events });
   } catch (error) {
@@ -69,19 +94,37 @@ router.post('/', authenticate, async (req: AuthRequest, res: Response) => {
       return;
     }
 
-    const event = await createEvent({
+    // datetime을 event_date와 start_time으로 변환
+    const dt = new Date(datetime);
+    const event_date = dt.toISOString().split('T')[0];
+    const start_time = dt.toTimeString().slice(0, 5);
+
+    // duration으로 end_time 계산
+    const endDt = new Date(dt.getTime() + (duration || 60) * 60000);
+    const end_time = endDt.toTimeString().slice(0, 5);
+
+    const dbEvent = await createEvent({
       user_id: userId,
       title,
-      datetime,
-      duration: duration || 60,
-      type: type || 'personal',
+      event_date,
+      start_time,
+      end_time,
+      is_all_day: false,
       location,
       description,
       category_id,
       is_completed: false
     });
 
-    res.status(201).json({ event });
+    // API 응답은 datetime 형식으로 변환하여 반환
+    const responseEvent = {
+      ...dbEvent,
+      datetime: `${dbEvent.event_date}T${dbEvent.start_time || '09:00'}:00`,
+      duration: duration || 60,
+      type: type || 'personal'
+    };
+
+    res.status(201).json({ event: responseEvent });
   } catch (error) {
     console.error('Create event error:', error);
     res.status(500).json({ error: 'Failed to create event' });

@@ -1,10 +1,11 @@
-import React from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { useEventStore } from '../store/eventStore';
 import { useGoalStore } from '../store/goalStore';
 import { useTodoStore } from '../store/todoStore';
 import { useAuthStore } from '../store/authStore';
 import { useCategoryStore } from '../store/categoryStore';
-import { AGENT_CONFIGS, DEFAULT_CATEGORY_COLOR, type CalendarEvent, type Goal } from '../types';
+import { sendChatMessage, ChatResponse } from '../services/api';
+import { DEFAULT_CATEGORY_COLOR, type CalendarEvent, type Goal, type AgentMessage, type SuggestedEvent } from '../types';
 
 interface DashboardProps {
   onEventClick: (event: CalendarEvent) => void;
@@ -17,13 +18,18 @@ export const Dashboard: React.FC<DashboardProps> = ({
   onEventClick,
   onGoalClick,
   onViewChange,
-  onOpenChat,
 }) => {
   const { user } = useAuthStore();
-  const { events, getEventsByDate } = useEventStore();
+  const { addEvent, getEventsByDate, loadEvents } = useEventStore();
   const { goals, getActiveGoals } = useGoalStore();
-  const { todos, getTodayTodos, getUpcomingTodos, getOverdueTodos, toggleComplete } = useTodoStore();
-  const { getCategoryById } = useCategoryStore();
+  const { getTodayTodos, getOverdueTodos, toggleComplete } = useTodoStore();
+  const { getCategoryById, getCategoryByName, getDefaultCategory } = useCategoryStore();
+
+  // 채팅 상태
+  const [messages, setMessages] = useState<AgentMessage[]>([]);
+  const [input, setInput] = useState('');
+  const [isLoading, setIsLoading] = useState(false);
+  const messagesEndRef = useRef<HTMLDivElement>(null);
 
   const today = new Date();
   const todayStr = today.toISOString().split('T')[0];
@@ -31,7 +37,14 @@ export const Dashboard: React.FC<DashboardProps> = ({
   const activeGoals = getActiveGoals();
   const todayTodos = getTodayTodos();
   const overdueTodos = getOverdueTodos();
-  const upcomingTodos = getUpcomingTodos(7);
+
+  const scrollToBottom = () => {
+    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+  };
+
+  useEffect(() => {
+    scrollToBottom();
+  }, [messages]);
 
   const getGreeting = () => {
     const hour = today.getHours();
@@ -42,256 +55,217 @@ export const Dashboard: React.FC<DashboardProps> = ({
 
   const formatDate = (date: Date) => {
     const weekdays = ['일', '월', '화', '수', '목', '금', '토'];
-    return `${date.getFullYear()}년 ${date.getMonth() + 1}월 ${date.getDate()}일 ${weekdays[date.getDay()]}요일`;
+    return `${date.getMonth() + 1}월 ${date.getDate()}일 ${weekdays[date.getDay()]}요일`;
   };
 
-  // 다가오는 일정 (오늘 이후 7일)
-  const getUpcomingEvents = () => {
-    const futureDate = new Date();
-    futureDate.setDate(today.getDate() + 7);
-    const futureDateStr = futureDate.toISOString().split('T')[0];
-
-    return events
-      .filter((e) => e.event_date > todayStr && e.event_date <= futureDateStr)
-      .sort((a, b) => a.event_date.localeCompare(b.event_date))
-      .slice(0, 5);
+  const findCategoryId = (categoryName?: string): string | undefined => {
+    if (!categoryName) {
+      const defaultCat = getDefaultCategory();
+      return defaultCat?.id;
+    }
+    const exactMatch = getCategoryByName(categoryName);
+    if (exactMatch) return exactMatch.id;
+    const defaultCat = getDefaultCategory();
+    return defaultCat?.id;
   };
 
-  const upcomingEvents = getUpcomingEvents();
+  // 채팅 전송
+  const handleSend = async () => {
+    if (!input.trim() || isLoading) return;
 
-  return (
-    <div className="dashboard">
-      <div className="dashboard-greeting">
-        <h1>{getGreeting()}, {user?.nickname || user?.name}님!</h1>
-        <p>{formatDate(today)}</p>
-      </div>
+    const userMessage: AgentMessage = {
+      id: crypto.randomUUID(),
+      role: 'user',
+      content: input.trim(),
+      timestamp: new Date(),
+    };
 
-      <div className="dashboard-grid">
-        {/* 오늘의 일정 */}
-        <div className="dashboard-card today-events">
-          <div className="dashboard-card-header">
-            <div className="dashboard-card-title">
-              <span>📅</span>
-              <span>오늘의 일정</span>
-            </div>
-            <span className="dashboard-card-action" onClick={() => onViewChange('calendar')}>
-              전체 보기
-            </span>
-          </div>
+    setMessages((prev) => [...prev, userMessage]);
+    setInput('');
+    setIsLoading(true);
 
-          {todayEvents.length === 0 ? (
-            <div className="empty-state" style={{ padding: '20px' }}>
-              <div className="empty-state-icon">📭</div>
-              <div className="empty-state-text">오늘 등록된 일정이 없어요</div>
-              <button className="btn btn-primary btn-sm" onClick={onOpenChat}>
-                AI에게 일정 추천받기
-              </button>
-            </div>
-          ) : (
-            <div className="event-list">
-              {todayEvents.map((event) => {
-                const category = event.category_id ? getCategoryById(event.category_id) : null;
-                const categoryColor = category?.color || DEFAULT_CATEGORY_COLOR;
-                const categoryName = category?.name || '기본';
-                return (
-                  <div
-                    key={event.id}
-                    className={`event-item ${event.is_completed ? 'completed' : ''}`}
-                    onClick={() => onEventClick(event)}
-                    style={{ opacity: event.is_completed ? 0.6 : 1 }}
-                  >
-                    <div
-                      className="event-color-bar"
-                      style={{ backgroundColor: categoryColor }}
-                    />
-                    <div className="event-time-badge">
-                      <div className="event-time">
-                        {event.is_all_day ? '종일' : event.start_time?.slice(0, 5)}
-                      </div>
-                    </div>
-                    <div className="event-content">
-                      <div className="event-title" style={{ textDecoration: event.is_completed ? 'line-through' : 'none' }}>
-                        {event.is_completed && '✓ '}{event.title}
-                      </div>
-                      <div className="event-meta">
-                        <span style={{ backgroundColor: categoryColor, color: '#fff', padding: '2px 6px', borderRadius: '4px', fontSize: '11px' }}>
-                          {categoryName}
-                        </span>
-                        {event.location && <span>📍 {event.location}</span>}
-                      </div>
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
-          )}
-        </div>
+    try {
+      const apiResponse: ChatResponse = await sendChatMessage(userMessage.content, false);
 
-        {/* 빠른 통계 */}
-        <div className="dashboard-card">
-          <div className="dashboard-card-header">
-            <div className="dashboard-card-title">
-              <span>📊</span>
-              <span>요약</span>
-            </div>
-          </div>
-          <div className="quick-stats">
-            <div className="stat-item">
-              <div className="stat-icon">📅</div>
-              <div>
-                <div className="stat-value">{todayEvents.length}</div>
-                <div className="stat-label">오늘 일정</div>
+      const suggestedEvents: SuggestedEvent[] = (apiResponse.events || []).map((evt: any) => ({
+        title: evt.title || '',
+        date: evt.datetime ? evt.datetime.split('T')[0] : new Date().toISOString().split('T')[0],
+        start_time: evt.datetime ? evt.datetime.split('T')[1]?.slice(0, 5) : undefined,
+        end_time: undefined,
+        location: evt.location,
+        category_name: '기본',
+        description: evt.description,
+        reason: '',
+        added: false,
+        rejected: false,
+      }));
+
+      const response: AgentMessage = {
+        id: crypto.randomUUID(),
+        role: 'assistant',
+        content: apiResponse.message,
+        agent_type: 'master',
+        timestamp: new Date(),
+        metadata: {
+          suggested_events: suggestedEvents.length > 0 ? suggestedEvents : undefined,
+        },
+      };
+
+      setMessages((prev) => [...prev, response]);
+
+      if (apiResponse.events && apiResponse.events.length > 0) {
+        loadEvents();
+      }
+    } catch (error) {
+      console.error('Chat error:', error);
+      setMessages((prev) => [
+        ...prev,
+        {
+          id: crypto.randomUUID(),
+          role: 'assistant',
+          content: '죄송합니다. 오류가 발생했습니다. 다시 시도해주세요.',
+          timestamp: new Date(),
+        },
+      ]);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  // 일정 추가
+  const handleAddSuggestedEvent = async (event: SuggestedEvent, messageId: string, eventIndex: number) => {
+    if (!user) return;
+
+    try {
+      const categoryId = findCategoryId(event.category_name);
+      const eventData = {
+        user_id: user.id,
+        title: event.title,
+        event_date: event.date,
+        start_time: event.start_time || undefined,
+        end_time: event.end_time || undefined,
+        location: event.location || undefined,
+        category_id: categoryId,
+        description: event.description || undefined,
+        is_all_day: !event.start_time,
+        is_completed: false,
+      };
+
+      const result = await addEvent(eventData);
+      if (result) {
+        setMessages((prev) => prev.map((msg) => {
+          if (msg.id === messageId && msg.metadata?.suggested_events) {
+            const updatedEvents = [...msg.metadata.suggested_events];
+            updatedEvents[eventIndex] = { ...updatedEvents[eventIndex], added: true };
+            return { ...msg, metadata: { ...msg.metadata, suggested_events: updatedEvents } };
+          }
+          return msg;
+        }));
+      }
+    } catch (error) {
+      console.error('Failed to add event:', error);
+    }
+  };
+
+  const handleRejectEvent = (messageId: string, eventIndex: number) => {
+    setMessages((prev) => prev.map((msg) => {
+      if (msg.id === messageId && msg.metadata?.suggested_events) {
+        const updatedEvents = [...msg.metadata.suggested_events];
+        updatedEvents[eventIndex] = { ...updatedEvents[eventIndex], rejected: true };
+        return { ...msg, metadata: { ...msg.metadata, suggested_events: updatedEvents } };
+      }
+      return msg;
+    }));
+  };
+
+  const quickPrompts = [
+    '오늘 일정 정리해줘',
+    '이번 주 운동 계획 세워줘',
+    '내일 회의 일정 잡아줘',
+    '주말 계획 추천해줘',
+  ];
+
+  const getCategoryInfo = (categoryName?: string) => {
+    if (!categoryName) {
+      const defaultCat = getDefaultCategory();
+      return { name: defaultCat?.name || '기본', color: defaultCat?.color || DEFAULT_CATEGORY_COLOR };
+    }
+    const cat = getCategoryByName(categoryName);
+    if (cat) return { name: cat.name, color: cat.color };
+    return { name: categoryName, color: DEFAULT_CATEGORY_COLOR };
+  };
+
+  // 일정 카드 렌더링
+  const renderScheduleCards = (msg: AgentMessage) => {
+    const suggestedEvents = msg.metadata?.suggested_events;
+    if (!suggestedEvents || suggestedEvents.length === 0) return null;
+
+    return (
+      <div className="suggested-events-list">
+        {suggestedEvents.map((event, idx) => {
+          const isAdded = event.added;
+          const isRejected = event.rejected;
+          const categoryInfo = getCategoryInfo(event.category_name);
+
+          return (
+            <div key={idx} className={`schedule-card compact ${isAdded ? 'added' : ''} ${isRejected ? 'rejected' : ''}`}>
+              <div className="schedule-card-header">
+                <span className="schedule-card-category" style={{ backgroundColor: categoryInfo.color }}>
+                  {categoryInfo.name}
+                </span>
+                {isAdded && <span className="schedule-card-status added">✓ 추가됨</span>}
+                {isRejected && <span className="schedule-card-status rejected">거절됨</span>}
               </div>
-            </div>
-            <div className="stat-item">
-              <div className="stat-icon">✅</div>
-              <div>
-                <div className="stat-value">{todayTodos.length + overdueTodos.length}</div>
-                <div className="stat-label">해야 할 일</div>
+              <div className="schedule-card-title">{event.title}</div>
+              <div className="schedule-card-info">
+                <span>📅 {event.date}</span>
+                {event.start_time && <span>🕐 {event.start_time}</span>}
+                {event.location && <span>📍 {event.location}</span>}
               </div>
-            </div>
-            <div className="stat-item">
-              <div className="stat-icon">🎯</div>
-              <div>
-                <div className="stat-value">{activeGoals.length}</div>
-                <div className="stat-label">진행 중인 목표</div>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        {/* 할 일 목록 */}
-        <div className="dashboard-card" style={{ gridColumn: 'span 2' }}>
-          <div className="dashboard-card-header">
-            <div className="dashboard-card-title">
-              <span>✅</span>
-              <span>오늘 할 일</span>
-              {(todayTodos.length + overdueTodos.length) > 0 && (
-                <span className="todo-count">{todayTodos.length + overdueTodos.length}</span>
+              {!isAdded && !isRejected && (
+                <div className="schedule-card-actions">
+                  <button className="btn btn-success btn-xs" onClick={() => handleAddSuggestedEvent(event, msg.id, idx)}>
+                    추가
+                  </button>
+                  <button className="btn btn-danger-outline btn-xs" onClick={() => handleRejectEvent(msg.id, idx)}>
+                    거절
+                  </button>
+                </div>
               )}
             </div>
-            <span className="dashboard-card-action" onClick={() => onViewChange('todos')}>
-              전체 보기
-            </span>
-          </div>
+          );
+        })}
+      </div>
+    );
+  };
 
-          <div className="todo-list">
-            {overdueTodos.map((todo) => (
-              <div
-                key={todo.id}
-                className={`todo-item ${todo.is_completed ? 'completed' : ''}`}
-              >
-                <div
-                  className={`todo-checkbox ${todo.is_completed ? 'checked' : ''}`}
-                  onClick={() => toggleComplete(todo.id!)}
-                />
-                <div className="todo-content">
-                  <div className="todo-title">{todo.title}</div>
-                  <div className="todo-meta">
-                    <span className={`todo-priority ${todo.priority}`} />
-                    <span style={{ color: '#E03E3E' }}>기한 초과</span>
-                    {todo.goal_id && (
-                      <span className="todo-goal-tag">
-                        {goals.find((g) => g.id === todo.goal_id)?.title}
-                      </span>
-                    )}
-                  </div>
-                </div>
-              </div>
-            ))}
-            {todayTodos.map((todo) => (
-              <div
-                key={todo.id}
-                className={`todo-item ${todo.is_completed ? 'completed' : ''}`}
-              >
-                <div
-                  className={`todo-checkbox ${todo.is_completed ? 'checked' : ''}`}
-                  onClick={() => toggleComplete(todo.id!)}
-                />
-                <div className="todo-content">
-                  <div className="todo-title">{todo.title}</div>
-                  <div className="todo-meta">
-                    <span className={`todo-priority ${todo.priority}`} />
-                    {todo.due_time && <span>{todo.due_time}</span>}
-                    {todo.goal_id && (
-                      <span className="todo-goal-tag">
-                        {goals.find((g) => g.id === todo.goal_id)?.title}
-                      </span>
-                    )}
-                  </div>
-                </div>
-              </div>
-            ))}
-            {todayTodos.length + overdueTodos.length === 0 && (
-              <div className="empty-state" style={{ padding: '20px' }}>
-                <div className="empty-state-text">오늘 할 일이 없어요</div>
-              </div>
-            )}
-          </div>
+  return (
+    <div className="dashboard-chat-layout">
+      {/* 왼쪽: 오늘 요약 사이드바 */}
+      <aside className="dashboard-sidebar">
+        <div className="dashboard-greeting-compact">
+          <h2>{getGreeting()}!</h2>
+          <p>{formatDate(today)}</p>
         </div>
 
-        {/* 내 목표 */}
-        <div className="dashboard-card">
-          <div className="dashboard-card-header">
-            <div className="dashboard-card-title">
-              <span>🎯</span>
-              <span>내 목표</span>
-            </div>
-            <span className="dashboard-card-action" onClick={() => onViewChange('goals')}>
-              전체 보기
-            </span>
+        {/* 오늘 일정 */}
+        <div className="sidebar-section">
+          <div className="sidebar-section-header">
+            <span>📅 오늘 일정</span>
+            <span className="sidebar-count">{todayEvents.length}</span>
           </div>
-
-          {activeGoals.length === 0 ? (
-            <div className="empty-state" style={{ padding: '20px' }}>
-              <div className="empty-state-text">설정된 목표가 없어요</div>
-              <button className="btn btn-primary btn-sm" onClick={() => onViewChange('goals')}>
-                목표 설정하기
-              </button>
-            </div>
+          {todayEvents.length === 0 ? (
+            <div className="sidebar-empty">일정이 없어요</div>
           ) : (
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-              {activeGoals.slice(0, 3).map((goal) => {
-                const category = goal.category_id ? getCategoryById(goal.category_id) : null;
-                const categoryColor = category?.color || DEFAULT_CATEGORY_COLOR;
-                const categoryName = category?.name || '기본';
+            <div className="sidebar-list">
+              {todayEvents.slice(0, 5).map((event) => {
+                const category = event.category_id ? getCategoryById(event.category_id) : null;
                 return (
-                  <div
-                    key={goal.id}
-                    style={{
-                      padding: '12px',
-                      background: 'var(--bg-sidebar)',
-                      borderRadius: 'var(--border-radius)',
-                      cursor: 'pointer',
-                    }}
-                    onClick={() => onGoalClick(goal)}
-                  >
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '8px' }}>
-                      <span
-                        style={{
-                          backgroundColor: categoryColor,
-                          color: '#fff',
-                          padding: '2px 8px',
-                          borderRadius: '4px',
-                          fontSize: '12px',
-                        }}
-                      >
-                        {categoryName}
-                      </span>
-                      <span style={{ fontWeight: 500 }}>{goal.title}</span>
-                    </div>
-                    <div className="goal-progress-bar">
-                      <div
-                        className="goal-progress-fill"
-                        style={{
-                          width: `${goal.progress}%`,
-                          backgroundColor: categoryColor,
-                        }}
-                      />
-                    </div>
-                    <div className="goal-progress-text">
-                      <span>{goal.progress}% 완료</span>
-                      {goal.target_date && <span>목표일: {goal.target_date}</span>}
+                  <div key={event.id} className="sidebar-item" onClick={() => onEventClick(event)}>
+                    <div className="sidebar-item-color" style={{ backgroundColor: category?.color || DEFAULT_CATEGORY_COLOR }} />
+                    <div className="sidebar-item-content">
+                      <div className="sidebar-item-time">{event.is_all_day ? '종일' : event.start_time?.slice(0, 5)}</div>
+                      <div className="sidebar-item-title">{event.title}</div>
                     </div>
                   </div>
                 );
@@ -300,66 +274,157 @@ export const Dashboard: React.FC<DashboardProps> = ({
           )}
         </div>
 
-        {/* AI 추천 */}
-        <div className="dashboard-card ai-recommendations">
-          <div className="dashboard-card-header">
-            <div className="dashboard-card-title">
-              <span>🤖</span>
-              <span>AI 추천</span>
-            </div>
-            <span className="dashboard-card-action" onClick={onOpenChat}>
-              대화하기
-            </span>
+        {/* 오늘 할 일 */}
+        <div className="sidebar-section">
+          <div className="sidebar-section-header">
+            <span>✅ 오늘 할 일</span>
+            <span className="sidebar-count">{todayTodos.length + overdueTodos.length}</span>
           </div>
+          {todayTodos.length + overdueTodos.length === 0 ? (
+            <div className="sidebar-empty">할 일이 없어요</div>
+          ) : (
+            <div className="sidebar-list">
+              {[...overdueTodos, ...todayTodos].slice(0, 5).map((todo) => (
+                <div key={todo.id} className={`sidebar-todo-item ${todo.is_completed ? 'completed' : ''}`}>
+                  <div
+                    className={`sidebar-todo-checkbox ${todo.is_completed ? 'checked' : ''}`}
+                    onClick={() => toggleComplete(todo.id!)}
+                  />
+                  <span className="sidebar-todo-title">{todo.title}</span>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
 
-          <div className="recommendation-list">
-            {activeGoals.slice(0, 3).map((goal) => {
-              const category = goal.category_id ? getCategoryById(goal.category_id) : null;
-              const agentConfig = AGENT_CONFIGS['master'];
-
-              return (
-                <div key={goal.id} className="recommendation-card">
-                  <div className="recommendation-header">
-                    <span className="recommendation-agent">{agentConfig.icon}</span>
-                    <span className="recommendation-agent-name">{agentConfig.name}</span>
-                  </div>
-                  <div className="recommendation-content">
-                    <h4>{goal.title} 달성을 위한 추천</h4>
-                    <p>
-                      {goal.target_date
-                        ? `목표일(${goal.target_date})까지 ${goal.progress}% 진행 중입니다. 일정을 추천해 드릴까요?`
-                        : '목표 달성을 위한 일정을 추천해 드릴까요?'}
-                    </p>
-                    <div className="recommendation-actions">
-                      <button className="btn btn-primary btn-sm" onClick={onOpenChat}>
-                        자세히 보기
-                      </button>
+        {/* 진행 중인 목표 */}
+        <div className="sidebar-section">
+          <div className="sidebar-section-header">
+            <span>🎯 목표</span>
+            <span className="sidebar-count">{activeGoals.length}</span>
+          </div>
+          {activeGoals.length === 0 ? (
+            <div className="sidebar-empty">목표가 없어요</div>
+          ) : (
+            <div className="sidebar-list">
+              {activeGoals.slice(0, 3).map((goal) => {
+                const category = goal.category_id ? getCategoryById(goal.category_id) : null;
+                return (
+                  <div key={goal.id} className="sidebar-goal-item" onClick={() => onGoalClick(goal)}>
+                    <div className="sidebar-goal-title">{goal.title}</div>
+                    <div className="sidebar-goal-progress">
+                      <div className="sidebar-goal-bar">
+                        <div
+                          className="sidebar-goal-fill"
+                          style={{
+                            width: `${goal.progress}%`,
+                            backgroundColor: category?.color || DEFAULT_CATEGORY_COLOR
+                          }}
+                        />
+                      </div>
+                      <span>{goal.progress}%</span>
                     </div>
                   </div>
-                </div>
-              );
-            })}
+                );
+              })}
+            </div>
+          )}
+        </div>
 
-            {activeGoals.length === 0 && (
-              <div className="recommendation-card" style={{ minWidth: '100%' }}>
-                <div className="recommendation-header">
-                  <span className="recommendation-agent">🤖</span>
-                  <span className="recommendation-agent-name">통합 매니저</span>
-                </div>
-                <div className="recommendation-content">
-                  <h4>목표를 설정해보세요!</h4>
-                  <p>목표를 설정하면 AI가 맞춤형 일정과 실천 방법을 추천해 드립니다.</p>
-                  <div className="recommendation-actions">
-                    <button className="btn btn-primary btn-sm" onClick={() => onViewChange('goals')}>
-                      목표 설정하기
+        <div className="sidebar-nav">
+          <button className="sidebar-nav-btn" onClick={() => onViewChange('calendar')}>
+            📅 캘린더
+          </button>
+          <button className="sidebar-nav-btn" onClick={() => onViewChange('todos')}>
+            ✅ 할 일
+          </button>
+          <button className="sidebar-nav-btn" onClick={() => onViewChange('goals')}>
+            🎯 목표
+          </button>
+        </div>
+      </aside>
+
+      {/* 오른쪽: 메인 채팅 영역 */}
+      <main className="dashboard-chat-main">
+        <div className="chat-container">
+          <div className="chat-messages">
+            {messages.length === 0 && (
+              <div className="chat-welcome">
+                <div className="chat-welcome-icon">🌴</div>
+                <h2>안녕하세요, {user?.nickname || user?.name}님!</h2>
+                <p>무엇을 도와드릴까요? 일정 추가, 계획 세우기, 할 일 관리 등을 도와드립니다.</p>
+                <div className="quick-prompts-grid">
+                  {quickPrompts.map((prompt, idx) => (
+                    <button key={idx} className="quick-prompt-card" onClick={() => setInput(prompt)}>
+                      {prompt}
                     </button>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {messages.map((msg) => (
+              <div key={msg.id} className={`chat-message ${msg.role}`}>
+                {msg.role === 'assistant' && (
+                  <div className="message-avatar">🌴</div>
+                )}
+                <div className="message-content">
+                  {msg.role === 'assistant' && msg.agent_type && (
+                    <div className="message-agent-name">PALM</div>
+                  )}
+                  <div className="message-bubble">
+                    {msg.content}
+                  </div>
+                  {renderScheduleCards(msg)}
+                </div>
+              </div>
+            ))}
+
+            {isLoading && (
+              <div className="chat-message assistant">
+                <div className="message-avatar">🌴</div>
+                <div className="message-content">
+                  <div className="typing-indicator">
+                    <div className="typing-dot" />
+                    <div className="typing-dot" />
+                    <div className="typing-dot" />
                   </div>
                 </div>
               </div>
             )}
+
+            <div ref={messagesEndRef} />
+          </div>
+
+          <div className="chat-input-container">
+            <div className="chat-input-box">
+              <input
+                type="text"
+                className="chat-input-field"
+                placeholder="메시지를 입력하세요... (예: 내일 3시에 팀 미팅 잡아줘)"
+                value={input}
+                onChange={(e) => setInput(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter' && !e.shiftKey) {
+                    e.preventDefault();
+                    handleSend();
+                  }
+                }}
+                disabled={isLoading}
+              />
+              <button
+                className="chat-send-button"
+                onClick={handleSend}
+                disabled={!input.trim() || isLoading}
+              >
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                  <path d="M22 2L11 13M22 2l-7 20-4-9-9-4 20-7z" />
+                </svg>
+              </button>
+            </div>
           </div>
         </div>
-      </div>
+      </main>
     </div>
   );
 };

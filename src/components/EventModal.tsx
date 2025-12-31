@@ -3,6 +3,7 @@ import { useEventStore } from '../store/eventStore';
 import { useAuthStore } from '../store/authStore';
 import { useCategoryStore } from '../store/categoryStore';
 import { type CalendarEvent, DEFAULT_CATEGORY_COLOR, CATEGORY_COLORS } from '../types';
+import TimePicker from './TimePicker';
 
 interface EventModalProps {
   isOpen: boolean;
@@ -173,21 +174,19 @@ export const EventModal: React.FC<EventModalProps> = ({
           {!isAllDay && (
             <div className="form-row">
               <div className="form-group">
-                <label className="form-label">시작 시간</label>
-                <input
-                  type="time"
-                  className="form-input"
+                <TimePicker
+                  label="시작 시간"
                   value={startTime}
-                  onChange={(e) => setStartTime(e.target.value)}
+                  onChange={setStartTime}
+                  placeholder="시작 시간 선택"
                 />
               </div>
               <div className="form-group">
-                <label className="form-label">종료 시간</label>
-                <input
-                  type="time"
-                  className="form-input"
+                <TimePicker
+                  label="종료 시간"
                   value={endTime}
-                  onChange={(e) => setEndTime(e.target.value)}
+                  onChange={setEndTime}
+                  placeholder="종료 시간 선택"
                 />
               </div>
             </div>

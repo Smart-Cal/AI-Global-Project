@@ -27,13 +27,18 @@ const today = new Date();
 
 // API Event를 CalendarEvent로 변환
 function apiEventToCalendarEvent(event: api.Event): CalendarEvent {
-  const datetime = new Date(event.datetime);
-  const eventDate = datetime.toISOString().split('T')[0];
-  const startTime = datetime.toTimeString().slice(0, 5);
+  // datetime 문자열에서 직접 날짜와 시간 추출 (타임존 문제 방지)
+  // datetime 형식: "2024-12-31T09:00:00" 또는 "2024-12-31T09:00"
+  const eventDate = event.datetime.split('T')[0];
+  const timePart = event.datetime.split('T')[1] || '09:00:00';
+  const startTime = timePart.slice(0, 5);
 
   // duration을 기반으로 end_time 계산
-  const endDatetime = new Date(datetime.getTime() + event.duration * 60000);
-  const endTime = endDatetime.toTimeString().slice(0, 5);
+  const [hours, minutes] = startTime.split(':').map(Number);
+  const totalMinutes = hours * 60 + minutes + event.duration;
+  const endHours = Math.floor(totalMinutes / 60) % 24;
+  const endMinutes = totalMinutes % 60;
+  const endTime = `${endHours.toString().padStart(2, '0')}:${endMinutes.toString().padStart(2, '0')}`;
 
   return {
     id: event.id,

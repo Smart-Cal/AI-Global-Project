@@ -4,6 +4,8 @@ import chatRoutes from './chat.js';
 import eventsRoutes from './events.js';
 import todosRoutes from './todos.js';
 import scheduleRoutes from './schedule.js';
+import categoriesRoutes from './categories.js';
+import goalsRoutes from './goals.js';
 
 const router = Router();
 
@@ -18,5 +20,7 @@ router.use('/chat', chatRoutes);
 router.use('/events', eventsRoutes);
 router.use('/todos', todosRoutes);
 router.use('/schedule', scheduleRoutes);
+router.use('/categories', categoriesRoutes);
+router.use('/goals', goalsRoutes);
 
 export default router;
