@@ -9,7 +9,35 @@ import {
   createTodo
 } from '../services/database.js';
 import { AuthRequest, authenticate } from '../middleware/auth.js';
-import { ChatMessage, OrchestratorContext, Event, Todo } from '../types/index.js';
+import { ChatMessage, OrchestratorContext, Event, Todo, DBEvent } from '../types/index.js';
+
+// DBEvent를 Event로 변환하는 헬퍼 함수
+function dbEventToEvent(dbEvent: DBEvent): Event {
+  const datetime = `${dbEvent.event_date}T${dbEvent.start_time || '09:00'}:00`;
+
+  let duration = 60;
+  if (dbEvent.start_time && dbEvent.end_time) {
+    const start = new Date(`2000-01-01T${dbEvent.start_time}`);
+    const end = new Date(`2000-01-01T${dbEvent.end_time}`);
+    duration = Math.round((end.getTime() - start.getTime()) / 60000);
+    if (duration <= 0) duration = 60;
+  }
+
+  return {
+    id: dbEvent.id,
+    user_id: dbEvent.user_id,
+    category_id: dbEvent.category_id,
+    title: dbEvent.title,
+    description: dbEvent.description,
+    datetime,
+    duration,
+    type: 'personal',
+    location: dbEvent.location,
+    is_completed: dbEvent.is_completed,
+    completed_at: dbEvent.completed_at,
+    created_at: dbEvent.created_at,
+  };
+}
 
 const router = Router();
 
@@ -31,21 +59,23 @@ router.post('/', authenticate, async (req: AuthRequest, res: Response) => {
     }
 
     // 사용자 데이터 로드
-    const [events, todos, goals, categories] = await Promise.all([
+    const [dbEvents, todos, goals, categories] = await Promise.all([
       getEventsByUser(userId),
       getTodosByUser(userId),
       getGoalsByUser(userId),
       getCategoriesByUser(userId)
     ]);
 
+    // DBEvent를 Event로 변환
+    const events: Event[] = dbEvents.map(dbEventToEvent);
+
     // 대화 기록 가져오기
     const history = conversationHistory.get(userId) || [];
 
     // Orchestrator 컨텍스트 생성
-    // Note: DBEvent[] -> Event[] 변환 필요 (실제로는 헬퍼 함수 사용 권장)
     const context: OrchestratorContext = {
       user_id: userId,
-      events: events as unknown as Event[],
+      events,
       todos: todos as Todo[],
       goals,
       categories,
