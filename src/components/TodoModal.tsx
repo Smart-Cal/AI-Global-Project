@@ -217,11 +217,11 @@ export const TodoModal: React.FC<TodoModalProps> = ({
             취소
           </button>
           <button
-            className="btn btn-primary"
+            className={`btn btn-primary ${isLoading ? 'loading' : ''}`}
             onClick={handleSubmit}
             disabled={!title.trim() || isLoading}
           >
-            {isLoading ? '저장 중...' : editingTodo ? '수정' : '추가'}
+            {editingTodo ? '수정' : '추가'}
           </button>
         </div>
       </div>

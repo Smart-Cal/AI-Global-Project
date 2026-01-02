@@ -296,11 +296,11 @@ export const EventModal: React.FC<EventModalProps> = ({
             취소
           </button>
           <button
-            className="btn btn-primary"
+            className={`btn btn-primary ${isLoading ? 'loading' : ''}`}
             onClick={handleSubmit}
             disabled={!title.trim() || !eventDate || isLoading}
           >
-            {isLoading ? '저장 중...' : isEditing ? '수정' : '추가'}
+            {isEditing ? '수정' : '추가'}
           </button>
         </div>
       </div>
