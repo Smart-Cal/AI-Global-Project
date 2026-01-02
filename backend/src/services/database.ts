@@ -991,3 +991,91 @@ export async function findGroupAvailableSlots(
 
   return slots;
 }
+
+// ==============================================
+// Life Log Operations
+// ==============================================
+
+export async function getLifeLogsByUser(userId: string, limit: number = 30): Promise<LifeLog[]> {
+  const { data, error } = await supabase
+    .from('life_logs')
+    .select('*')
+    .eq('user_id', userId)
+    .order('log_date', { ascending: false })
+    .limit(limit);
+
+  if (error) throw new Error(`Failed to get life logs: ${error.message}`);
+  return data || [];
+}
+
+export async function getLifeLogByDate(userId: string, date: string): Promise<LifeLog | null> {
+  const { data, error } = await supabase
+    .from('life_logs')
+    .select('*')
+    .eq('user_id', userId)
+    .eq('log_date', date)
+    .single();
+
+  if (error && error.code !== 'PGRST116') throw new Error(`Failed to get life log: ${error.message}`);
+  return data;
+}
+
+export async function getLifeLogById(id: string): Promise<LifeLog | null> {
+  const { data, error } = await supabase
+    .from('life_logs')
+    .select('*')
+    .eq('id', id)
+    .single();
+
+  if (error && error.code !== 'PGRST116') throw new Error(`Failed to get life log: ${error.message}`);
+  return data;
+}
+
+export async function createLifeLog(log: Partial<LifeLog>): Promise<LifeLog> {
+  const { data, error } = await supabase
+    .from('life_logs')
+    .insert(log)
+    .select()
+    .single();
+
+  if (error) throw new Error(`Failed to create life log: ${error.message}`);
+  return data;
+}
+
+export async function updateLifeLog(id: string, updates: Partial<LifeLog>): Promise<LifeLog> {
+  const { data, error } = await supabase
+    .from('life_logs')
+    .update({ ...updates, updated_at: new Date().toISOString() })
+    .eq('id', id)
+    .select()
+    .single();
+
+  if (error) throw new Error(`Failed to update life log: ${error.message}`);
+  return data;
+}
+
+export async function deleteLifeLog(id: string): Promise<void> {
+  const { error } = await supabase
+    .from('life_logs')
+    .delete()
+    .eq('id', id);
+
+  if (error) throw new Error(`Failed to delete life log: ${error.message}`);
+}
+
+export async function upsertLifeLog(log: Partial<LifeLog>): Promise<LifeLog> {
+  if (!log.user_id || !log.log_date) {
+    throw new Error('user_id and log_date are required');
+  }
+
+  // 해당 날짜의 기존 로그 확인
+  const existing = await getLifeLogByDate(log.user_id, log.log_date);
+
+  if (existing) {
+    // 기존 로그 업데이트
+    return updateLifeLog(existing.id, log);
+  } else {
+    // 새 로그 생성
+    return createLifeLog(log);
+  }
+}

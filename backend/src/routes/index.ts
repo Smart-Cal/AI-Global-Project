@@ -8,6 +8,7 @@ import categoriesRoutes from './categories.js';
 import goalsRoutes from './goals.js';
 import groupsRoutes from './groups.js';
 import briefingRoutes from './briefing.js';
+import lifelogRoutes from './lifelog.js';
 
 const router = Router();
 
@@ -26,5 +27,6 @@ router.use('/categories', categoriesRoutes);
 router.use('/goals', goalsRoutes);
 router.use('/groups', groupsRoutes);
 router.use('/briefing', briefingRoutes);
+router.use('/lifelog', lifelogRoutes);
 
 export default router;
