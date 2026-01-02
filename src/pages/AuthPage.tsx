@@ -59,19 +59,15 @@ const AuthPage: React.FC = () => {
 
         <div className="auth-features">
           <div className="auth-feature">
-            <span className="auth-feature-icon">🎯</span>
             <span>목표 기반 일정 추천</span>
           </div>
           <div className="auth-feature">
-            <span className="auth-feature-icon">🤖</span>
             <span>AI 에이전트와 대화</span>
           </div>
           <div className="auth-feature">
-            <span className="auth-feature-icon">📊</span>
             <span>스마트 할 일 관리</span>
           </div>
           <div className="auth-feature">
-            <span className="auth-feature-icon">📅</span>
             <span>자동 시간 배치</span>
           </div>
         </div>

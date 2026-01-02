@@ -111,7 +111,6 @@ const GoalView: React.FC<GoalViewProps> = ({ onGoalClick, onAddGoal }) => {
         <div className="goal-list">
           {filteredGoals.length === 0 ? (
             <div className="goal-empty">
-              <span className="goal-empty-icon">🎯</span>
               <p>목표가 없습니다</p>
               <button className="btn btn-primary" onClick={onAddGoal}>
                 첫 번째 목표 설정하기
@@ -167,7 +166,7 @@ const GoalView: React.FC<GoalViewProps> = ({ onGoalClick, onAddGoal }) => {
                   <div className="goal-card-footer">
                     {goal.target_date && (
                       <span className={`goal-card-date ${daysRemaining?.isOverdue ? 'overdue' : ''}`}>
-                        📅 {formatDate(goal.target_date)}
+                        {formatDate(goal.target_date)}
                         {daysRemaining && ` (${daysRemaining.text})`}
                       </span>
                     )}

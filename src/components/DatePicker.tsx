@@ -125,7 +125,7 @@ const DatePicker: React.FC<DatePickerProps> = ({
         className={`date-picker-input ${isOpen ? 'focused' : ''}`}
         onClick={() => setIsOpen(!isOpen)}
       >
-        <span className="date-picker-icon">📅</span>
+        <span className="date-picker-icon"></span>
         <span className={`date-picker-value ${!value ? 'placeholder' : ''}`}>
           {value ? formatDisplay() : placeholder}
         </span>

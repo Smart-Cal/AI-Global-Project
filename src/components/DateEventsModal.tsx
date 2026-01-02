@@ -35,7 +35,7 @@ export const DateEventsModal: React.FC<DateEventsModalProps> = ({
   };
 
   return (
-    <Modal isOpen={isOpen} onClose={onClose} title={`📅 ${formatDate(date)}`}>
+    <Modal isOpen={isOpen} onClose={onClose} title={`${formatDate(date)}`}>
       <div style={{ marginBottom: '16px' }}>
         <button className="btn btn-primary" onClick={onAddEvent}>
           + 새 일정 추가
@@ -73,7 +73,7 @@ export const DateEventsModal: React.FC<DateEventsModalProps> = ({
                     {event.title}
                   </div>
                   {event.location && (
-                    <div className="event-meta">📍 {event.location}</div>
+                    <div className="event-meta">{event.location}</div>
                   )}
                 </div>
               </div>

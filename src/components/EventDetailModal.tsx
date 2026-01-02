@@ -93,7 +93,6 @@ export const EventDetailModal: React.FC<EventDetailModalProps> = ({
 
           {/* 날짜/시간 */}
           <div className="event-detail-row">
-            <span className="event-detail-icon">📅</span>
             <span>
               {event.event_date}
               {event.is_all_day ? ' (종일)' : ''}
@@ -102,7 +101,6 @@ export const EventDetailModal: React.FC<EventDetailModalProps> = ({
 
           {!event.is_all_day && event.start_time && (
             <div className="event-detail-row">
-              <span className="event-detail-icon">🕐</span>
               <span>
                 {formatTime(event.start_time)}
                 {event.end_time && ` ~ ${formatTime(event.end_time)}`}
@@ -113,7 +111,6 @@ export const EventDetailModal: React.FC<EventDetailModalProps> = ({
           {/* 장소 */}
           {event.location && (
             <div className="event-detail-row">
-              <span className="event-detail-icon">📍</span>
               <span>{event.location}</span>
             </div>
           )}

@@ -330,7 +330,7 @@ const AssistantView: React.FC = () => {
       // 결과 메시지 생성
       let resultContent = '';
       if (confirmedEvents.length > 0) {
-        resultContent = `✅ ${confirmedEvents.length}개의 일정이 추가되었습니다.`;
+        resultContent = `${confirmedEvents.length}개의 일정이 추가되었습니다.`;
         if (rejectedCount > 0) {
           resultContent += ` (${rejectedCount}개 거절)`;
         }
@@ -395,7 +395,7 @@ const AssistantView: React.FC = () => {
       // 결과 메시지 생성
       let resultContent = '';
       if (confirmedTodos.length > 0) {
-        resultContent = `✅ ${confirmedTodos.length}개의 할 일이 추가되었습니다.`;
+        resultContent = `${confirmedTodos.length}개의 할 일이 추가되었습니다.`;
         if (rejectedCount > 0) {
           resultContent += ` (${rejectedCount}개 거절)`;
         }
@@ -456,7 +456,7 @@ const AssistantView: React.FC = () => {
       // 결과 메시지 생성
       let resultContent = '';
       if (confirmedGoals.length > 0) {
-        resultContent = `✅ ${confirmedGoals.length}개의 목표가 추가되었습니다.`;
+        resultContent = `${confirmedGoals.length}개의 목표가 추가되었습니다.`;
         if (rejectedCount > 0) {
           resultContent += ` (${rejectedCount}개 거절)`;
         }
@@ -618,7 +618,7 @@ const AssistantView: React.FC = () => {
               <span className="event-card-inline-category">{eventWithEdits.category}</span>
             )}
             {eventWithEdits.location && (
-              <span className="event-card-inline-location">📍 {eventWithEdits.location}</span>
+              <span className="event-card-inline-location">{eventWithEdits.location}</span>
             )}
           </div>
           {decision && (
@@ -1036,7 +1036,7 @@ const AssistantView: React.FC = () => {
         <div className="message-bubble result-message">
           {confirmedCount > 0 ? (
             <>
-              <div className="result-title">✅ {confirmedCount}개의 {typeLabel}이 추가되었습니다!</div>
+              <div className="result-title">{confirmedCount}개의 {typeLabel}이 추가되었습니다!</div>
               {type === 'event' && items && (
                 <div className="result-list">
                   {items.map((event: PendingEvent, idx: number) => (
@@ -1044,7 +1044,7 @@ const AssistantView: React.FC = () => {
                       <span className="result-item-title">{event.title}</span>
                       <span className="result-item-datetime">{formatShortDateTime(event.datetime)}</span>
                       {event.category && <span className="result-item-category">{event.category}</span>}
-                      {event.location && <span className="result-item-location">📍 {event.location}</span>}
+                      {event.location && <span className="result-item-location">{event.location}</span>}
                     </div>
                   ))}
                 </div>
@@ -1261,7 +1261,7 @@ const AssistantView: React.FC = () => {
         {selectedGoal && (
           <div className="selected-goal-bar">
             <span className="selected-goal-tag">
-              🎯 {selectedGoal.title}
+              [Goal] {selectedGoal.title}
               <button onClick={() => setSelectedGoal(null)}>×</button>
             </span>
           </div>
@@ -1276,35 +1276,35 @@ const AssistantView: React.FC = () => {
               onClick={() => setChatMode('auto')}
               title="AI가 자동으로 판단"
             >
-              🤖 자동
+              자동
             </button>
             <button
               className={`chat-mode-btn ${chatMode === 'event' ? 'active' : ''}`}
               onClick={() => setChatMode('event')}
               title="일정 추가"
             >
-              📅 일정
+              일정
             </button>
             <button
               className={`chat-mode-btn ${chatMode === 'todo' ? 'active' : ''}`}
               onClick={() => setChatMode('todo')}
               title="할 일 추가"
             >
-              ✅ TODO
+              TODO
             </button>
             <button
               className={`chat-mode-btn ${chatMode === 'goal' ? 'active' : ''}`}
               onClick={() => setChatMode('goal')}
               title="목표 설정 및 분해"
             >
-              🎯 Goal
+              Goal
             </button>
             <button
               className={`chat-mode-btn ${chatMode === 'briefing' ? 'active' : ''}`}
               onClick={() => setChatMode('briefing')}
               title="오늘 브리핑"
             >
-              📋 브리핑
+              브리핑
             </button>
           </div>
 
@@ -1357,7 +1357,6 @@ const AssistantView: React.FC = () => {
                     setShowGoalSelector(false);
                   }}
                 >
-                  <span>💬</span>
                   <span>일반 대화</span>
                 </div>
                 {activeGoals.map(goal => (
@@ -1369,7 +1368,6 @@ const AssistantView: React.FC = () => {
                       setShowGoalSelector(false);
                     }}
                   >
-                    <span>🎯</span>
                     <span>{goal.title}</span>
                   </div>
                 ))}
