@@ -6310,3 +6310,281 @@ textarea.form-input {
     display: none;
   }
 }
+
+/* ==================== Goal Decomposition ==================== */
+
+.goal-decompose-header {
+  margin-bottom: 24px;
+}
+
+.goal-decompose-header h3 {
+  font-size: 20px;
+  font-weight: 600;
+  margin-bottom: 8px;
+}
+
+.goal-decompose-header .goal-description {
+  color: var(--text-secondary);
+  font-size: 14px;
+  margin-bottom: 12px;
+}
+
+.goal-meta {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+  flex-wrap: wrap;
+}
+
+.goal-priority-badge {
+  padding: 4px 10px;
+  border-radius: 12px;
+  color: white;
+  font-size: 12px;
+  font-weight: 500;
+}
+
+.goal-target-date {
+  color: var(--text-secondary);
+  font-size: 13px;
+}
+
+.goal-progress-badge {
+  color: var(--primary);
+  font-size: 13px;
+  font-weight: 500;
+}
+
+/* 기존 연결된 Todo */
+.goal-existing-todos {
+  margin-bottom: 24px;
+  padding: 16px;
+  background: var(--bg-sidebar);
+  border-radius: var(--border-radius-lg);
+}
+
+.goal-existing-todos h4 {
+  font-size: 14px;
+  font-weight: 600;
+  margin-bottom: 12px;
+  color: var(--text-secondary);
+}
+
+.existing-todo-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.existing-todo-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 12px;
+  background: var(--bg-main);
+  border-radius: var(--border-radius);
+}
+
+.existing-todo-item.completed {
+  opacity: 0.6;
+}
+
+.existing-todo-item .todo-status {
+  width: 18px;
+  height: 18px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--text-muted);
+  font-size: 14px;
+}
+
+.existing-todo-item .todo-status.done {
+  color: var(--success);
+}
+
+.existing-todo-item .todo-title {
+  flex: 1;
+  font-size: 14px;
+}
+
+.existing-todo-item.completed .todo-title {
+  text-decoration: line-through;
+}
+
+/* 활동 유형 선택 */
+.goal-decompose-options {
+  margin-bottom: 24px;
+}
+
+.goal-decompose-options h4 {
+  font-size: 14px;
+  font-weight: 600;
+  margin-bottom: 12px;
+}
+
+.activity-type-selector {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.activity-type-btn {
+  padding: 10px 16px;
+  border: 1px solid var(--border-medium);
+  border-radius: var(--border-radius);
+  background: var(--bg-main);
+  color: var(--text-secondary);
+  font-size: 14px;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+
+.activity-type-btn:hover {
+  background: var(--bg-hover);
+  border-color: var(--primary);
+}
+
+.activity-type-btn.active {
+  background: var(--primary-light);
+  border-color: var(--primary);
+  color: var(--primary);
+  font-weight: 500;
+}
+
+/* 분해 결과 */
+.goal-decompose-result {
+  margin-top: 16px;
+}
+
+.decompose-strategy {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  padding: 16px;
+  background: linear-gradient(135deg, #e8f3fc 0%, #f0f7ff 100%);
+  border-radius: var(--border-radius-lg);
+  margin-bottom: 20px;
+}
+
+.strategy-icon {
+  font-size: 24px;
+  flex-shrink: 0;
+}
+
+.decompose-strategy p {
+  color: var(--text-primary);
+  font-size: 14px;
+  line-height: 1.6;
+}
+
+.goal-decompose-result h4 {
+  font-size: 14px;
+  font-weight: 600;
+  margin-bottom: 12px;
+}
+
+.decomposed-todo-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-bottom: 16px;
+}
+
+.decomposed-todo-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 14px 16px;
+  background: var(--bg-sidebar);
+  border: 2px solid transparent;
+  border-radius: var(--border-radius);
+  cursor: pointer;
+  transition: all 0.15s;
+}
+
+.decomposed-todo-item:hover {
+  background: var(--bg-hover);
+}
+
+.decomposed-todo-item.selected {
+  background: var(--primary-light);
+  border-color: var(--primary);
+}
+
+.todo-checkbox-wrapper {
+  flex-shrink: 0;
+}
+
+.decomposed-todo-item .todo-checkbox {
+  width: 20px;
+  height: 20px;
+  border: 2px solid var(--border-medium);
+  border-radius: 4px;
+  transition: all 0.15s;
+}
+
+.decomposed-todo-item.selected .todo-checkbox {
+  border-color: var(--primary);
+  background: var(--primary);
+}
+
+.decomposed-todo-item.selected .todo-checkbox::after {
+  content: '✓';
+  color: white;
+  font-size: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  height: 100%;
+}
+
+.decomposed-todo-item .todo-content {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.decomposed-todo-item .todo-order {
+  color: var(--text-muted);
+  font-weight: 600;
+  font-size: 13px;
+}
+
+.decomposed-todo-item .todo-title {
+  color: var(--text-primary);
+  font-size: 14px;
+}
+
+.decomposed-todo-item .todo-duration {
+  color: var(--text-muted);
+  font-size: 13px;
+  flex-shrink: 0;
+}
+
+.decompose-summary {
+  display: flex;
+  justify-content: space-between;
+  padding: 12px 16px;
+  background: var(--bg-sidebar);
+  border-radius: var(--border-radius);
+  font-size: 13px;
+  color: var(--text-secondary);
+}
+
+/* Goal 카드 내 Todo 표시 */
+.goal-card-todos {
+  margin-top: 12px;
+  padding-top: 12px;
+  border-top: 1px solid var(--border-light);
+}
+
+.goal-card-todos .todo-count {
+  font-size: 12px;
+  color: var(--text-muted);
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
