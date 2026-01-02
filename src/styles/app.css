@@ -6588,3 +6588,194 @@ textarea.form-input {
   align-items: center;
   gap: 4px;
 }
+
+/* ==================== Chronotype Settings ==================== */
+
+.chronotype-intro {
+  padding: 16px;
+  background: linear-gradient(135deg, #e8f3fc 0%, #f0f7ff 100%);
+  border-radius: var(--border-radius-lg);
+  margin-bottom: 24px;
+}
+
+.chronotype-intro p {
+  color: var(--text-primary);
+  font-size: 14px;
+  line-height: 1.6;
+  margin: 0;
+}
+
+/* Chronotype 선택 */
+.chronotype-selector {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  margin-bottom: 24px;
+}
+
+.chronotype-option {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: 16px 20px;
+  background: var(--bg-sidebar);
+  border: 2px solid transparent;
+  border-radius: var(--border-radius-lg);
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.chronotype-option:hover {
+  background: var(--bg-hover);
+  border-color: var(--border-medium);
+}
+
+.chronotype-option.selected {
+  background: var(--primary-light);
+  border-color: var(--primary);
+}
+
+.chronotype-icon {
+  font-size: 32px;
+  flex-shrink: 0;
+}
+
+.chronotype-content {
+  flex: 1;
+}
+
+.chronotype-content h4 {
+  font-size: 15px;
+  font-weight: 600;
+  margin-bottom: 4px;
+  color: var(--text-primary);
+}
+
+.chronotype-content p {
+  font-size: 13px;
+  color: var(--text-secondary);
+  margin: 0;
+}
+
+.chronotype-check {
+  width: 24px;
+  height: 24px;
+  flex-shrink: 0;
+}
+
+/* 추천 시간대 정보 */
+.chronotype-hours-info {
+  margin-bottom: 24px;
+}
+
+.chronotype-hours-info h4 {
+  font-size: 14px;
+  font-weight: 600;
+  margin-bottom: 12px;
+  color: var(--text-primary);
+}
+
+.hours-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 12px;
+}
+
+.hours-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 14px;
+  background: var(--bg-sidebar);
+  border-radius: var(--border-radius);
+}
+
+.hours-icon {
+  font-size: 20px;
+  flex-shrink: 0;
+}
+
+.hours-content {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.hours-label {
+  font-size: 12px;
+  color: var(--text-muted);
+}
+
+.hours-value {
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--text-primary);
+}
+
+/* 기상/취침 시간 설정 */
+.chronotype-times {
+  margin-bottom: 24px;
+}
+
+.chronotype-times h4 {
+  font-size: 14px;
+  font-weight: 600;
+  margin-bottom: 12px;
+  color: var(--text-primary);
+}
+
+.times-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+}
+
+.time-field {
+  display: flex;
+  flex-direction: column;
+}
+
+/* 작업 설정 */
+.chronotype-work-settings {
+  margin-bottom: 16px;
+}
+
+.chronotype-work-settings h4 {
+  font-size: 14px;
+  font-weight: 600;
+  margin-bottom: 12px;
+  color: var(--text-primary);
+}
+
+.work-settings-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+}
+
+.setting-item {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.setting-item label {
+  font-size: 13px;
+  color: var(--text-secondary);
+}
+
+.setting-item select.form-input {
+  padding: 10px 12px;
+  font-size: 14px;
+}
+
+@media (max-width: 600px) {
+  .hours-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .times-row,
+  .work-settings-grid {
+    grid-template-columns: 1fr;
+  }
+}
