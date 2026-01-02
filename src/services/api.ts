@@ -96,31 +96,88 @@ export async function loginWithGoogle(accessToken: string): Promise<AuthResponse
 // Chat API
 // ==============================================
 
+export interface PendingEvent {
+  title: string;
+  datetime: string;
+  duration: number;
+  location?: string;
+  description?: string;
+  type: 'fixed' | 'personal' | 'goal';
+  category?: string; // AI가 추천한 카테고리 이름
+}
+
 export interface ChatResponse {
+  conversation_id: string;
+  message_id: string;
   message: string;
-  events?: any[];
+  pending_events?: PendingEvent[];
   todos?: any[];
   scheduled_items?: any[];
   needs_user_input?: boolean;
   suggestions?: string[];
 }
 
+export interface Conversation {
+  id: string;
+  user_id: string;
+  title?: string;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface Message {
+  id: string;
+  conversation_id: string;
+  role: 'user' | 'assistant' | 'system';
+  content: string;
+  pending_events?: PendingEvent[];
+  created_at: string;
+}
+
 export async function sendChatMessage(
   message: string,
-  autoSave: boolean = false
+  conversationId?: string
 ): Promise<ChatResponse> {
   return apiRequest<ChatResponse>('/chat', {
     method: 'POST',
-    body: JSON.stringify({ message, auto_save: autoSave }),
+    body: JSON.stringify({ message, conversation_id: conversationId }),
   });
 }
 
-export async function getChatHistory(): Promise<{ history: any[] }> {
-  return apiRequest<{ history: any[] }>('/chat/history');
+export async function confirmEvents(events: PendingEvent[]): Promise<{ message: string; events: Event[] }> {
+  return apiRequest('/chat/confirm-events', {
+    method: 'POST',
+    body: JSON.stringify({ events }),
+  });
 }
 
-export async function clearChatHistory(): Promise<void> {
-  await apiRequest('/chat/history', { method: 'DELETE' });
+export async function saveResultMessage(
+  conversationId: string,
+  content: string
+): Promise<{ message_id: string }> {
+  return apiRequest('/chat/save-result', {
+    method: 'POST',
+    body: JSON.stringify({ conversation_id: conversationId, content }),
+  });
+}
+
+export async function getConversations(): Promise<{ conversations: Conversation[] }> {
+  return apiRequest<{ conversations: Conversation[] }>('/chat/conversations');
+}
+
+export async function getConversation(id: string): Promise<{ conversation: Conversation; messages: Message[] }> {
+  return apiRequest<{ conversation: Conversation; messages: Message[] }>(`/chat/conversations/${id}`);
+}
+
+export async function createConversation(title?: string): Promise<{ conversation: Conversation }> {
+  return apiRequest<{ conversation: Conversation }>('/chat/conversations', {
+    method: 'POST',
+    body: JSON.stringify({ title }),
+  });
+}
+
+export async function deleteConversation(id: string): Promise<void> {
+  await apiRequest(`/chat/conversations/${id}`, { method: 'DELETE' });
 }
 
 // ==============================================

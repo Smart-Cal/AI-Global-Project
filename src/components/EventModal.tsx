@@ -4,6 +4,7 @@ import { useAuthStore } from '../store/authStore';
 import { useCategoryStore } from '../store/categoryStore';
 import { type CalendarEvent, DEFAULT_CATEGORY_COLOR, CATEGORY_COLORS } from '../types';
 import TimePicker from './TimePicker';
+import DatePicker from './DatePicker';
 
 interface EventModalProps {
   isOpen: boolean;
@@ -144,12 +145,11 @@ export const EventModal: React.FC<EventModalProps> = ({
           </div>
 
           <div className="form-group">
-            <label className="form-label">날짜 *</label>
-            <input
-              type="date"
-              className="form-input"
+            <DatePicker
+              label="날짜 *"
               value={eventDate}
-              onChange={(e) => setEventDate(e.target.value)}
+              onChange={setEventDate}
+              placeholder="날짜 선택"
             />
           </div>
 

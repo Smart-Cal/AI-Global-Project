@@ -165,15 +165,31 @@ export const useEventStore = create<EventState>((set, get) => ({
     const event = get().events.find((e) => e.id === id);
     if (!event) return;
 
+    const newIsCompleted = !event.is_completed;
+
+    // 낙관적 업데이트: API 호출 전에 먼저 UI 업데이트
+    set((s) => ({
+      events: s.events.map((e) =>
+        e.id === id ? { ...e, is_completed: newIsCompleted } : e
+      ),
+    }));
+
     try {
-      const response = await api.completeEvent(id, !event.is_completed);
+      const response = await api.completeEvent(id, newIsCompleted);
       const updated = apiEventToCalendarEvent(response.event);
 
+      // API 응답으로 정확한 데이터로 동기화
       set((s) => ({
         events: s.events.map((e) => (e.id === id ? updated : e)),
       }));
     } catch (error) {
       console.error('Error in toggleComplete store:', error);
+      // 에러 발생 시 롤백
+      set((s) => ({
+        events: s.events.map((e) =>
+          e.id === id ? { ...e, is_completed: !newIsCompleted } : e
+        ),
+      }));
     }
   },
 

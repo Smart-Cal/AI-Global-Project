@@ -53,9 +53,9 @@ const AssistantTab: React.FC = () => {
     setIsLoading(true);
 
     try {
-      const apiResponse: ChatResponse = await sendChatMessage(messageContent, true);
+      const apiResponse: ChatResponse = await sendChatMessage(messageContent);
 
-      const suggestedEvents: SuggestedEvent[] = (apiResponse.events || []).map((evt: any) => ({
+      const suggestedEvents: SuggestedEvent[] = (apiResponse.pending_events || []).map((evt: any) => ({
         title: evt.title || '',
         date: evt.datetime ? evt.datetime.split('T')[0] : new Date().toISOString().split('T')[0],
         start_time: evt.datetime ? evt.datetime.split('T')[1]?.slice(0, 5) : undefined,
@@ -81,7 +81,7 @@ const AssistantTab: React.FC = () => {
 
       setMessages((prev) => [...prev, response]);
 
-      if (apiResponse.events && apiResponse.events.length > 0) {
+      if (apiResponse.pending_events && apiResponse.pending_events.length > 0) {
         loadEvents();
       }
     } catch (error) {

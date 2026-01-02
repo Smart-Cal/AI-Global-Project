@@ -4,7 +4,6 @@ import { useAuthStore } from './store/authStore';
 import {
   Sidebar,
   Calendar,
-  ChatPanel,
   EventModal,
   EventDetailModal,
   GoalModal,
@@ -16,7 +15,7 @@ import ScheduleView from './components/views/ScheduleView';
 import GoalView from './components/views/GoalView';
 import AuthPage from './pages/AuthPage';
 import AuthCallback from './pages/AuthCallback';
-import { MenuIcon, PlusIcon, SparkleIcon } from './components/Icons';
+import { MenuIcon, PlusIcon } from './components/Icons';
 import type { CalendarView as CalendarViewType, CalendarEvent, Goal } from './types';
 
 // View types (기존 SidebarView 대체)
@@ -45,7 +44,6 @@ const MainLayout: React.FC = () => {
   const [currentView, setCurrentView] = useState<AppView>('assistant');
   const [calendarView, setCalendarView] = useState<CalendarViewType>('month');
   const [sidebarOpen, setSidebarOpen] = useState(false);
-  const [chatPanelOpen, setChatPanelOpen] = useState(false);
 
   // Modal states
   const [eventModalOpen, setEventModalOpen] = useState(false);
@@ -101,9 +99,6 @@ const MainLayout: React.FC = () => {
     setTodoModalOpen(true);
   };
 
-  const handleOpenChat = () => {
-    setChatPanelOpen(true);
-  };
 
   const getContentTitle = () => {
     switch (currentView) {
@@ -212,25 +207,11 @@ const MainLayout: React.FC = () => {
                 <PlusIcon size={14} /> 새 할 일
               </button>
             )}
-            {currentView !== 'assistant' && (
-              <button
-                className={`btn ${chatPanelOpen ? 'btn-primary' : 'btn-secondary'} btn-sm btn-ai`}
-                onClick={() => setChatPanelOpen(!chatPanelOpen)}
-              >
-                <SparkleIcon size={14} /> AI
-              </button>
-            )}
           </div>
         </header>
 
         <div className="content-body">
           <div style={{ flex: 1, overflow: 'auto' }}>{renderContent()}</div>
-
-          {chatPanelOpen && currentView !== 'assistant' && (
-            <div className="right-panel">
-              <ChatPanel onClose={() => setChatPanelOpen(false)} />
-            </div>
-          )}
         </div>
       </main>
 

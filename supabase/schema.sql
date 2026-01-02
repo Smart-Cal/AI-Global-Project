@@ -1,9 +1,10 @@
 -- =============================================
 -- PALM (Personal AI Life Manager) - Database Schema
--- v2.0 - 구글 로그인 전용
+-- v2.1 - Complete Schema
 -- =============================================
 
 -- 기존 테이블 삭제 (순서 중요: 외래키 의존성)
+DROP TABLE IF EXISTS messages CASCADE;
 DROP TABLE IF EXISTS conversations CASCADE;
 DROP TABLE IF EXISTS todos CASCADE;
 DROP TABLE IF EXISTS events CASCADE;
@@ -142,21 +143,42 @@ CREATE POLICY "Users can manage todos" ON todos
   FOR ALL USING (true);
 
 -- =============================================
--- 6. Conversations 테이블 (AI 대화 기록)
+-- 6. Conversations 테이블 (AI 대화 세션)
 -- =============================================
 CREATE TABLE conversations (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
-  messages JSONB DEFAULT '[]',
+  title TEXT,
   created_at TIMESTAMPTZ DEFAULT NOW(),
   updated_at TIMESTAMPTZ DEFAULT NOW()
 );
 
 CREATE INDEX idx_conversations_user_id ON conversations(user_id);
+CREATE INDEX idx_conversations_updated_at ON conversations(updated_at DESC);
 
 ALTER TABLE conversations ENABLE ROW LEVEL SECURITY;
 
 CREATE POLICY "Users can manage conversations" ON conversations
+  FOR ALL USING (true);
+
+-- =============================================
+-- 7. Messages 테이블 (대화 메시지)
+-- =============================================
+CREATE TABLE messages (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  conversation_id UUID NOT NULL REFERENCES conversations(id) ON DELETE CASCADE,
+  role TEXT NOT NULL CHECK (role IN ('user', 'assistant', 'system')),
+  content TEXT NOT NULL,
+  pending_events JSONB,
+  created_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+CREATE INDEX idx_messages_conversation_id ON messages(conversation_id);
+CREATE INDEX idx_messages_created_at ON messages(created_at);
+
+ALTER TABLE messages ENABLE ROW LEVEL SECURITY;
+
+CREATE POLICY "Users can manage messages" ON messages
   FOR ALL USING (true);
 
 -- =============================================

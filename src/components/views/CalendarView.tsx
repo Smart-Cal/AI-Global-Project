@@ -24,18 +24,23 @@ const CalendarView: React.FC<CalendarViewProps> = ({
   const [viewMode, setViewMode] = useState<ViewMode>('month');
   const [currentDate, setCurrentDate] = useState(new Date());
   const [selectedWeekStart, setSelectedWeekStart] = useState<Date | null>(null);
+  // 선택된 카테고리 ID 목록 (체크된 것만 보임)
   const [categoryFilters, setCategoryFilters] = useState<Set<string>>(new Set());
+  const [filtersInitialized, setFiltersInitialized] = useState(false);
+  const [isSidebarOpen, setIsSidebarOpen] = useState(true);
 
   useEffect(() => {
     loadEvents();
     fetchCategories();
   }, []);
 
+  // 카테고리가 로드되면 모든 카테고리를 기본 선택
   useEffect(() => {
-    if (categories.length > 0 && categoryFilters.size === 0) {
+    if (categories.length > 0 && !filtersInitialized) {
       setCategoryFilters(new Set(categories.map(c => c.id)));
+      setFiltersInitialized(true);
     }
-  }, [categories]);
+  }, [categories, filtersInitialized]);
 
   const getMonthDays = () => {
     const year = currentDate.getFullYear();
@@ -75,11 +80,23 @@ const CalendarView: React.FC<CalendarViewProps> = ({
     return date.toISOString().split('T')[0];
   };
 
+  // 기본 카테고리 ID 가져오기
+  const getDefaultCategoryId = () => {
+    const defaultCat = categories.find(c => c.name === '기본');
+    return defaultCat?.id;
+  };
+
   const getEventsForDate = (dateStr: string) => {
     return events.filter(e => {
       const matchesDate = e.event_date === dateStr;
-      // 카테고리 필터가 비어있으면 모든 일정 표시, 아니면 필터에 포함된 카테고리만 표시
-      const matchesCategory = categoryFilters.size === 0 || !e.category_id || categoryFilters.has(e.category_id);
+      // 카테고리 필터 체크:
+      // - 필터가 초기화되지 않았으면 모두 표시
+      // - 카테고리가 없는 일정은 "기본" 카테고리로 취급
+      // - 카테고리가 있으면 필터에 포함된 경우만 표시
+      if (!filtersInitialized) return matchesDate;
+
+      const categoryId = e.category_id || getDefaultCategoryId();
+      const matchesCategory = categoryId ? categoryFilters.has(categoryId) : true;
       return matchesDate && matchesCategory;
     });
   };
@@ -290,8 +307,9 @@ const CalendarView: React.FC<CalendarViewProps> = ({
   };
 
   return (
-    <div className="calendar-view">
-      <aside className="calendar-sidebar">
+    <div className="calendar-view-container">
+      {/* Category Sidebar */}
+      <div className={`calendar-sidebar ${isSidebarOpen ? 'open' : 'closed'}`}>
         <div className="calendar-sidebar-header">
           <h3>My calendars</h3>
         </div>
@@ -308,7 +326,15 @@ const CalendarView: React.FC<CalendarViewProps> = ({
             </label>
           ))}
         </div>
-      </aside>
+      </div>
+
+      {/* Toggle sidebar button */}
+      <button
+        className="toggle-sidebar-btn calendar-toggle"
+        onClick={() => setIsSidebarOpen(!isSidebarOpen)}
+      >
+        {isSidebarOpen ? '◀' : '▶'}
+      </button>
 
       <div className="calendar-main">
         {viewMode === 'month' && renderMonthView()}

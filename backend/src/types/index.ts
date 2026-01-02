@@ -110,6 +110,7 @@ export interface ParsedEvent {
   location?: string;
   type: 'fixed' | 'personal' | 'goal';
   description?: string;
+  category?: string; // AI가 추천한 카테고리 이름
 }
 
 export interface ParsedTodo {
@@ -153,8 +154,30 @@ export interface PlanResult {
 
 // Chat Message
 export interface ChatMessage {
+  id?: string;
   role: 'user' | 'assistant' | 'system';
   content: string;
+  created_at?: string;
+  pending_events?: Partial<Event>[]; // 확인 대기 중인 일정들
+}
+
+// Conversation (대화 세션)
+export interface Conversation {
+  id: string;
+  user_id: string;
+  title?: string; // 첫 번째 메시지 기반 자동 생성
+  created_at: string;
+  updated_at: string;
+}
+
+// DB Message (실제 DB 저장용)
+export interface DBMessage {
+  id: string;
+  conversation_id: string;
+  role: 'user' | 'assistant' | 'system';
+  content: string;
+  pending_events?: any; // JSON으로 저장
+  created_at: string;
 }
 
 // Orchestrator Context

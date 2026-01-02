@@ -205,11 +205,13 @@ router.patch('/:id/complete', authenticate, async (req: AuthRequest, res: Respon
     const { id } = req.params;
     const { is_completed } = req.body;
 
-    const event = await updateEvent(id, {
+    const dbEvent = await updateEvent(id, {
       is_completed: is_completed !== false,
       completed_at: is_completed !== false ? new Date().toISOString() : undefined
     });
 
+    // API 응답은 Event 형식으로 변환
+    const event = dbEventToApiEvent(dbEvent as unknown as DBEvent);
     res.json({ event });
   } catch (error) {
     console.error('Complete event error:', error);
