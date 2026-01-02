@@ -102,14 +102,19 @@ router.post('/', authenticate, async (req: AuthRequest, res: Response) => {
       return;
     }
 
-    // datetime을 event_date와 start_time으로 변환
-    const dt = new Date(datetime);
-    const event_date = dt.toISOString().split('T')[0];
-    const start_time = dt.toTimeString().slice(0, 5);
+    // datetime을 event_date와 start_time으로 변환 (타임존 문제 방지)
+    // 형식: "YYYY-MM-DDTHH:mm:ss" 또는 "YYYY-MM-DDTHH:mm"
+    const [datePart, timePart] = datetime.split('T');
+    const event_date = datePart;
+    const start_time = timePart ? timePart.slice(0, 5) : '09:00';
 
     // duration으로 end_time 계산
-    const endDt = new Date(dt.getTime() + (duration || 60) * 60000);
-    const end_time = endDt.toTimeString().slice(0, 5);
+    const eventDuration = duration || 60;
+    const [hours, minutes] = start_time.split(':').map(Number);
+    const totalMinutes = hours * 60 + minutes + eventDuration;
+    const endHours = Math.floor(totalMinutes / 60) % 24;
+    const endMinutes = totalMinutes % 60;
+    const end_time = `${endHours.toString().padStart(2, '0')}:${endMinutes.toString().padStart(2, '0')}`;
 
     const dbEvent = await createEvent({
       user_id: userId,
@@ -158,14 +163,18 @@ router.put('/:id', authenticate, async (req: AuthRequest, res: Response) => {
     if (is_completed !== undefined) dbUpdates.is_completed = is_completed;
 
     if (datetime) {
-      const dt = new Date(datetime);
-      dbUpdates.event_date = dt.toISOString().split('T')[0];
-      dbUpdates.start_time = dt.toTimeString().slice(0, 5);
+      // datetime 문자열에서 직접 날짜와 시간 추출 (타임존 문제 방지)
+      const [datePart, timePart] = datetime.split('T');
+      dbUpdates.event_date = datePart;
+      dbUpdates.start_time = timePart ? timePart.slice(0, 5) : '09:00';
 
       // duration으로 end_time 계산
       if (duration) {
-        const endDt = new Date(dt.getTime() + duration * 60000);
-        dbUpdates.end_time = endDt.toTimeString().slice(0, 5);
+        const [hours, minutes] = (dbUpdates.start_time).split(':').map(Number);
+        const totalMinutes = hours * 60 + minutes + duration;
+        const endHours = Math.floor(totalMinutes / 60) % 24;
+        const endMinutes = totalMinutes % 60;
+        dbUpdates.end_time = `${endHours.toString().padStart(2, '0')}:${endMinutes.toString().padStart(2, '0')}`;
       }
     }
 

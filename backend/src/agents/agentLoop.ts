@@ -193,11 +193,41 @@ export class AgentLoop {
         };
       }
 
-      // 목표 분해 응답인 경우
-      if (parsed.decomposed_todos && parsed.decomposed_todos.length > 0) {
+      // Goal 생성 요청인 경우 (goal 객체 또는 goals 배열이 있는 경우)
+      if (parsed.goal || (parsed.goals && parsed.goals.length > 0)) {
+        const goals = parsed.goals || [parsed.goal];
+        const goalsToCreate = goals.map((g: any) => ({
+          title: g.title,
+          description: g.description || null,
+          target_date: g.target_date || null,
+          priority: g.priority || 'medium',
+          category: g.category || null,
+          decomposed_todos: g.decomposed_todos || parsed.decomposed_todos || []
+        }));
+
         return {
-          message: parsed.message || '목표를 세부 작업으로 분해했습니다.',
-          todos_to_create: parsed.decomposed_todos,
+          message: parsed.message || `${goalsToCreate.length}개의 목표를 생성합니다.`,
+          goals_to_create: goalsToCreate,
+          suggestions: parsed.suggestions
+        };
+      }
+
+      // TODO 생성 요청인 경우 (decomposed_todos 또는 todos 배열)
+      if ((parsed.decomposed_todos && parsed.decomposed_todos.length > 0) ||
+          (parsed.todos && parsed.todos.length > 0)) {
+        const todos = parsed.todos || parsed.decomposed_todos;
+        const todosToCreate = todos.map((t: any, idx: number) => ({
+          title: t.title,
+          duration: t.duration || 60,
+          order: t.order || idx + 1,
+          priority: t.priority || 'medium',
+          deadline: t.deadline || null,
+          description: t.description || null
+        }));
+
+        return {
+          message: parsed.message || `${todosToCreate.length}개의 할 일을 생성합니다.`,
+          todos_to_create: todosToCreate,
           suggestions: parsed.suggestions
         };
       }
@@ -291,6 +321,11 @@ export class AgentLoop {
 
     return `당신은 PALM(Personal AI Life Manager) - 사용자의 일정과 목표를 관리하는 AI 비서입니다.
 
+## 핵심 원칙 (매우 중요!)
+1. **필수 정보가 부족하면 반드시 질문하세요** - 임의로 값을 채우지 마세요
+2. **사용자가 "추천해줘", "알아서 해줘", "적당히" 라고 할 때만 AI가 값을 설정**
+3. **질문할 때는 한 번에 필요한 정보를 모두 물어보세요**
+
 ## 현재 모드: ${this.getModeLabel(mode)}
 ${modeInstructions}
 
@@ -304,7 +339,8 @@ ${modeInstructions}
 미완료 할 일: ${incompleteTodos.length}개
 사용 가능한 카테고리: ${this.context.categories.map(c => c.name).join(', ')}
 
-## 기본값
+## 기본값 사용 조건
+기본값은 사용자가 명시적으로 "알아서", "추천해줘", "적당히" 등을 말했을 때만 사용하세요.
 - 시간: Chronotype에 따라 다름 (아침형: 오전 9시, 저녁형: 오후 4시, 중립: 오후 3시)
 - 소요 시간: 1시간 (60분)
 - 장소: null
@@ -331,11 +367,31 @@ ${modeInstructions}
       "category": "카테고리 이름"
     }
   ],
-  "decomposed_todos": [
+  "todos": [
     {
-      "title": "세부 작업 제목",
+      "title": "할 일 제목",
       "duration": 60,
-      "order": 1
+      "order": 1,
+      "priority": "high" | "medium" | "low",
+      "deadline": "YYYY-MM-DD (선택)",
+      "description": "설명 (선택)"
+    }
+  ],
+  "goals": [
+    {
+      "title": "목표 제목",
+      "description": "목표 설명 (선택)",
+      "target_date": "YYYY-MM-DD (선택)",
+      "priority": "high" | "medium" | "low",
+      "category": "카테고리 이름 (선택)",
+      "decomposed_todos": [
+        {
+          "title": "세부 작업 제목",
+          "duration": 60,
+          "order": 1,
+          "priority": "medium"
+        }
+      ]
     }
   ],
   "briefing": {
@@ -378,63 +434,94 @@ ${modeInstructions}
         return `## 일정 모드 지시사항
 사용자가 일정(Event)을 추가하려고 합니다.
 
-### 필수 확인 사항
-1. 날짜 (언제?)
-2. 시간 (몇 시?) - "저녁", "아침" 같은 모호한 표현은 정확히 물어보세요
-3. 소요 시간 (얼마나?)
-4. 장소 (어디서?) - 선택사항
+### 필수 정보 (반드시 확인!)
+1. **날짜** (언제?) - 필수
+2. **시간** (몇 시?) - 필수. "저녁", "아침" 같은 모호한 표현은 정확히 물어보세요
+3. 소요 시간 - 기본 60분, 필요시 질문
+4. 장소 - 선택사항
 
-### 처리 방식
-- 정확한 시간이 있으면 → check_conflicts로 충돌 확인 후 일정 생성
-- 시간이 모호하면 → 질문하여 명확화
-- "아무거나", "적당히" 등의 답변 → 기본값(오후 3시, 1시간)으로 생성
+### 처리 흐름
+1. 날짜와 시간이 명확하면 → 일정 생성
+2. 날짜 또는 시간이 없거나 모호하면 → 반드시 질문
+3. "추천해줘", "알아서 해줘" 라고 하면 → 기본값으로 생성
+
+### 질문이 필요한 경우 (needs_clarification: true)
+- "내일 미팅" → 시간을 물어보세요: "몇 시에 하실 건가요?"
+- "저녁에 약속" → 정확한 시간 질문: "저녁 몇 시쯤 생각하고 계신가요? (예: 6시, 7시)"
+- "회의" → 날짜와 시간 둘 다 질문
 
 ### 응답 형식
-events 배열에 일정을 담아 반환하세요.`;
+- 정보가 충분하면: events 배열에 일정 반환
+- 정보가 부족하면: needs_clarification: true, clarification_question에 질문`;
 
       case 'todo':
         return `## TODO 모드 지시사항
 사용자가 할 일(Todo)을 추가하려고 합니다.
 
-### 필수 확인 사항
-1. 할 일 제목 (무엇을?)
-2. 우선순위 (high/medium/low) - 기본값: medium
-3. 마감일 (언제까지?) - 선택사항
+### 필수 정보 (반드시 확인!)
+1. **할 일 제목** (무엇을?) - 필수
+2. 우선순위 - 기본 medium
+3. 마감일 - 선택사항
+4. 예상 소요 시간 - 기본 60분
 
-### 처리 방식
-- 간단한 할 일 → 바로 todo 생성
-- 복잡한 작업 → 세부 단계로 분해 가능
+### 처리 흐름
+TODO는 제목만 있으면 생성 가능합니다.
+- 제목이 명확하면 → 바로 todo 생성
+- 복잡한 작업이면 → 세부 단계로 분해할지 물어보기
 
 ### 응답 형식
-decomposed_todos 배열에 할 일을 담아 반환하세요.
-각 todo에는 title, duration, order, priority를 포함하세요.`;
+- 정보가 충분하면: todos 배열에 할 일 반환
+예시:
+{
+  "message": "할 일을 추가합니다.",
+  "todos": [
+    {"title": "보고서 작성", "duration": 60, "order": 1, "priority": "medium"}
+  ]
+}`;
 
       case 'goal':
         return `## Goal 모드 지시사항
 사용자가 목표(Goal)를 설정하고 계획을 세우려고 합니다.
 
-### 필수 확인 사항
-1. 목표 제목 (무엇을 달성?)
-2. 목표 기한 (언제까지?)
-3. 활동 유형 (공부, 운동, 프로젝트 등)
+### 필수 정보 (반드시 확인!)
+1. **목표 제목** (무엇을 달성?) - 필수
+2. **목표 기한** (언제까지?) - 필수! 없으면 반드시 질문하세요
+3. 카테고리 - 선택사항
 
-### 처리 방식
-1. decompose_goal 도구로 목표를 세부 작업으로 분해
-2. smart_schedule로 최적 시간대 추천
-3. 단계별 계획을 상세히 설명
+### 처리 흐름
+1. 목표 제목과 기한이 모두 있으면 → 목표 생성
+2. 기한이 없으면 → 반드시 질문: "언제까지 달성하고 싶으신가요?"
+3. 사용자가 "추천해줘", "알아서" 라고 하면 → 세부 작업 분해 및 적절한 기한 제안
+
+### 질문이 필요한 경우 (needs_clarification: true)
+- "토익 900점 목표" → 기한 질문: "언제까지 달성하고 싶으신가요? (예: 6개월 후, 2025년 6월)"
+- "운동 목표 세워줘" → 구체적 목표와 기한 질문: "어떤 운동 목표인가요? 그리고 언제까지 달성하고 싶으신가요?"
 
 ### 응답 형식
-decomposed_todos 배열에 세부 작업을 담고,
-message에 전체 계획과 추천 일정을 상세히 설명하세요.
+- 정보가 충분하면: goals 배열에 목표 반환
+- 정보가 부족하면: needs_clarification: true, clarification_question에 질문
 
-예시:
-"토익 900점" 목표를 다음과 같이 분해합니다:
-1. 개념 학습 (90분) - 문법, 어휘 기초
-2. 연습 문제 풀이 (60분) - 파트별 연습
-3. 복습 (45분) - 오답 노트 정리
-4. 모의 테스트 (60분) - 실전 연습
+예시 (정보 충분할 때):
+{
+  "message": "토익 900점 목표를 설정합니다.",
+  "goals": [
+    {
+      "title": "토익 900점",
+      "description": "토익 시험에서 900점 이상 달성하기",
+      "target_date": "2025-06-30",
+      "priority": "high",
+      "category": "공부",
+      "decomposed_todos": []
+    }
+  ]
+}
 
-D-XXX일 남았으므로 주 X회 수행을 권장합니다.`;
+예시 (기한 없을 때):
+{
+  "needs_clarification": true,
+  "clarification_question": "토익 900점 목표 좋네요! 언제까지 달성하고 싶으신가요? (예: 6개월 후, 2025년 6월)",
+  "message": "토익 900점 목표 좋네요! 언제까지 달성하고 싶으신가요?"
+}`;
 
       case 'briefing':
         return `## 브리핑 모드 지시사항
@@ -461,6 +548,12 @@ briefing 객체에 브리핑 내용을 담아 반환하세요.
 - 목표 관련 키워드 (목표, 계획, 달성 등) → Goal 모드처럼 처리
 - 브리핑 요청 (오늘 일정, 뭐 있어 등) → 브리핑 모드처럼 처리
 
+### 필수 정보 확인 (매우 중요!)
+각 유형별 필수 정보가 없으면 반드시 질문하세요:
+- 일정: 날짜, 시간 필수
+- 목표: 목표 내용, 기한 필수
+- TODO: 제목 필수
+
 ### 사용 가능한 도구
 - get_events: 일정 조회
 - check_conflicts: 충돌 확인
@@ -472,9 +565,9 @@ briefing 객체에 브리핑 내용을 담아 반환하세요.
 - get_weekly_review: 주간 리뷰
 
 ### 핵심 원칙
-- 시간이 모호하면 반드시 질문
+- 정보가 부족하면 반드시 질문 (임의로 채우지 않기!)
 - 한 번에 필요한 정보를 모두 물어보기
-- "몰라", "아무거나" 답변 시 기본값 사용`;
+- "추천해줘", "알아서", "아무거나" 라고 할 때만 AI가 값 설정`;
     }
   }
 }

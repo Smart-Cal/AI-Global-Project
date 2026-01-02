@@ -9,10 +9,14 @@ import {
   getConversation,
   deleteConversation,
   confirmEvents,
+  confirmTodos,
+  confirmGoals,
   saveResultMessage,
   type Conversation,
   type Message,
   type PendingEvent,
+  type PendingTodo,
+  type PendingGoal,
   type ChatMode,
 } from '../../services/api';
 import DatePicker from '../DatePicker';
@@ -24,15 +28,21 @@ interface LocalMessage {
   role: 'user' | 'assistant';
   content: string;
   pending_events?: PendingEvent[];
+  pending_todos?: PendingTodo[];
+  pending_goals?: PendingGoal[];
   created_at: string;
 }
 
-// 각 이벤트의 선택 상태
-type EventDecision = 'pending' | 'confirmed' | 'rejected';
+// 각 항목의 선택 상태
+type ItemDecision = 'pending' | 'confirmed' | 'rejected';
 
-interface EventDecisionState {
-  [index: number]: EventDecision;
+interface DecisionState {
+  [index: number]: ItemDecision;
 }
+
+// 호환성을 위한 alias
+type EventDecision = ItemDecision;
+type EventDecisionState = DecisionState;
 
 const AssistantView: React.FC = () => {
   const { user } = useAuthStore();
@@ -55,13 +65,25 @@ const AssistantView: React.FC = () => {
 
   // Event confirmation state - 메시지 ID별로 관리
   const [activeMessageId, setActiveMessageId] = useState<string | null>(null);
+  const [activeItemType, setActiveItemType] = useState<'event' | 'todo' | 'goal' | null>(null);
   const [eventDecisions, setEventDecisions] = useState<EventDecisionState>({});
   const [editingEvents, setEditingEvents] = useState<{ [index: number]: PendingEvent }>({});
+
+  // TODO confirmation state
+  const [todoDecisions, setTodoDecisions] = useState<DecisionState>({});
+  const [editingTodos, setEditingTodos] = useState<{ [index: number]: PendingTodo }>({});
+
+  // Goal confirmation state
+  const [goalDecisions, setGoalDecisions] = useState<DecisionState>({});
+  const [editingGoals, setEditingGoals] = useState<{ [index: number]: PendingGoal }>({});
+
   const [isSaving, setIsSaving] = useState(false);
   const [completedResults, setCompletedResults] = useState<{
     messageId: string;
-    confirmed: PendingEvent[];
-    rejected: number;
+    type: 'event' | 'todo' | 'goal';
+    confirmedCount: number;
+    rejectedCount: number;
+    items?: any[];
   } | null>(null);
 
   const messagesEndRef = useRef<HTMLDivElement>(null);
@@ -90,24 +112,32 @@ const AssistantView: React.FC = () => {
         role: m.role as 'user' | 'assistant',
         content: m.content,
         pending_events: m.pending_events,
+        pending_todos: m.pending_todos,
+        pending_goals: m.pending_goals,
         created_at: m.created_at,
       })));
-      setActiveMessageId(null);
-      setEventDecisions({});
-      setEditingEvents({});
-      setCompletedResults(null);
+      resetConfirmationState();
     } catch (error) {
       console.error('Failed to load conversation:', error);
     }
   };
 
+  const resetConfirmationState = () => {
+    setActiveMessageId(null);
+    setActiveItemType(null);
+    setEventDecisions({});
+    setEditingEvents({});
+    setTodoDecisions({});
+    setEditingTodos({});
+    setGoalDecisions({});
+    setEditingGoals({});
+    setCompletedResults(null);
+  };
+
   const handleNewConversation = () => {
     setCurrentConversationId(null);
     setMessages([]);
-    setActiveMessageId(null);
-    setEventDecisions({});
-    setEditingEvents({});
-    setCompletedResults(null);
+    resetConfirmationState();
   };
 
   const handleDeleteConversation = async (id: string, e: React.MouseEvent) => {
@@ -164,24 +194,40 @@ const AssistantView: React.FC = () => {
         loadConversations();
       }
 
+      // Determine content message based on what's pending
+      let contentMessage = response.message;
+      if (response.pending_events && response.pending_events.length > 0) {
+        contentMessage = '아래와 같은 일정은 어떠세요?';
+      } else if (response.pending_todos && response.pending_todos.length > 0) {
+        contentMessage = '아래와 같은 할 일은 어떠세요?';
+      } else if (response.pending_goals && response.pending_goals.length > 0) {
+        contentMessage = '아래와 같은 목표는 어떠세요?';
+      }
+
       // Add assistant message
       const assistantMessage: LocalMessage = {
         id: response.message_id,
         role: 'assistant',
-        content: response.pending_events && response.pending_events.length > 0
-          ? '아래와 같은 일정은 어떠세요?'
-          : response.message,
+        content: contentMessage,
         pending_events: response.pending_events,
+        pending_todos: response.pending_todos,
+        pending_goals: response.pending_goals,
         created_at: new Date().toISOString(),
       };
 
       setMessages(prev => [...prev, assistantMessage]);
 
-      // Set up event confirmation UI
+      // Set up confirmation UI based on type
+      resetConfirmationState();
       if (response.pending_events && response.pending_events.length > 0) {
         setActiveMessageId(response.message_id);
-        setEventDecisions({});
-        setEditingEvents({});
+        setActiveItemType('event');
+      } else if (response.pending_todos && response.pending_todos.length > 0) {
+        setActiveMessageId(response.message_id);
+        setActiveItemType('todo');
+      } else if (response.pending_goals && response.pending_goals.length > 0) {
+        setActiveMessageId(response.message_id);
+        setActiveItemType('goal');
       }
     } catch (error) {
       console.error('Chat error:', error);
@@ -261,8 +307,8 @@ const AssistantView: React.FC = () => {
     );
   };
 
-  // 최종 확정 처리
-  const handleFinalConfirm = async (pendingEvents: PendingEvent[]) => {
+  // 최종 확정 처리 - Events
+  const handleFinalConfirmEvents = async (pendingEvents: PendingEvent[]) => {
     setIsSaving(true);
 
     const confirmedEvents: PendingEvent[] = [];
@@ -312,14 +358,14 @@ const AssistantView: React.FC = () => {
       // 결과 표시 (UI용)
       setCompletedResults({
         messageId: activeMessageId!,
-        confirmed: confirmedEvents,
-        rejected: rejectedCount,
+        type: 'event',
+        confirmedCount: confirmedEvents.length,
+        rejectedCount,
+        items: confirmedEvents,
       });
 
       // 상태 초기화
-      setActiveMessageId(null);
-      setEventDecisions({});
-      setEditingEvents({});
+      resetConfirmationState();
     } catch (error) {
       console.error('Failed to save events:', error);
     } finally {
@@ -327,30 +373,205 @@ const AssistantView: React.FC = () => {
     }
   };
 
+  // 최종 확정 처리 - TODOs
+  const handleFinalConfirmTodos = async (pendingTodos: PendingTodo[]) => {
+    setIsSaving(true);
+
+    const confirmedTodos: PendingTodo[] = [];
+    const rejectedCount = Object.values(todoDecisions).filter(d => d === 'rejected').length;
+
+    for (let i = 0; i < pendingTodos.length; i++) {
+      if (todoDecisions[i] === 'confirmed') {
+        const todoWithEdits = editingTodos[i] || pendingTodos[i];
+        confirmedTodos.push(todoWithEdits);
+      }
+    }
+
+    try {
+      if (confirmedTodos.length > 0) {
+        await confirmTodos(confirmedTodos);
+      }
+
+      // 결과 메시지 생성
+      let resultContent = '';
+      if (confirmedTodos.length > 0) {
+        resultContent = `✅ ${confirmedTodos.length}개의 할 일이 추가되었습니다.`;
+        if (rejectedCount > 0) {
+          resultContent += ` (${rejectedCount}개 거절)`;
+        }
+      } else {
+        resultContent = '할 일이 추가되지 않았습니다.';
+        if (rejectedCount > 0) {
+          resultContent += ` (${rejectedCount}개 거절)`;
+        }
+      }
+
+      // 결과 메시지를 대화 기록에 저장
+      if (currentConversationId) {
+        const savedResult = await saveResultMessage(currentConversationId, resultContent);
+        const resultMessage: LocalMessage = {
+          id: savedResult.message_id,
+          role: 'assistant',
+          content: resultContent,
+          created_at: new Date().toISOString(),
+        };
+        setMessages(prev => [...prev, resultMessage]);
+      }
+
+      setCompletedResults({
+        messageId: activeMessageId!,
+        type: 'todo',
+        confirmedCount: confirmedTodos.length,
+        rejectedCount,
+        items: confirmedTodos,
+      });
+
+      resetConfirmationState();
+    } catch (error) {
+      console.error('Failed to save todos:', error);
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
+  // 최종 확정 처리 - Goals
+  const handleFinalConfirmGoals = async (pendingGoals: PendingGoal[]) => {
+    setIsSaving(true);
+
+    const confirmedGoals: PendingGoal[] = [];
+    const rejectedCount = Object.values(goalDecisions).filter(d => d === 'rejected').length;
+
+    for (let i = 0; i < pendingGoals.length; i++) {
+      if (goalDecisions[i] === 'confirmed') {
+        const goalWithEdits = editingGoals[i] || pendingGoals[i];
+        confirmedGoals.push(goalWithEdits);
+      }
+    }
+
+    try {
+      if (confirmedGoals.length > 0) {
+        await confirmGoals(confirmedGoals);
+      }
+
+      // 결과 메시지 생성
+      let resultContent = '';
+      if (confirmedGoals.length > 0) {
+        resultContent = `✅ ${confirmedGoals.length}개의 목표가 추가되었습니다.`;
+        if (rejectedCount > 0) {
+          resultContent += ` (${rejectedCount}개 거절)`;
+        }
+      } else {
+        resultContent = '목표가 추가되지 않았습니다.';
+        if (rejectedCount > 0) {
+          resultContent += ` (${rejectedCount}개 거절)`;
+        }
+      }
+
+      // 결과 메시지를 대화 기록에 저장
+      if (currentConversationId) {
+        const savedResult = await saveResultMessage(currentConversationId, resultContent);
+        const resultMessage: LocalMessage = {
+          id: savedResult.message_id,
+          role: 'assistant',
+          content: resultContent,
+          created_at: new Date().toISOString(),
+        };
+        setMessages(prev => [...prev, resultMessage]);
+      }
+
+      setCompletedResults({
+        messageId: activeMessageId!,
+        type: 'goal',
+        confirmedCount: confirmedGoals.length,
+        rejectedCount,
+        items: confirmedGoals,
+      });
+
+      resetConfirmationState();
+    } catch (error) {
+      console.error('Failed to save goals:', error);
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
+  // TODO decision handlers
+  const handleTodoDecision = (index: number, decision: ItemDecision) => {
+    setTodoDecisions(prev => ({ ...prev, [index]: decision }));
+  };
+
+  const handleEditTodo = (index: number, field: keyof PendingTodo, value: any) => {
+    const currentTodos = messages.find(m => m.id === activeMessageId)?.pending_todos || [];
+    const currentTodo = editingTodos[index] || currentTodos[index];
+    setEditingTodos(prev => ({
+      ...prev,
+      [index]: { ...currentTodo, [field]: value }
+    }));
+  };
+
+  // Goal decision handlers
+  const handleGoalDecision = (index: number, decision: ItemDecision) => {
+    setGoalDecisions(prev => ({ ...prev, [index]: decision }));
+  };
+
+  const handleEditGoal = (index: number, field: keyof PendingGoal, value: any) => {
+    const currentGoals = messages.find(m => m.id === activeMessageId)?.pending_goals || [];
+    const currentGoal = editingGoals[index] || currentGoals[index];
+    setEditingGoals(prev => ({
+      ...prev,
+      [index]: { ...currentGoal, [field]: value }
+    }));
+  };
+
+  // 모든 TODO가 처리되었는지 확인
+  const allTodosProcessed = (pendingTodos: PendingTodo[]) => {
+    return pendingTodos.every((_, index) =>
+      todoDecisions[index] === 'confirmed' || todoDecisions[index] === 'rejected'
+    );
+  };
+
+  // 모든 Goal이 처리되었는지 확인
+  const allGoalsProcessed = (pendingGoals: PendingGoal[]) => {
+    return pendingGoals.every((_, index) =>
+      goalDecisions[index] === 'confirmed' || goalDecisions[index] === 'rejected'
+    );
+  };
+
   const formatEventDateTime = (datetime: string) => {
-    const date = new Date(datetime);
+    // datetime을 직접 파싱하여 타임존 문제 방지
+    // 형식: "YYYY-MM-DDTHH:mm:ss" 또는 "YYYY-MM-DDTHH:mm"
+    const [datePart, timePart] = datetime.split('T');
+    const [year, month, day] = datePart.split('-').map(Number);
+    const [hours, minutes] = (timePart || '00:00').split(':').map(Number);
+
+    // 요일 계산을 위해 로컬 날짜 객체 생성
+    const date = new Date(year, month - 1, day);
     const weekdays = ['일', '월', '화', '수', '목', '금', '토'];
-    const month = date.getMonth() + 1;
-    const day = date.getDate();
     const weekday = weekdays[date.getDay()];
-    const hours = date.getHours();
-    const minutes = date.getMinutes().toString().padStart(2, '0');
+
     const ampm = hours < 12 ? '오전' : '오후';
     const displayHours = hours === 0 ? 12 : hours > 12 ? hours - 12 : hours;
-    return `${month}월 ${day}일 (${weekday}) ${ampm} ${displayHours}:${minutes}`;
+    const displayMinutes = (minutes || 0).toString().padStart(2, '0');
+
+    return `${month}월 ${day}일 (${weekday}) ${ampm} ${displayHours}:${displayMinutes}`;
   };
 
   const formatShortDateTime = (datetime: string) => {
-    const date = new Date(datetime);
+    // datetime을 직접 파싱하여 타임존 문제 방지
+    const [datePart, timePart] = datetime.split('T');
+    const [year, month, day] = datePart.split('-').map(Number);
+    const [hours, minutes] = (timePart || '00:00').split(':').map(Number);
+
+    // 요일 계산을 위해 로컬 날짜 객체 생성
+    const date = new Date(year, month - 1, day);
     const weekdays = ['일', '월', '화', '수', '목', '금', '토'];
-    const month = date.getMonth() + 1;
-    const day = date.getDate();
     const weekday = weekdays[date.getDay()];
-    const hours = date.getHours();
-    const minutes = date.getMinutes().toString().padStart(2, '0');
+
     const ampm = hours < 12 ? '오전' : '오후';
     const displayHours = hours === 0 ? 12 : hours > 12 ? hours - 12 : hours;
-    return `${month}/${day}(${weekday}) ${ampm}${displayHours}:${minutes}`;
+    const displayMinutes = (minutes || 0).toString().padStart(2, '0');
+
+    return `${month}/${day}(${weekday}) ${ampm}${displayHours}:${displayMinutes}`;
   };
 
   // 시간 충돌 검사 함수
@@ -535,34 +756,328 @@ const AssistantView: React.FC = () => {
     );
   };
 
+  // TODO 카드 렌더링
+  const renderTodoCard = (todo: PendingTodo, index: number, isActive: boolean) => {
+    const todoWithEdits = editingTodos[index] || todo;
+    const decision = todoDecisions[index];
+
+    if (!isActive) {
+      return (
+        <div key={index} className={`todo-card-inline ${decision || ''}`}>
+          <div className="todo-card-inline-info">
+            <span className="todo-card-inline-title">{todoWithEdits.title}</span>
+            <span className="todo-card-inline-duration">{todoWithEdits.duration}분</span>
+            {todoWithEdits.category && (
+              <span className="todo-card-inline-category">{todoWithEdits.category}</span>
+            )}
+            {todoWithEdits.priority && (
+              <span className={`todo-card-inline-priority ${todoWithEdits.priority}`}>
+                {todoWithEdits.priority === 'high' ? '높음' : todoWithEdits.priority === 'medium' ? '보통' : '낮음'}
+              </span>
+            )}
+          </div>
+          {decision && (
+            <span className={`item-decision-badge ${decision}`}>
+              {decision === 'confirmed' ? '✓ 추가' : '✗ 거절'}
+            </span>
+          )}
+        </div>
+      );
+    }
+
+    return (
+      <div key={index} className={`todo-card-editable ${decision || ''}`}>
+        <div className="item-card-header">
+          <span className="item-card-number">{index + 1}</span>
+          <div className="item-card-quick-actions">
+            <button
+              className={`quick-action-btn confirm ${decision === 'confirmed' ? 'active' : ''}`}
+              onClick={() => handleTodoDecision(index, 'confirmed')}
+              disabled={isSaving}
+            >
+              ✓
+            </button>
+            <button
+              className={`quick-action-btn reject ${decision === 'rejected' ? 'active' : ''}`}
+              onClick={() => handleTodoDecision(index, 'rejected')}
+              disabled={isSaving}
+            >
+              ✗
+            </button>
+          </div>
+        </div>
+
+        <div className="item-card-body">
+          <div className="item-card-row">
+            <label>제목</label>
+            <input
+              type="text"
+              value={todoWithEdits.title}
+              onChange={(e) => handleEditTodo(index, 'title', e.target.value)}
+              disabled={decision === 'rejected'}
+            />
+          </div>
+
+          <div className="item-card-row-group">
+            <div className="item-card-row">
+              <label>소요시간</label>
+              <div className="duration-inputs">
+                <select
+                  value={getDurationHours(todoWithEdits.duration)}
+                  onChange={(e) => {
+                    const hours = parseInt(e.target.value);
+                    const minutes = getDurationMinutes(todoWithEdits.duration);
+                    handleEditTodo(index, 'duration', combineDuration(hours, minutes));
+                  }}
+                  disabled={decision === 'rejected'}
+                >
+                  {[0, 1, 2, 3, 4, 5, 6, 7, 8].map(h => (
+                    <option key={h} value={h}>{h}시간</option>
+                  ))}
+                </select>
+                <select
+                  value={getDurationMinutes(todoWithEdits.duration)}
+                  onChange={(e) => {
+                    const minutes = parseInt(e.target.value);
+                    const hours = getDurationHours(todoWithEdits.duration);
+                    handleEditTodo(index, 'duration', combineDuration(hours, minutes));
+                  }}
+                  disabled={decision === 'rejected'}
+                >
+                  {[0, 10, 15, 20, 30, 40, 45, 50].map(m => (
+                    <option key={m} value={m}>{m}분</option>
+                  ))}
+                </select>
+              </div>
+            </div>
+
+            <div className="item-card-row">
+              <label>우선순위</label>
+              <select
+                value={todoWithEdits.priority || 'medium'}
+                onChange={(e) => handleEditTodo(index, 'priority', e.target.value)}
+                disabled={decision === 'rejected'}
+              >
+                <option value="high">높음</option>
+                <option value="medium">보통</option>
+                <option value="low">낮음</option>
+              </select>
+            </div>
+          </div>
+
+          <div className="item-card-row">
+            <label>카테고리</label>
+            <select
+              value={todoWithEdits.category || ''}
+              onChange={(e) => handleEditTodo(index, 'category', e.target.value)}
+              disabled={decision === 'rejected'}
+            >
+              <option value="">선택</option>
+              {categories.map(cat => (
+                <option key={cat.id} value={cat.name}>{cat.name}</option>
+              ))}
+            </select>
+          </div>
+
+          <div className="item-card-row">
+            <label>설명</label>
+            <input
+              type="text"
+              value={todoWithEdits.description || ''}
+              onChange={(e) => handleEditTodo(index, 'description', e.target.value)}
+              placeholder="설명 입력 (선택)"
+              disabled={decision === 'rejected'}
+            />
+          </div>
+        </div>
+      </div>
+    );
+  };
+
+  // Goal 카드 렌더링
+  const renderGoalCard = (goal: PendingGoal, index: number, isActive: boolean) => {
+    const goalWithEdits = editingGoals[index] || goal;
+    const decision = goalDecisions[index];
+
+    if (!isActive) {
+      return (
+        <div key={index} className={`goal-card-inline ${decision || ''}`}>
+          <div className="goal-card-inline-info">
+            <span className="goal-card-inline-title">{goalWithEdits.title}</span>
+            {goalWithEdits.target_date && (
+              <span className="goal-card-inline-date">~{goalWithEdits.target_date}</span>
+            )}
+            {goalWithEdits.priority && (
+              <span className={`goal-card-inline-priority ${goalWithEdits.priority}`}>
+                {goalWithEdits.priority === 'high' ? '높음' : goalWithEdits.priority === 'medium' ? '보통' : '낮음'}
+              </span>
+            )}
+          </div>
+          {decision && (
+            <span className={`item-decision-badge ${decision}`}>
+              {decision === 'confirmed' ? '✓ 추가' : '✗ 거절'}
+            </span>
+          )}
+        </div>
+      );
+    }
+
+    return (
+      <div key={index} className={`goal-card-editable ${decision || ''}`}>
+        <div className="item-card-header">
+          <span className="item-card-number">{index + 1}</span>
+          <div className="item-card-quick-actions">
+            <button
+              className={`quick-action-btn confirm ${decision === 'confirmed' ? 'active' : ''}`}
+              onClick={() => handleGoalDecision(index, 'confirmed')}
+              disabled={isSaving}
+            >
+              ✓
+            </button>
+            <button
+              className={`quick-action-btn reject ${decision === 'rejected' ? 'active' : ''}`}
+              onClick={() => handleGoalDecision(index, 'rejected')}
+              disabled={isSaving}
+            >
+              ✗
+            </button>
+          </div>
+        </div>
+
+        <div className="item-card-body">
+          <div className="item-card-row">
+            <label>목표</label>
+            <input
+              type="text"
+              value={goalWithEdits.title}
+              onChange={(e) => handleEditGoal(index, 'title', e.target.value)}
+              disabled={decision === 'rejected'}
+            />
+          </div>
+
+          <div className="item-card-row-group">
+            <div className="item-card-row">
+              <label>목표일</label>
+              <DatePicker
+                value={goalWithEdits.target_date || ''}
+                onChange={(date) => handleEditGoal(index, 'target_date', date)}
+              />
+            </div>
+
+            <div className="item-card-row">
+              <label>우선순위</label>
+              <select
+                value={goalWithEdits.priority || 'medium'}
+                onChange={(e) => handleEditGoal(index, 'priority', e.target.value)}
+                disabled={decision === 'rejected'}
+              >
+                <option value="high">높음</option>
+                <option value="medium">보통</option>
+                <option value="low">낮음</option>
+              </select>
+            </div>
+          </div>
+
+          <div className="item-card-row">
+            <label>카테고리</label>
+            <select
+              value={goalWithEdits.category || ''}
+              onChange={(e) => handleEditGoal(index, 'category', e.target.value)}
+              disabled={decision === 'rejected'}
+            >
+              <option value="">선택</option>
+              {categories.map(cat => (
+                <option key={cat.id} value={cat.name}>{cat.name}</option>
+              ))}
+            </select>
+          </div>
+
+          <div className="item-card-row">
+            <label>설명</label>
+            <input
+              type="text"
+              value={goalWithEdits.description || ''}
+              onChange={(e) => handleEditGoal(index, 'description', e.target.value)}
+              placeholder="목표 설명 (선택)"
+              disabled={decision === 'rejected'}
+            />
+          </div>
+
+          {/* 세부 작업 표시 */}
+          {goalWithEdits.decomposed_todos && goalWithEdits.decomposed_todos.length > 0 && (
+            <div className="goal-decomposed-todos">
+              <label>세부 작업 ({goalWithEdits.decomposed_todos.length}개)</label>
+              <div className="decomposed-todo-list">
+                {goalWithEdits.decomposed_todos.map((todo, idx) => (
+                  <div key={idx} className="decomposed-todo-item">
+                    <span className="decomposed-todo-order">{idx + 1}</span>
+                    <span className="decomposed-todo-title">{todo.title}</span>
+                    <span className="decomposed-todo-duration">{todo.duration}분</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+        </div>
+      </div>
+    );
+  };
+
   // 결과 메시지 렌더링
   const renderCompletedResults = () => {
     if (!completedResults) return null;
 
-    const { confirmed, rejected } = completedResults;
+    const { type, confirmedCount, rejectedCount, items } = completedResults;
+    const typeLabels = { event: '일정', todo: '할 일', goal: '목표' };
+    const typeLabel = typeLabels[type];
 
     return (
       <div className="chat-message assistant">
         <div className="message-bubble result-message">
-          {confirmed.length > 0 ? (
+          {confirmedCount > 0 ? (
             <>
-              <div className="result-title">✅ {confirmed.length}개의 일정이 추가되었습니다!</div>
-              <div className="result-list">
-                {confirmed.map((event, idx) => (
-                  <div key={idx} className="result-item">
-                    <span className="result-item-title">{event.title}</span>
-                    <span className="result-item-datetime">{formatShortDateTime(event.datetime)}</span>
-                    {event.category && <span className="result-item-category">{event.category}</span>}
-                    {event.location && <span className="result-item-location">📍 {event.location}</span>}
-                  </div>
-                ))}
-              </div>
+              <div className="result-title">✅ {confirmedCount}개의 {typeLabel}이 추가되었습니다!</div>
+              {type === 'event' && items && (
+                <div className="result-list">
+                  {items.map((event: PendingEvent, idx: number) => (
+                    <div key={idx} className="result-item">
+                      <span className="result-item-title">{event.title}</span>
+                      <span className="result-item-datetime">{formatShortDateTime(event.datetime)}</span>
+                      {event.category && <span className="result-item-category">{event.category}</span>}
+                      {event.location && <span className="result-item-location">📍 {event.location}</span>}
+                    </div>
+                  ))}
+                </div>
+              )}
+              {type === 'todo' && items && (
+                <div className="result-list">
+                  {items.map((todo: PendingTodo, idx: number) => (
+                    <div key={idx} className="result-item">
+                      <span className="result-item-title">{todo.title}</span>
+                      <span className="result-item-duration">{todo.duration}분</span>
+                    </div>
+                  ))}
+                </div>
+              )}
+              {type === 'goal' && items && (
+                <div className="result-list">
+                  {items.map((goal: PendingGoal, idx: number) => (
+                    <div key={idx} className="result-item">
+                      <span className="result-item-title">{goal.title}</span>
+                      {goal.target_date && <span className="result-item-date">~{goal.target_date}</span>}
+                      {goal.decomposed_todos && goal.decomposed_todos.length > 0 && (
+                        <span className="result-item-todos">{goal.decomposed_todos.length}개 작업</span>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              )}
             </>
           ) : (
-            <div className="result-title">일정이 추가되지 않았습니다.</div>
+            <div className="result-title">{typeLabel}이 추가되지 않았습니다.</div>
           )}
-          {rejected > 0 && (
-            <div className="result-rejected">{rejected}개의 일정은 거절되었습니다.</div>
+          {rejectedCount > 0 && (
+            <div className="result-rejected">{rejectedCount}개의 {typeLabel}은 거절되었습니다.</div>
           )}
         </div>
       </div>
@@ -635,19 +1150,19 @@ const AssistantView: React.FC = () => {
                 </div>
 
                 {/* 일정 확인 UI - 메시지 바로 아래에 표시 */}
-                {msg.pending_events && msg.pending_events.length > 0 && msg.id === activeMessageId && (
-                  <div className="event-confirmation-inline">
-                    <div className="event-cards-container">
+                {msg.pending_events && msg.pending_events.length > 0 && msg.id === activeMessageId && activeItemType === 'event' && (
+                  <div className="item-confirmation-inline">
+                    <div className="item-cards-container">
                       {msg.pending_events.map((event, index) =>
                         renderEventCard(event, index, true)
                       )}
                     </div>
 
                     {allEventsProcessed(msg.pending_events) && (
-                      <div className="event-final-actions">
+                      <div className="item-final-actions">
                         <button
                           className="btn-final-confirm"
-                          onClick={() => handleFinalConfirm(msg.pending_events!)}
+                          onClick={() => handleFinalConfirmEvents(msg.pending_events!)}
                           disabled={isSaving}
                         >
                           {isSaving ? '저장 중...' : '확정하기'}
@@ -656,8 +1171,66 @@ const AssistantView: React.FC = () => {
                     )}
 
                     {!allEventsProcessed(msg.pending_events) && (
-                      <div className="event-pending-hint">
+                      <div className="item-pending-hint">
                         각 일정에서 ✓(추가) 또는 ✗(거절)를 선택해주세요
+                      </div>
+                    )}
+                  </div>
+                )}
+
+                {/* TODO 확인 UI */}
+                {msg.pending_todos && msg.pending_todos.length > 0 && msg.id === activeMessageId && activeItemType === 'todo' && (
+                  <div className="item-confirmation-inline">
+                    <div className="item-cards-container">
+                      {msg.pending_todos.map((todo, index) =>
+                        renderTodoCard(todo, index, true)
+                      )}
+                    </div>
+
+                    {allTodosProcessed(msg.pending_todos) && (
+                      <div className="item-final-actions">
+                        <button
+                          className="btn-final-confirm"
+                          onClick={() => handleFinalConfirmTodos(msg.pending_todos!)}
+                          disabled={isSaving}
+                        >
+                          {isSaving ? '저장 중...' : '확정하기'}
+                        </button>
+                      </div>
+                    )}
+
+                    {!allTodosProcessed(msg.pending_todos) && (
+                      <div className="item-pending-hint">
+                        각 할 일에서 ✓(추가) 또는 ✗(거절)를 선택해주세요
+                      </div>
+                    )}
+                  </div>
+                )}
+
+                {/* Goal 확인 UI */}
+                {msg.pending_goals && msg.pending_goals.length > 0 && msg.id === activeMessageId && activeItemType === 'goal' && (
+                  <div className="item-confirmation-inline">
+                    <div className="item-cards-container">
+                      {msg.pending_goals.map((goal, index) =>
+                        renderGoalCard(goal, index, true)
+                      )}
+                    </div>
+
+                    {allGoalsProcessed(msg.pending_goals) && (
+                      <div className="item-final-actions">
+                        <button
+                          className="btn-final-confirm"
+                          onClick={() => handleFinalConfirmGoals(msg.pending_goals!)}
+                          disabled={isSaving}
+                        >
+                          {isSaving ? '저장 중...' : '확정하기'}
+                        </button>
+                      </div>
+                    )}
+
+                    {!allGoalsProcessed(msg.pending_goals) && (
+                      <div className="item-pending-hint">
+                        각 목표에서 ✓(추가) 또는 ✗(거절)를 선택해주세요
                       </div>
                     )}
                   </div>
