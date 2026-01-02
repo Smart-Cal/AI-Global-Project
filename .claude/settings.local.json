@@ -15,7 +15,11 @@
       "Bash(git pull:*)",
       "Bash(git add:*)",
       "Bash(git commit:*)",
-      "Bash(git push:*)"
+      "Bash(git push:*)",
+      "Bash(npx tsc:*)",
+      "Bash(npx typescript --noEmit)",
+      "Bash(./node_modules/.bin/tsc:*)",
+      "Bash(npm install:*)"
     ]
   }
 }

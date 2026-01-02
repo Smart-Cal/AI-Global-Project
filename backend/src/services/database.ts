@@ -10,7 +10,7 @@ const __dirname = path.dirname(__filename);
 dotenv.config({ path: path.resolve(__dirname, '../../.env') });
 
 import { createClient, SupabaseClient } from '@supabase/supabase-js';
-import { User, DBEvent, Todo, Goal, Category, Conversation, DBMessage } from '../types/index.js';
+import { User, Event, Todo, Goal, Category, Conversation, Message, LifeLog, Group, GroupMember, GroupInvitation } from '../types/index.js';
 
 const supabaseUrl = process.env.SUPABASE_URL || '';
 const supabaseKey = process.env.SUPABASE_SERVICE_KEY || '';
@@ -85,7 +85,7 @@ export async function upsertGoogleUser(userData: {
 // Event Operations
 // ==============================================
 
-export async function getEventsByUser(userId: string, startDate?: string, endDate?: string): Promise<DBEvent[]> {
+export async function getEventsByUser(userId: string, startDate?: string, endDate?: string): Promise<Event[]> {
   let query = supabase
     .from('events')
     .select('*')
@@ -104,7 +104,29 @@ export async function getEventsByUser(userId: string, startDate?: string, endDat
   return data || [];
 }
 
-export async function createEvent(event: Partial<DBEvent>): Promise<DBEvent> {
+export async function getEventById(id: string): Promise<Event | null> {
+  const { data, error } = await supabase
+    .from('events')
+    .select('*')
+    .eq('id', id)
+    .single();
+
+  if (error && error.code !== 'PGRST116') throw new Error(`Failed to get event: ${error.message}`);
+  return data;
+}
+
+export async function getEventsByTodo(todoId: string): Promise<Event[]> {
+  const { data, error } = await supabase
+    .from('events')
+    .select('*')
+    .eq('related_todo_id', todoId)
+    .order('event_date', { ascending: true });
+
+  if (error) throw new Error(`Failed to get events by todo: ${error.message}`);
+  return data || [];
+}
+
+export async function createEvent(event: Partial<Event>): Promise<Event> {
   const { data, error } = await supabase
     .from('events')
     .insert(event)
@@ -112,10 +134,16 @@ export async function createEvent(event: Partial<DBEvent>): Promise<DBEvent> {
     .single();
 
   if (error) throw new Error(`Failed to create event: ${error.message}`);
+
+  // Todo와 연결된 경우, Goal의 total_estimated_time 업데이트
+  if (event.related_todo_id) {
+    await updateGoalEstimatedTimeFromTodo(event.related_todo_id);
+  }
+
   return data;
 }
 
-export async function updateEvent(id: string, updates: Partial<DBEvent>): Promise<DBEvent> {
+export async function updateEvent(id: string, updates: Partial<Event>): Promise<Event> {
   const { data, error } = await supabase
     .from('events')
     .update(updates)
@@ -125,6 +153,37 @@ export async function updateEvent(id: string, updates: Partial<DBEvent>): Promis
 
   if (error) throw new Error(`Failed to update event: ${error.message}`);
   return data;
+}
+
+/**
+ * Event 완료 시 Todo와 Goal 진행률 업데이트
+ */
+export async function completeEvent(id: string): Promise<Event> {
+  // 1. Event 완료 처리
+  const event = await updateEvent(id, {
+    is_completed: true,
+    completed_at: new Date().toISOString()
+  });
+
+  // 2. 연결된 Todo가 있으면 completed_time 업데이트
+  if (event.related_todo_id) {
+    const duration = calculateEventDuration(event);
+    await addTodoCompletedTime(event.related_todo_id, duration);
+  }
+
+  return event;
+}
+
+/**
+ * Event duration 계산 (분 단위)
+ */
+function calculateEventDuration(event: Event): number {
+  if (event.is_all_day || !event.start_time || !event.end_time) return 60; // 기본 1시간
+
+  const [startHour, startMin] = event.start_time.split(':').map(Number);
+  const [endHour, endMin] = event.end_time.split(':').map(Number);
+
+  return (endHour * 60 + endMin) - (startHour * 60 + startMin);
 }
 
 export async function deleteEvent(id: string): Promise<void> {
@@ -184,10 +243,63 @@ export async function deleteTodo(id: string): Promise<void> {
 }
 
 export async function completeTodo(id: string): Promise<Todo> {
-  return updateTodo(id, {
+  const todo = await updateTodo(id, {
     is_completed: true,
     completed_at: new Date().toISOString()
   });
+
+  // Goal과 연결된 경우 진행률 업데이트
+  if (todo.goal_id) {
+    await recalculateGoalProgress(todo.goal_id);
+  }
+
+  return todo;
+}
+
+/**
+ * Todo에 완료 시간 추가 (Event 완료 시 호출)
+ */
+export async function addTodoCompletedTime(todoId: string, minutes: number): Promise<Todo> {
+  const todo = await getTodoById(todoId);
+  if (!todo) throw new Error('Todo not found');
+
+  const newCompletedTime = (todo.completed_time || 0) + minutes;
+  const isNowCompleted = todo.estimated_time ? newCompletedTime >= todo.estimated_time : false;
+
+  const updatedTodo = await updateTodo(todoId, {
+    completed_time: newCompletedTime,
+    is_completed: isNowCompleted,
+    completed_at: isNowCompleted ? new Date().toISOString() : undefined
+  });
+
+  // Goal과 연결된 경우 진행률 업데이트
+  if (updatedTodo.goal_id) {
+    await recalculateGoalProgress(updatedTodo.goal_id);
+  }
+
+  return updatedTodo;
+}
+
+export async function getTodoById(id: string): Promise<Todo | null> {
+  const { data, error } = await supabase
+    .from('todos')
+    .select('*')
+    .eq('id', id)
+    .single();
+
+  if (error && error.code !== 'PGRST116') throw new Error(`Failed to get todo: ${error.message}`);
+  return data;
+}
+
+export async function getTodosByGoal(goalId: string): Promise<Todo[]> {
+  const { data, error } = await supabase
+    .from('todos')
+    .select('*')
+    .eq('goal_id', goalId)
+    .order('created_at', { ascending: true });
+
+  if (error) throw new Error(`Failed to get todos by goal: ${error.message}`);
+  return data || [];
 }
 
 // ==============================================
@@ -199,16 +311,32 @@ export async function getGoalsByUser(userId: string): Promise<Goal[]> {
     .from('goals')
     .select('*')
     .eq('user_id', userId)
-    .order('created_at', { ascending: false });
+    .order('target_date', { ascending: true });
 
   if (error) throw new Error(`Failed to get goals: ${error.message}`);
   return data || [];
 }
 
+export async function getGoalById(id: string): Promise<Goal | null> {
+  const { data, error } = await supabase
+    .from('goals')
+    .select('*')
+    .eq('id', id)
+    .single();
+
+  if (error && error.code !== 'PGRST116') throw new Error(`Failed to get goal: ${error.message}`);
+  return data;
+}
+
 export async function createGoal(goal: Partial<Goal>): Promise<Goal> {
   const { data, error } = await supabase
     .from('goals')
-    .insert(goal)
+    .insert({
+      ...goal,
+      status: goal.status || 'planning',
+      total_estimated_time: goal.total_estimated_time || 0,
+      completed_time: goal.completed_time || 0
+    })
     .select()
     .single();
 
@@ -235,6 +363,48 @@ export async function deleteGoal(id: string): Promise<void> {
     .eq('id', id);
 
   if (error) throw new Error(`Failed to delete goal: ${error.message}`);
+}
+
+/**
+ * Goal 진행률 재계산
+ * - 연결된 모든 Todo의 completed_time 합산
+ * - 연결된 모든 Todo의 estimated_time 합산
+ * - 상태 자동 업데이트 (in_progress, completed)
+ */
+export async function recalculateGoalProgress(goalId: string): Promise<Goal> {
+  const todos = await getTodosByGoal(goalId);
+
+  const totalEstimatedTime = todos.reduce((sum, t) => sum + (t.estimated_time || 0), 0);
+  const completedTime = todos.reduce((sum, t) => sum + (t.completed_time || 0), 0);
+
+  // 상태 결정
+  let status: Goal['status'] = 'planning';
+  if (todos.length > 0) {
+    const hasScheduledEvents = true; // TODO: Event 확인 로직 추가 가능
+    if (completedTime > 0 && completedTime < totalEstimatedTime) {
+      status = 'in_progress';
+    } else if (totalEstimatedTime > 0 && completedTime >= totalEstimatedTime) {
+      status = 'completed';
+    } else if (hasScheduledEvents) {
+      status = 'scheduled';
+    }
+  }
+
+  return updateGoal(goalId, {
+    total_estimated_time: totalEstimatedTime,
+    completed_time: completedTime,
+    status
+  });
+}
+
+/**
+ * Todo 생성/수정 시 Goal의 total_estimated_time 업데이트
+ */
+export async function updateGoalEstimatedTimeFromTodo(todoId: string): Promise<void> {
+  const todo = await getTodoById(todoId);
+  if (!todo?.goal_id) return;
+
+  await recalculateGoalProgress(todo.goal_id);
 }
 
 // ==============================================
@@ -371,7 +541,7 @@ export async function deleteConversation(id: string): Promise<void> {
 // Message Operations
 // ==============================================
 
-export async function getMessagesByConversation(conversationId: string): Promise<DBMessage[]> {
+export async function getMessagesByConversation(conversationId: string): Promise<Message[]> {
   const { data, error } = await supabase
     .from('messages')
     .select('*')
@@ -387,7 +557,7 @@ export async function createMessage(message: {
   role: 'user' | 'assistant' | 'system';
   content: string;
   pending_events?: any;
-}): Promise<DBMessage> {
+}): Promise<Message> {
   const { data, error } = await supabase
     .from('messages')
     .insert(message)

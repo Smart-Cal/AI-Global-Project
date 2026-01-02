@@ -17,64 +17,26 @@ import {
   createMessage
 } from '../services/database.js';
 import { AuthRequest, authenticate } from '../middleware/auth.js';
-import { ChatMessage, OrchestratorContext, Event, Todo, Goal, DBEvent, Conversation } from '../types/index.js';
+import {
+  ChatMessage,
+  OrchestratorContext,
+  LegacyEvent,
+  Todo,
+  Goal,
+  DBEvent,
+  Conversation,
+  dbEventToLegacy,
+  legacyToDbEvent
+} from '../types/index.js';
 
-// DBEvent를 Event로 변환하는 헬퍼 함수
-function dbEventToEvent(dbEvent: DBEvent): Event {
-  const datetime = `${dbEvent.event_date}T${dbEvent.start_time || '09:00'}:00`;
-
-  let duration = 60;
-  if (dbEvent.start_time && dbEvent.end_time) {
-    const start = new Date(`2000-01-01T${dbEvent.start_time}`);
-    const end = new Date(`2000-01-01T${dbEvent.end_time}`);
-    duration = Math.round((end.getTime() - start.getTime()) / 60000);
-    if (duration <= 0) duration = 60;
-  }
-
-  return {
-    id: dbEvent.id,
-    user_id: dbEvent.user_id,
-    category_id: dbEvent.category_id,
-    title: dbEvent.title,
-    description: dbEvent.description,
-    datetime,
-    duration,
-    type: 'personal',
-    location: dbEvent.location,
-    is_completed: dbEvent.is_completed,
-    completed_at: dbEvent.completed_at,
-    created_at: dbEvent.created_at,
-  };
+// DBEvent를 LegacyEvent로 변환하는 헬퍼 함수
+function dbEventToEvent(dbEvent: DBEvent): LegacyEvent {
+  return dbEventToLegacy(dbEvent);
 }
 
-// Event(datetime 형식)를 DBEvent(event_date/start_time/end_time 형식)로 변환
-function eventToDbEvent(event: Partial<Event>): Partial<DBEvent> {
-  const dbEvent: Partial<DBEvent> = {
-    user_id: event.user_id,
-    title: event.title,
-    description: event.description,
-    location: event.location,
-    is_completed: event.is_completed ?? false,
-    is_all_day: false,
-  };
-
-  if (event.datetime) {
-    // datetime 문자열에서 직접 날짜와 시간 추출 (타임존 문제 방지)
-    // 형식: "YYYY-MM-DDTHH:mm:ss" 또는 "YYYY-MM-DDTHH:mm"
-    const [datePart, timePart] = event.datetime.split('T');
-    dbEvent.event_date = datePart;
-    dbEvent.start_time = timePart ? timePart.slice(0, 5) : '09:00';
-
-    // duration으로 end_time 계산
-    const duration = event.duration || 60;
-    const [hours, minutes] = (dbEvent.start_time).split(':').map(Number);
-    const totalMinutes = hours * 60 + minutes + duration;
-    const endHours = Math.floor(totalMinutes / 60) % 24;
-    const endMinutes = totalMinutes % 60;
-    dbEvent.end_time = `${endHours.toString().padStart(2, '0')}:${endMinutes.toString().padStart(2, '0')}`;
-  }
-
-  return dbEvent;
+// LegacyEvent를 DBEvent로 변환
+function eventToDbEvent(event: Partial<LegacyEvent>): Partial<DBEvent> {
+  return legacyToDbEvent(event);
 }
 
 const router = Router();
@@ -123,8 +85,8 @@ router.post('/', authenticate, async (req: AuthRequest, res: Response) => {
       getCategoriesByUser(userId)
     ]);
 
-    // DBEvent를 Event로 변환
-    const events: Event[] = dbEvents.map(dbEventToEvent);
+    // DBEvent를 LegacyEvent로 변환
+    const events: LegacyEvent[] = dbEvents.map(dbEventToEvent);
 
     // 이전 대화 기록 로드 (최근 20개)
     const dbMessages = await getMessagesByConversation(conversation.id);
@@ -266,7 +228,7 @@ router.post('/confirm-events', authenticate, async (req: AuthRequest, res: Respo
     // 사용자의 카테고리 목록 가져오기
     const categories = await getCategoriesByUser(userId);
 
-    const createdEvents: Event[] = [];
+    const createdEvents: LegacyEvent[] = [];
 
     for (const event of events) {
       // AI가 추천한 카테고리 이름으로 category_id 찾기
@@ -276,7 +238,7 @@ router.post('/confirm-events', authenticate, async (req: AuthRequest, res: Respo
         ...event,
         user_id: userId,
         category_id: categoryId
-      });
+      } as Partial<LegacyEvent>);
       const created = await createEvent(dbEvent);
       createdEvents.push(dbEventToEvent(created));
     }
@@ -312,21 +274,24 @@ router.post('/confirm-todos', authenticate, async (req: AuthRequest, res: Respon
 
     for (const todo of todos) {
       // 카테고리 이름으로 category_id 찾기
-      const categoryId = findCategoryId(categories, todo.category);
+      // const categoryId = findCategoryId(categories, todo.category);
 
       const todoData: Partial<Todo> = {
         user_id: userId,
-        category_id: categoryId,
+        // category_id: categoryId,  // Todo 타입에는 category_id가 없음
         title: todo.title,
-        description: todo.description || null,
+        description: todo.description || undefined,
         priority: todo.priority || 'medium',
-        duration: todo.duration || 60,
-        is_completed: false
+        estimated_time: todo.duration || todo.estimated_time || 60,
+        completed_time: 0,
+        is_completed: false,
+        is_hard_deadline: false,
+        is_divisible: true
       };
 
-      // deadline이 있으면 due_date로 변환
+      // deadline 설정
       if (todo.deadline) {
-        (todoData as any).due_date = todo.deadline.split('T')[0];
+        todoData.deadline = todo.deadline;
       }
 
       const created = await createTodo(todoData);
@@ -370,11 +335,12 @@ router.post('/confirm-goals', authenticate, async (req: AuthRequest, res: Respon
         user_id: userId,
         category_id: categoryId,
         title: goal.title,
-        description: goal.description || null,
-        target_date: goal.target_date || null,
+        description: goal.description || undefined,
+        target_date: goal.target_date || new Date().toISOString().split('T')[0],
         priority: goal.priority || 'medium',
-        progress: 0,
-        is_active: true
+        status: 'planning',
+        total_estimated_time: 0,
+        completed_time: 0
       };
 
       const created = await createGoal(goalData);
@@ -387,10 +353,13 @@ router.post('/confirm-goals', authenticate, async (req: AuthRequest, res: Respon
             user_id: userId,
             goal_id: created.id,
             title: todo.title,
-            description: todo.description || null,
+            description: todo.description || undefined,
             priority: todo.priority || 'medium',
-            duration: todo.duration || 60,
-            is_completed: false
+            estimated_time: todo.duration || 60,
+            completed_time: 0,
+            is_completed: false,
+            is_hard_deadline: false,
+            is_divisible: true
           };
           await createTodo(todoData);
         }

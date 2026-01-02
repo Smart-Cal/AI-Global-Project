@@ -9,6 +9,9 @@
 
 export type Chronotype = 'early_morning' | 'morning' | 'afternoon' | 'evening' | 'night';
 
+// 레거시 호환 Chronotype (3단계)
+export type LegacyChronotype = 'morning' | 'evening' | 'neutral';
+
 // Chronotype 시간대 정의
 export const CHRONOTYPE_HOURS: Record<Chronotype, { start: number; end: number }> = {
   early_morning: { start: 5, end: 9 },
@@ -154,6 +157,102 @@ export function calculateEventDuration(event: Event): number {
 }
 
 // ==============================================
+// 레거시 호환 타입 (DB 형식과의 호환성)
+// ==============================================
+
+// DB에서 직접 가져온 Event (event_date, start_time, end_time 형식)
+export interface DBEvent {
+  id: string;
+  user_id: string;
+  category_id?: string;
+  related_todo_id?: string;
+  title: string;
+  description?: string;
+  event_date: string;             // YYYY-MM-DD
+  start_time?: string;            // HH:MM
+  end_time?: string;              // HH:MM
+  is_all_day: boolean;
+  location?: string;
+  is_fixed: boolean;
+  priority: EventPriority;
+  is_completed: boolean;
+  completed_at?: string;
+  created_at?: string;
+}
+
+// 레거시 Event (datetime, duration 형식 - orchestrator 등에서 사용)
+export interface LegacyEvent {
+  id: string;
+  user_id: string;
+  category_id?: string;
+  title: string;
+  description?: string;
+  datetime: string;               // ISO datetime
+  duration: number;               // 분 단위
+  type: 'fixed' | 'personal' | 'goal';
+  location?: string;
+  is_completed: boolean;
+  completed_at?: string;
+  created_at?: string;
+}
+
+// DBEvent를 LegacyEvent로 변환
+export function dbEventToLegacy(dbEvent: DBEvent): LegacyEvent {
+  const datetime = `${dbEvent.event_date}T${dbEvent.start_time || '09:00'}:00`;
+  let duration = 60;
+  if (dbEvent.start_time && dbEvent.end_time) {
+    const [startH, startM] = dbEvent.start_time.split(':').map(Number);
+    const [endH, endM] = dbEvent.end_time.split(':').map(Number);
+    duration = (endH * 60 + endM) - (startH * 60 + startM);
+    if (duration <= 0) duration = 60;
+  }
+
+  return {
+    id: dbEvent.id,
+    user_id: dbEvent.user_id,
+    category_id: dbEvent.category_id,
+    title: dbEvent.title,
+    description: dbEvent.description,
+    datetime,
+    duration,
+    type: dbEvent.is_fixed ? 'fixed' : 'personal',
+    location: dbEvent.location,
+    is_completed: dbEvent.is_completed,
+    completed_at: dbEvent.completed_at,
+    created_at: dbEvent.created_at,
+  };
+}
+
+// LegacyEvent를 DBEvent로 변환
+export function legacyToDbEvent(event: Partial<LegacyEvent>): Partial<DBEvent> {
+  const dbEvent: Partial<DBEvent> = {
+    user_id: event.user_id,
+    title: event.title,
+    description: event.description,
+    location: event.location,
+    is_completed: event.is_completed ?? false,
+    is_all_day: false,
+    is_fixed: event.type === 'fixed',
+    priority: 3, // 기본값
+  };
+
+  if (event.datetime) {
+    const [datePart, timePart] = event.datetime.split('T');
+    dbEvent.event_date = datePart;
+    dbEvent.start_time = timePart ? timePart.slice(0, 5) : '09:00';
+
+    const duration = event.duration || 60;
+    const [hours, minutes] = (dbEvent.start_time).split(':').map(Number);
+    const totalMinutes = hours * 60 + minutes + duration;
+    const endHours = Math.floor(totalMinutes / 60) % 24;
+    const endMinutes = totalMinutes % 60;
+    dbEvent.end_time = `${endHours.toString().padStart(2, '0')}:${endMinutes.toString().padStart(2, '0')}`;
+  }
+
+  return dbEvent;
+}
+
+// ==============================================
 // Life Log types (AI 일기)
 // ==============================================
 export interface LifeLog {
@@ -268,7 +367,7 @@ export interface EveningBriefing {
 
 // Parser Agent Output
 export interface ParsedInput {
-  type: 'goal' | 'todo' | 'event' | 'question' | 'unknown';
+  type: 'goal' | 'todo' | 'event' | 'question' | 'unknown' | 'fixed' | 'personal';
   goal?: {
     title: string;
     target_date?: string;
@@ -287,6 +386,8 @@ export interface ParsedEvent {
   start_time?: string;
   end_time?: string;
   duration?: number;              // 분 단위
+  datetime?: string;              // ISO datetime (레거시 호환)
+  type?: 'fixed' | 'personal' | 'goal';  // 레거시 호환
   location?: string;
   is_fixed?: boolean;
   priority?: EventPriority;
@@ -299,8 +400,10 @@ export interface ParsedTodo {
   goal_title?: string;            // 연결할 Goal 제목
   deadline?: string;
   estimated_time?: number;        // 분 단위
+  duration?: number;              // 레거시 호환 (estimated_time과 동일)
   is_divisible?: boolean;
   priority?: 'high' | 'medium' | 'low';
+  timing?: 'before' | 'during' | 'after';  // 레거시 호환
 }
 
 // Scheduler Agent
@@ -319,6 +422,7 @@ export interface ScheduledItem {
   title: string;
   scheduled_date: string;         // YYYY-MM-DD
   scheduled_time: string;         // HH:MM
+  scheduled_at?: string;          // ISO datetime (레거시 호환)
   duration: number;               // 분 단위
   reason: string;                 // 왜 이 시간에 배치했는지
 }
@@ -330,11 +434,26 @@ export interface ScheduleResult {
   suggestions: string[];
 }
 
+// Planner Agent Types
+export interface PlanItem {
+  title: string;
+  date: string;                   // YYYY-MM-DD
+  duration: number;               // 분 단위
+  order: number;
+}
+
+export interface PlanResult {
+  goal_title: string;
+  items: PlanItem[];
+  total_duration: number;         // 분 단위
+  strategy: string;
+}
+
 // Orchestrator Context
 export interface OrchestratorContext {
   user_id: string;
-  user: User;
-  events: Event[];
+  user?: User;
+  events: LegacyEvent[];
   todos: Todo[];
   goals: Goal[];
   categories: Category[];
@@ -344,10 +463,11 @@ export interface OrchestratorContext {
 // Agent Response
 export interface AgentResponse {
   message: string;
-  events_to_create?: Partial<Event>[];
+  events_to_create?: Partial<LegacyEvent>[];
   todos_to_create?: Partial<Todo>[];
   goals_to_create?: Partial<Goal>[];
   scheduled_items?: ScheduledItem[];
+  todos_to_schedule?: ScheduledItem[];  // 레거시 호환
   needs_user_input?: boolean;
   suggestions?: string[];
 }
