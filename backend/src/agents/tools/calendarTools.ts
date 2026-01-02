@@ -1,0 +1,376 @@
+import { getEventsByUser, createEvent, getGoalsByUser } from '../../services/database.js';
+import { DBEvent, Event, Goal } from '../../types/index.js';
+
+/**
+ * Calendar Tools - AI Agent가 사용할 캘린더 도구들
+ */
+
+// DBEvent를 Event로 변환
+function dbEventToEvent(dbEvent: DBEvent): Event {
+  const datetime = `${dbEvent.event_date}T${dbEvent.start_time || '09:00'}:00`;
+  let duration = 60;
+  if (dbEvent.start_time && dbEvent.end_time) {
+    const start = new Date(`2000-01-01T${dbEvent.start_time}`);
+    const end = new Date(`2000-01-01T${dbEvent.end_time}`);
+    duration = Math.round((end.getTime() - start.getTime()) / 60000);
+    if (duration <= 0) duration = 60;
+  }
+
+  return {
+    id: dbEvent.id,
+    user_id: dbEvent.user_id,
+    category_id: dbEvent.category_id,
+    title: dbEvent.title,
+    description: dbEvent.description,
+    datetime,
+    duration,
+    type: 'personal',
+    location: dbEvent.location,
+    is_completed: dbEvent.is_completed,
+    completed_at: dbEvent.completed_at,
+    created_at: dbEvent.created_at,
+  };
+}
+
+/**
+ * 특정 기간의 일정 조회
+ */
+export async function getEvents(
+  userId: string,
+  startDate?: string,
+  endDate?: string
+): Promise<{ events: Event[]; summary: string }> {
+  const dbEvents = await getEventsByUser(userId, startDate, endDate);
+  const events = dbEvents.map(dbEventToEvent);
+
+  let summary = '';
+  if (events.length === 0) {
+    summary = startDate ? `${startDate}부터 ${endDate || '이후'}까지 일정이 없습니다.` : '등록된 일정이 없습니다.';
+  } else {
+    summary = `총 ${events.length}개의 일정이 있습니다.`;
+  }
+
+  return { events, summary };
+}
+
+/**
+ * 특정 날짜/시간에 충돌하는 일정 확인
+ */
+export async function checkConflicts(
+  userId: string,
+  datetime: string,
+  duration: number
+): Promise<{ hasConflict: boolean; conflictingEvents: Event[]; message: string }> {
+  const targetDate = datetime.split('T')[0];
+  const dbEvents = await getEventsByUser(userId, targetDate, targetDate);
+  const events = dbEvents.map(dbEventToEvent);
+
+  const targetStart = new Date(datetime);
+  const targetEnd = new Date(targetStart.getTime() + duration * 60000);
+
+  const conflictingEvents = events.filter(event => {
+    const eventStart = new Date(event.datetime);
+    const eventEnd = new Date(eventStart.getTime() + event.duration * 60000);
+
+    return (targetStart < eventEnd && targetEnd > eventStart);
+  });
+
+  const hasConflict = conflictingEvents.length > 0;
+  let message = '';
+  if (hasConflict) {
+    const titles = conflictingEvents.map(e => e.title).join(', ');
+    message = `해당 시간에 "${titles}" 일정이 있어 충돌합니다.`;
+  } else {
+    message = '해당 시간에 충돌하는 일정이 없습니다.';
+  }
+
+  return { hasConflict, conflictingEvents, message };
+}
+
+/**
+ * 특정 날짜의 빈 시간대 찾기
+ */
+export async function findFreeSlots(
+  userId: string,
+  date: string,
+  requiredDuration: number = 60,
+  workdayStart: number = 9,
+  workdayEnd: number = 21
+): Promise<{ slots: { start: string; end: string; duration: number }[]; message: string }> {
+  const dbEvents = await getEventsByUser(userId, date, date);
+  const events = dbEvents.map(dbEventToEvent);
+
+  // 시간순 정렬
+  events.sort((a, b) => new Date(a.datetime).getTime() - new Date(b.datetime).getTime());
+
+  const slots: { start: string; end: string; duration: number }[] = [];
+
+  // 하루 시작 시간
+  let currentTime = new Date(`${date}T${workdayStart.toString().padStart(2, '0')}:00:00`);
+  const dayEnd = new Date(`${date}T${workdayEnd.toString().padStart(2, '0')}:00:00`);
+
+  for (const event of events) {
+    const eventStart = new Date(event.datetime);
+    const eventEnd = new Date(eventStart.getTime() + event.duration * 60000);
+
+    // 현재 시간과 이벤트 시작 사이에 빈 시간이 있으면 추가
+    if (eventStart > currentTime) {
+      const gapDuration = Math.round((eventStart.getTime() - currentTime.getTime()) / 60000);
+      if (gapDuration >= requiredDuration) {
+        slots.push({
+          start: currentTime.toISOString(),
+          end: eventStart.toISOString(),
+          duration: gapDuration
+        });
+      }
+    }
+
+    // 현재 시간을 이벤트 종료 시간 이후로 이동
+    if (eventEnd > currentTime) {
+      currentTime = eventEnd;
+    }
+  }
+
+  // 마지막 이벤트 이후 하루 끝까지 빈 시간 확인
+  if (dayEnd > currentTime) {
+    const gapDuration = Math.round((dayEnd.getTime() - currentTime.getTime()) / 60000);
+    if (gapDuration >= requiredDuration) {
+      slots.push({
+        start: currentTime.toISOString(),
+        end: dayEnd.toISOString(),
+        duration: gapDuration
+      });
+    }
+  }
+
+  let message = '';
+  if (slots.length === 0) {
+    message = `${date}에 ${requiredDuration}분 이상의 빈 시간이 없습니다.`;
+  } else {
+    message = `${date}에 ${slots.length}개의 빈 시간대가 있습니다.`;
+  }
+
+  return { slots, message };
+}
+
+/**
+ * 사용자의 목표 조회
+ */
+export async function getGoals(userId: string): Promise<{ goals: Goal[]; summary: string }> {
+  const goals = await getGoalsByUser(userId);
+  const activeGoals = goals.filter(g => g.is_active);
+
+  let summary = '';
+  if (activeGoals.length === 0) {
+    summary = '현재 활성화된 목표가 없습니다.';
+  } else {
+    summary = `활성 목표 ${activeGoals.length}개: ${activeGoals.map(g => g.title).join(', ')}`;
+  }
+
+  return { goals: activeGoals, summary };
+}
+
+/**
+ * 목표에 맞는 일정 추천 (빈 시간에 배치)
+ */
+export async function suggestScheduleForGoal(
+  userId: string,
+  goalTitle: string,
+  activityType: string,
+  daysAhead: number = 7
+): Promise<{ suggestions: { date: string; time: string; duration: number }[]; message: string }> {
+  const suggestions: { date: string; time: string; duration: number }[] = [];
+
+  const today = new Date();
+
+  // 활동 유형별 기본 설정
+  const activityDefaults: { [key: string]: { duration: number; preferredHour: number } } = {
+    '운동': { duration: 60, preferredHour: 7 },
+    '공부': { duration: 120, preferredHour: 10 },
+    '독서': { duration: 60, preferredHour: 21 },
+    '명상': { duration: 30, preferredHour: 6 },
+    default: { duration: 60, preferredHour: 14 }
+  };
+
+  const settings = activityDefaults[activityType] || activityDefaults.default;
+
+  for (let i = 0; i < daysAhead; i++) {
+    const targetDate = new Date(today);
+    targetDate.setDate(today.getDate() + i);
+    const dateStr = targetDate.toISOString().split('T')[0];
+
+    // 해당 날짜의 빈 시간 확인
+    const { slots } = await findFreeSlots(userId, dateStr, settings.duration);
+
+    if (slots.length > 0) {
+      // 선호 시간에 가장 가까운 슬롯 찾기
+      const preferredTime = new Date(`${dateStr}T${settings.preferredHour.toString().padStart(2, '0')}:00:00`);
+
+      let bestSlot = slots[0];
+      let minDiff = Math.abs(new Date(slots[0].start).getTime() - preferredTime.getTime());
+
+      for (const slot of slots) {
+        const diff = Math.abs(new Date(slot.start).getTime() - preferredTime.getTime());
+        if (diff < minDiff) {
+          minDiff = diff;
+          bestSlot = slot;
+        }
+      }
+
+      suggestions.push({
+        date: dateStr,
+        time: new Date(bestSlot.start).toTimeString().slice(0, 5),
+        duration: settings.duration
+      });
+    }
+  }
+
+  let message = '';
+  if (suggestions.length === 0) {
+    message = `${goalTitle}을 위한 빈 시간을 찾지 못했습니다.`;
+  } else {
+    message = `${goalTitle}을 위해 ${suggestions.length}개의 시간대를 추천합니다.`;
+  }
+
+  return { suggestions, message };
+}
+
+/**
+ * OpenAI Function Calling용 도구 정의
+ */
+export const calendarToolDefinitions = [
+  {
+    type: 'function' as const,
+    function: {
+      name: 'get_events',
+      description: '사용자의 일정을 조회합니다. 특정 기간의 일정을 확인할 때 사용합니다.',
+      parameters: {
+        type: 'object',
+        properties: {
+          start_date: {
+            type: 'string',
+            description: '조회 시작 날짜 (YYYY-MM-DD 형식)'
+          },
+          end_date: {
+            type: 'string',
+            description: '조회 종료 날짜 (YYYY-MM-DD 형식)'
+          }
+        },
+        required: []
+      }
+    }
+  },
+  {
+    type: 'function' as const,
+    function: {
+      name: 'check_conflicts',
+      description: '특정 날짜/시간에 충돌하는 일정이 있는지 확인합니다.',
+      parameters: {
+        type: 'object',
+        properties: {
+          datetime: {
+            type: 'string',
+            description: '확인할 날짜/시간 (ISO 형식, 예: 2024-01-15T14:00:00)'
+          },
+          duration: {
+            type: 'number',
+            description: '일정 소요 시간 (분 단위)'
+          }
+        },
+        required: ['datetime', 'duration']
+      }
+    }
+  },
+  {
+    type: 'function' as const,
+    function: {
+      name: 'find_free_slots',
+      description: '특정 날짜의 빈 시간대를 찾습니다.',
+      parameters: {
+        type: 'object',
+        properties: {
+          date: {
+            type: 'string',
+            description: '확인할 날짜 (YYYY-MM-DD 형식)'
+          },
+          required_duration: {
+            type: 'number',
+            description: '필요한 최소 시간 (분 단위, 기본값 60)'
+          }
+        },
+        required: ['date']
+      }
+    }
+  },
+  {
+    type: 'function' as const,
+    function: {
+      name: 'get_goals',
+      description: '사용자의 목표를 조회합니다.',
+      parameters: {
+        type: 'object',
+        properties: {},
+        required: []
+      }
+    }
+  },
+  {
+    type: 'function' as const,
+    function: {
+      name: 'suggest_schedule_for_goal',
+      description: '목표 달성을 위한 일정을 빈 시간에 추천합니다.',
+      parameters: {
+        type: 'object',
+        properties: {
+          goal_title: {
+            type: 'string',
+            description: '목표 제목'
+          },
+          activity_type: {
+            type: 'string',
+            description: '활동 유형 (운동, 공부, 독서, 명상 등)'
+          },
+          days_ahead: {
+            type: 'number',
+            description: '추천할 기간 (일 수, 기본값 7)'
+          }
+        },
+        required: ['goal_title', 'activity_type']
+      }
+    }
+  }
+];
+
+/**
+ * 도구 실행 함수
+ */
+export async function executeCalendarTool(
+  toolName: string,
+  args: any,
+  userId: string
+): Promise<any> {
+  switch (toolName) {
+    case 'get_events':
+      return await getEvents(userId, args.start_date, args.end_date);
+
+    case 'check_conflicts':
+      return await checkConflicts(userId, args.datetime, args.duration);
+
+    case 'find_free_slots':
+      return await findFreeSlots(userId, args.date, args.required_duration || 60);
+
+    case 'get_goals':
+      return await getGoals(userId);
+
+    case 'suggest_schedule_for_goal':
+      return await suggestScheduleForGoal(
+        userId,
+        args.goal_title,
+        args.activity_type,
+        args.days_ahead || 7
+      );
+
+    default:
+      return { error: `Unknown tool: ${toolName}` };
+  }
+}

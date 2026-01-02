@@ -1,5 +1,5 @@
 import { Router, Response } from 'express';
-import { createOrchestrator } from '../agents/index.js';
+import { createAgentLoop } from '../agents/index.js';
 import {
   getEventsByUser,
   getTodosByUser,
@@ -137,9 +137,9 @@ router.post('/', authenticate, async (req: AuthRequest, res: Response) => {
       conversation_history: history
     };
 
-    // Orchestrator로 메시지 처리
-    const orchestrator = createOrchestrator(context);
-    const response = await orchestrator.processMessage(message);
+    // Agent Loop로 메시지 처리 (Function Calling 사용)
+    const agent = createAgentLoop(context);
+    const response = await agent.processMessage(message);
 
     // 일정이 있으면 pending_events로 저장 (바로 저장하지 않음)
     const pendingEvents = response.events_to_create || [];

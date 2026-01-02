@@ -3,3 +3,15 @@ export { parseUserInput, classifyEventType, parseTimeExpression } from './parser
 export { scheduleTodos, calculateAvailableSlots, checkConflicts, findOptimalSlot } from './schedulerAgent.js';
 export { createPlan, decomposeGoal, createStudyPlan } from './plannerAgent.js';
 export { MainOrchestrator, createOrchestrator } from './orchestrator.js';
+
+// New Agent Loop (with Function Calling)
+export { AgentLoop, createAgentLoop } from './agentLoop.js';
+export {
+  calendarToolDefinitions,
+  executeCalendarTool,
+  getEvents,
+  checkConflicts as checkEventConflicts,
+  findFreeSlots,
+  getGoals,
+  suggestScheduleForGoal
+} from './tools/calendarTools.js';
