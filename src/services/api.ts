@@ -134,13 +134,16 @@ export interface Message {
   created_at: string;
 }
 
+export type ChatMode = 'auto' | 'event' | 'todo' | 'goal' | 'briefing';
+
 export async function sendChatMessage(
   message: string,
-  conversationId?: string
+  conversationId?: string,
+  mode: ChatMode = 'auto'
 ): Promise<ChatResponse> {
   return apiRequest<ChatResponse>('/chat', {
     method: 'POST',
-    body: JSON.stringify({ message, conversation_id: conversationId }),
+    body: JSON.stringify({ message, conversation_id: conversationId, mode }),
   });
 }
 

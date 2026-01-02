@@ -79,7 +79,7 @@ const router = Router();
  */
 router.post('/', authenticate, async (req: AuthRequest, res: Response) => {
   try {
-    const { message, conversation_id } = req.body;
+    const { message, conversation_id, mode = 'auto' } = req.body;
     const userId = req.userId!;
 
     if (!message) {
@@ -139,7 +139,7 @@ router.post('/', authenticate, async (req: AuthRequest, res: Response) => {
 
     // Agent Loop로 메시지 처리 (Function Calling 사용)
     const agent = createAgentLoop(context);
-    const response = await agent.processMessage(message);
+    const response = await agent.processMessage(message, mode);
 
     // 일정이 있으면 pending_events로 저장 (바로 저장하지 않음)
     const pendingEvents = response.events_to_create || [];

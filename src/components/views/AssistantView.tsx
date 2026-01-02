@@ -13,6 +13,7 @@ import {
   type Conversation,
   type Message,
   type PendingEvent,
+  type ChatMode,
 } from '../../services/api';
 import DatePicker from '../DatePicker';
 import TimePicker from '../TimePicker';
@@ -50,6 +51,7 @@ const AssistantView: React.FC = () => {
   const [selectedGoal, setSelectedGoal] = useState<Goal | null>(null);
   const [showGoalSelector, setShowGoalSelector] = useState(false);
   const [showConversationList, setShowConversationList] = useState(true);
+  const [chatMode, setChatMode] = useState<ChatMode>('auto');
 
   // Event confirmation state - 메시지 ID별로 관리
   const [activeMessageId, setActiveMessageId] = useState<string | null>(null);
@@ -154,7 +156,7 @@ const AssistantView: React.FC = () => {
     setCompletedResults(null);
 
     try {
-      const response = await sendChatMessage(messageContent, currentConversationId || undefined);
+      const response = await sendChatMessage(messageContent, currentConversationId || undefined, chatMode);
 
       // Update conversation ID if new
       if (!currentConversationId) {
@@ -694,6 +696,45 @@ const AssistantView: React.FC = () => {
 
         {/* Input Area */}
         <div className="chat-input-area">
+          {/* Mode Selector */}
+          <div className="chat-mode-selector">
+            <button
+              className={`chat-mode-btn ${chatMode === 'auto' ? 'active' : ''}`}
+              onClick={() => setChatMode('auto')}
+              title="AI가 자동으로 판단"
+            >
+              🤖 자동
+            </button>
+            <button
+              className={`chat-mode-btn ${chatMode === 'event' ? 'active' : ''}`}
+              onClick={() => setChatMode('event')}
+              title="일정 추가"
+            >
+              📅 일정
+            </button>
+            <button
+              className={`chat-mode-btn ${chatMode === 'todo' ? 'active' : ''}`}
+              onClick={() => setChatMode('todo')}
+              title="할 일 추가"
+            >
+              ✅ TODO
+            </button>
+            <button
+              className={`chat-mode-btn ${chatMode === 'goal' ? 'active' : ''}`}
+              onClick={() => setChatMode('goal')}
+              title="목표 설정 및 분해"
+            >
+              🎯 Goal
+            </button>
+            <button
+              className={`chat-mode-btn ${chatMode === 'briefing' ? 'active' : ''}`}
+              onClick={() => setChatMode('briefing')}
+              title="오늘 브리핑"
+            >
+              📋 브리핑
+            </button>
+          </div>
+
           <div className="chat-input-wrapper">
             <button
               className="chat-attach-btn"
@@ -705,7 +746,13 @@ const AssistantView: React.FC = () => {
             <input
               type="text"
               className="chat-input"
-              placeholder="무엇이든 물어보세요..."
+              placeholder={
+                chatMode === 'event' ? '일정을 입력하세요... (예: 내일 3시 미팅)' :
+                chatMode === 'todo' ? '할 일을 입력하세요... (예: 보고서 작성)' :
+                chatMode === 'goal' ? '목표를 입력하세요... (예: 토익 900점)' :
+                chatMode === 'briefing' ? '브리핑 요청... (예: 오늘 일정 알려줘)' :
+                '무엇이든 물어보세요...'
+              }
               value={input}
               onChange={(e) => setInput(e.target.value)}
               onKeyDown={handleKeyDown}
