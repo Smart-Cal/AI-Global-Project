@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useGoalStore } from '../store/goalStore';
 import { useAuthStore } from '../store/authStore';
 import { useCategoryStore } from '../store/categoryStore';
+import { useToast } from './Toast';
 import { type Goal, CATEGORY_COLORS } from '../types';
 
 interface GoalModalProps {
@@ -14,6 +15,7 @@ export const GoalModal: React.FC<GoalModalProps> = ({ isOpen, onClose, editingGo
   const { user } = useAuthStore();
   const { addGoal, updateGoal } = useGoalStore();
   const { categories, addCategory, getDefaultCategory } = useCategoryStore();
+  const { showToast } = useToast();
 
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
@@ -62,6 +64,7 @@ export const GoalModal: React.FC<GoalModalProps> = ({ isOpen, onClose, editingGo
           priority,
           target_date: targetDate || undefined,
         });
+        showToast('목표가 수정되었습니다', 'success');
       } else {
         await addGoal({
           title: title.trim(),
@@ -72,10 +75,12 @@ export const GoalModal: React.FC<GoalModalProps> = ({ isOpen, onClose, editingGo
           progress: 0,
           is_active: true,
         });
+        showToast('목표가 추가되었습니다', 'success');
       }
       onClose();
     } catch (error) {
       console.error('Failed to save goal:', error);
+      showToast('목표 저장에 실패했습니다', 'error');
     } finally {
       setIsLoading(false);
     }
@@ -227,11 +232,11 @@ export const GoalModal: React.FC<GoalModalProps> = ({ isOpen, onClose, editingGo
             취소
           </button>
           <button
-            className="btn btn-primary"
+            className={`btn btn-primary ${isLoading ? 'loading' : ''}`}
             onClick={handleSubmit}
             disabled={!title.trim() || isLoading}
           >
-            {isLoading ? '저장 중...' : editingGoal ? '수정' : '추가'}
+            {editingGoal ? '수정' : '추가'}
           </button>
         </div>
       </div>

@@ -80,7 +80,7 @@ export const AIChatModal: React.FC<AIChatModalProps> = ({ isOpen, onClose }) => 
         description: pendingSchedule.description,
       });
 
-      setMessages((prev) => [...prev, { role: 'assistant', content: `✅ '${pendingSchedule.title}' 일정이 추가되었습니다!` }]);
+      setMessages((prev) => [...prev, { role: 'assistant', content: `'${pendingSchedule.title}' 일정이 추가되었습니다!` }]);
       setPendingSchedule(null);
     } finally {
       setIsLoading(false);
@@ -95,7 +95,7 @@ export const AIChatModal: React.FC<AIChatModalProps> = ({ isOpen, onClose }) => 
   const quickInputs = ['내일 점심 약속', '이번주 토요일 저녁', '다음주 회의'];
 
   return (
-    <Modal isOpen={isOpen} onClose={onClose} title="💬 AI 일정 도우미">
+    <Modal isOpen={isOpen} onClose={onClose} title="AI 일정 도우미">
       <div style={{ background: '#E3F2FD', padding: '12px', borderRadius: '12px', marginBottom: '16px', textAlign: 'center' }}>
         <span style={{ fontSize: '13px', color: '#1565C0' }}>
           자연어로 일정을 추가해보세요!<br />예: '내일 12시 강남역에서 점심약속'
@@ -109,7 +109,7 @@ export const AIChatModal: React.FC<AIChatModalProps> = ({ isOpen, onClose }) => 
 
         {pendingSchedule && (
           <div className="schedule-card">
-            <div className="schedule-card-title">📅 이 일정을 추가할까요?</div>
+            <div className="schedule-card-title">이 일정을 추가할까요?</div>
             <div className="schedule-card-item">• 제목: {pendingSchedule.title}</div>
             <div className="schedule-card-item">• 날짜: {pendingSchedule.date}</div>
             <div className="schedule-card-item">• 시간: {pendingSchedule.start_time || '미정'}</div>

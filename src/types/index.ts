@@ -143,7 +143,7 @@ export const AGENT_CONFIGS: Record<AgentType, AgentConfig> = {
   master: {
     type: 'master',
     name: '통합 매니저',
-    icon: '🤖',
+    icon: '',
     description: '모든 에이전트를 조율하고 최적의 일정을 제안합니다',
     specialties: ['일정 조율', '목표 관리', '우선순위 설정'],
     color: '#4A90D9',
@@ -151,7 +151,7 @@ export const AGENT_CONFIGS: Record<AgentType, AgentConfig> = {
   health: {
     type: 'health',
     name: '건강 코치',
-    icon: '💪',
+    icon: '',
     description: '운동, 식단, 건강 관리를 도와드립니다',
     specialties: ['운동 계획', '다이어트', '수면 관리', '건강 습관'],
     color: '#1DD1A1',
@@ -159,7 +159,7 @@ export const AGENT_CONFIGS: Record<AgentType, AgentConfig> = {
   study: {
     type: 'study',
     name: '학습 멘토',
-    icon: '📚',
+    icon: '',
     description: '공부 계획과 학습 목표를 관리합니다',
     specialties: ['학습 계획', '시험 준비', '자격증', '언어 학습'],
     color: '#FECA57',
@@ -167,7 +167,7 @@ export const AGENT_CONFIGS: Record<AgentType, AgentConfig> = {
   career: {
     type: 'career',
     name: '커리어 어드바이저',
-    icon: '💼',
+    icon: '',
     description: '직장/커리어 관련 일정과 목표를 관리합니다',
     specialties: ['업무 관리', '커리어 개발', '네트워킹', '자기계발'],
     color: '#54A0FF',
@@ -175,7 +175,7 @@ export const AGENT_CONFIGS: Record<AgentType, AgentConfig> = {
   lifestyle: {
     type: 'lifestyle',
     name: '라이프 플래너',
-    icon: '🌟',
+    icon: '',
     description: '일상생활과 여가, 관계를 관리합니다',
     specialties: ['약속 관리', '취미 활동', '여행 계획', '관계 관리'],
     color: '#FF9FF3',
@@ -183,7 +183,7 @@ export const AGENT_CONFIGS: Record<AgentType, AgentConfig> = {
   scheduler: {
     type: 'scheduler',
     name: '스케줄 최적화',
-    icon: '📅',
+    icon: '',
     description: '일정 충돌을 해결하고 최적의 시간을 찾습니다',
     specialties: ['시간 최적화', '충돌 해결', '여유시간 확보'],
     color: '#5F27CD',

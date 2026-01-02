@@ -156,7 +156,6 @@ const ScheduleView: React.FC<ScheduleViewProps> = ({ onEventClick, onAddEvent, o
 
               {sortedDates.length === 0 ? (
                 <div className="schedule-empty">
-                  <span className="schedule-empty-icon">📅</span>
                   <p>일정이 없습니다</p>
                 </div>
               ) : (
@@ -188,7 +187,7 @@ const ScheduleView: React.FC<ScheduleViewProps> = ({ onEventClick, onAddEvent, o
                                   </span>
                                 )}
                                 {event.location && (
-                                  <span className="schedule-event-location">📍 {event.location}</span>
+                                  <span className="schedule-event-location">{event.location}</span>
                                 )}
                               </div>
                             </div>
@@ -211,7 +210,6 @@ const ScheduleView: React.FC<ScheduleViewProps> = ({ onEventClick, onAddEvent, o
 
               {filteredTodos.length === 0 ? (
                 <div className="schedule-empty">
-                  <span className="schedule-empty-icon">✅</span>
                   <p>할 일이 없습니다</p>
                 </div>
               ) : (
@@ -231,7 +229,7 @@ const ScheduleView: React.FC<ScheduleViewProps> = ({ onEventClick, onAddEvent, o
                         <div className="schedule-todo-title">{todo.title}</div>
                         {todo.due_date && (
                           <div className="schedule-todo-due">
-                            📅 {formatDate(todo.due_date)}
+                            {formatDate(todo.due_date)}
                             {todo.due_time && ` ${todo.due_time.slice(0, 5)}`}
                           </div>
                         )}

@@ -2,9 +2,9 @@ import React from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 
 const navItems = [
-  { path: '/', icon: '🏠', label: '홈' },
-  { path: '/calendar', icon: '📅', label: '캘린더' },
-  { path: '/schedule', icon: '📋', label: '일정' },
+  { path: '/', label: '홈' },
+  { path: '/calendar', label: '캘린더' },
+  { path: '/schedule', label: '일정' },
 ];
 
 export const BottomNav: React.FC = () => {
@@ -19,7 +19,6 @@ export const BottomNav: React.FC = () => {
           className={`nav-item ${location.pathname === item.path ? 'active' : ''}`}
           onClick={() => navigate(item.path)}
         >
-          <span className="icon">{item.icon}</span>
           <span>{item.label}</span>
         </button>
       ))}

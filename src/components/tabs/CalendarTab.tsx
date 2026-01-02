@@ -332,7 +332,7 @@ const CalendarTab: React.FC<CalendarTabProps> = ({ onEventClick, onAddEvent }) =
                           {event.start_time?.slice(0, 5)} - {event.end_time?.slice(0, 5)}
                         </div>
                         {event.location && (
-                          <div className="calendar-day-event-location">📍 {event.location}</div>
+                          <div className="calendar-day-event-location">{event.location}</div>
                         )}
                       </div>
                     );

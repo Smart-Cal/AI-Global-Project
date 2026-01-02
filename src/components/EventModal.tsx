@@ -5,6 +5,7 @@ import { useCategoryStore } from '../store/categoryStore';
 import { type CalendarEvent, DEFAULT_CATEGORY_COLOR, CATEGORY_COLORS } from '../types';
 import TimePicker from './TimePicker';
 import DatePicker from './DatePicker';
+import { useToast } from './Toast';
 
 interface EventModalProps {
   isOpen: boolean;
@@ -22,6 +23,7 @@ export const EventModal: React.FC<EventModalProps> = ({
   const { user } = useAuthStore();
   const { addEvent, editEvent, removeEvent } = useEventStore();
   const { categories, addCategory, getDefaultCategory } = useCategoryStore();
+  const { showToast } = useToast();
 
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
@@ -89,12 +91,15 @@ export const EventModal: React.FC<EventModalProps> = ({
 
       if (isEditing && event?.id) {
         await editEvent(event.id, eventData);
+        showToast('일정이 수정되었습니다', 'success');
       } else {
         await addEvent(eventData);
+        showToast('일정이 추가되었습니다', 'success');
       }
       onClose();
     } catch (error) {
       console.error('Failed to save event:', error);
+      showToast('일정 저장에 실패했습니다', 'error');
     } finally {
       setIsLoading(false);
     }
@@ -104,6 +109,7 @@ export const EventModal: React.FC<EventModalProps> = ({
     if (!event?.id) return;
     if (confirm('이 일정을 삭제하시겠습니까?')) {
       await removeEvent(event.id);
+      showToast('일정이 삭제되었습니다', 'success');
       onClose();
     }
   };
@@ -290,11 +296,11 @@ export const EventModal: React.FC<EventModalProps> = ({
             취소
           </button>
           <button
-            className="btn btn-primary"
+            className={`btn btn-primary ${isLoading ? 'loading' : ''}`}
             onClick={handleSubmit}
             disabled={!title.trim() || !eventDate || isLoading}
           >
-            {isLoading ? '저장 중...' : isEditing ? '수정' : '추가'}
+            {isEditing ? '수정' : '추가'}
           </button>
         </div>
       </div>

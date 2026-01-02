@@ -180,8 +180,7 @@ const AssistantTab: React.FC = () => {
       {selectedGoal && (
         <div className="assistant-selected-goal">
           <span className="goal-tag">
-            <span className="goal-icon">🎯</span>
-            {selectedGoal.title}
+            [Goal] {selectedGoal.title}
             <button
               className="goal-remove"
               onClick={() => setSelectedGoal(null)}
@@ -207,11 +206,9 @@ const AssistantTab: React.FC = () => {
             {showAttachMenu && (
               <div className="assistant-attach-menu">
                 <button onClick={handleFileSelect}>
-                  <span className="attach-icon">📎</span>
                   파일 첨부
                 </button>
                 <button onClick={() => { setShowGoalSelector(true); setShowAttachMenu(false); }}>
-                  <span className="attach-icon">🎯</span>
                   Goal 선택
                 </button>
               </div>
@@ -274,7 +271,6 @@ const AssistantTab: React.FC = () => {
                 className={`goal-selector-item ${!selectedGoal ? 'selected' : ''}`}
                 onClick={() => handleGoalSelect(null)}
               >
-                <span className="goal-selector-icon">💬</span>
                 <span>일반 대화</span>
               </button>
               {activeGoals.map((goal) => (
@@ -283,7 +279,6 @@ const AssistantTab: React.FC = () => {
                   className={`goal-selector-item ${selectedGoal?.id === goal.id ? 'selected' : ''}`}
                   onClick={() => handleGoalSelect(goal)}
                 >
-                  <span className="goal-selector-icon">🎯</span>
                   <span>{goal.title}</span>
                 </button>
               ))}

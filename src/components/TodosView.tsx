@@ -140,9 +140,6 @@ export const TodosView: React.FC<TodosViewProps> = ({ onAddTodo }) => {
       {/* Todo List */}
       {filteredTodos.length === 0 ? (
         <div className="empty-state">
-          <div className="empty-state-icon">
-            {filter === 'completed' ? '🎉' : '✅'}
-          </div>
           <div className="empty-state-title">
             {filter === 'completed'
               ? '완료된 할 일이 없어요'
@@ -194,7 +191,7 @@ export const TodosView: React.FC<TodosViewProps> = ({ onAddTodo }) => {
                     )}
                     {todo.is_recurring && (
                       <span style={{ color: 'var(--text-muted)' }}>
-                        🔄 {todo.recurrence_pattern === 'daily' ? '매일' : todo.recurrence_pattern === 'weekly' ? '매주' : '매월'}
+                        {todo.recurrence_pattern === 'daily' ? '매일' : todo.recurrence_pattern === 'weekly' ? '매주' : '매월'}
                       </span>
                     )}
                   </div>
@@ -204,7 +201,7 @@ export const TodosView: React.FC<TodosViewProps> = ({ onAddTodo }) => {
                   onClick={() => handleDelete(todo.id!)}
                   style={{ color: 'var(--text-muted)' }}
                 >
-                  🗑️
+                  삭제
                 </button>
               </div>
             );
@@ -217,7 +214,6 @@ export const TodosView: React.FC<TodosViewProps> = ({ onAddTodo }) => {
         <div className="todo-section" style={{ marginTop: '24px' }}>
           <div className="todo-section-header">
             <div className="todo-section-title">
-              <span>✅</span>
               <span>완료됨</span>
               <span className="todo-count">{getCompletedTodos().length}</span>
             </div>

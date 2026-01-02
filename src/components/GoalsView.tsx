@@ -46,7 +46,6 @@ export const GoalsView: React.FC<GoalsViewProps> = ({ onAddGoal }) => {
 
       {activeGoals.length === 0 ? (
         <div className="empty-state">
-          <div className="empty-state-icon">🎯</div>
           <div className="empty-state-title">아직 목표가 없어요</div>
           <div className="empty-state-text">
             목표를 설정하면 AI가 맞춤형 일정과 실천 방법을 추천해 드려요
@@ -60,7 +59,6 @@ export const GoalsView: React.FC<GoalsViewProps> = ({ onAddGoal }) => {
           <div className="todo-section">
             <div className="todo-section-header">
               <div className="todo-section-title">
-                <span>🔥</span>
                 <span>진행 중</span>
                 <span className="todo-count">{activeGoals.length}</span>
               </div>
@@ -136,7 +134,6 @@ export const GoalsView: React.FC<GoalsViewProps> = ({ onAddGoal }) => {
             <div className="todo-section">
               <div className="todo-section-header">
                 <div className="todo-section-title">
-                  <span>✅</span>
                   <span>완료됨</span>
                   <span className="todo-count">{completedGoals.length}</span>
                 </div>

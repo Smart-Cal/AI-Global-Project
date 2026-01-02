@@ -1,7 +1,9 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useGoalStore } from '../../store/goalStore';
 import { useCategoryStore } from '../../store/categoryStore';
+import { useTodoStore } from '../../store/todoStore';
 import { DEFAULT_CATEGORY_COLOR, type Goal } from '../../types';
+import GoalDecomposition from '../GoalDecomposition';
 
 interface GoalViewProps {
   onGoalClick: (goal: Goal) => void;
@@ -11,9 +13,11 @@ interface GoalViewProps {
 const GoalView: React.FC<GoalViewProps> = ({ onGoalClick, onAddGoal }) => {
   const { goals, fetchGoals, updateGoal, deleteGoal } = useGoalStore();
   const { getCategoryById } = useCategoryStore();
+  const { getTodosByGoal } = useTodoStore();
 
   const [selectedGoal, setSelectedGoal] = useState<Goal | null>(null);
   const [showFilter, setShowFilter] = useState<'all' | 'active' | 'completed'>('all');
+  const [decomposeGoal, setDecomposeGoal] = useState<Goal | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
@@ -111,7 +115,6 @@ const GoalView: React.FC<GoalViewProps> = ({ onGoalClick, onAddGoal }) => {
         <div className="goal-list">
           {filteredGoals.length === 0 ? (
             <div className="goal-empty">
-              <span className="goal-empty-icon">🎯</span>
               <p>목표가 없습니다</p>
               <button className="btn btn-primary" onClick={onAddGoal}>
                 첫 번째 목표 설정하기
@@ -123,6 +126,8 @@ const GoalView: React.FC<GoalViewProps> = ({ onGoalClick, onAddGoal }) => {
               const priority = getPriorityLabel(goal.priority);
               const daysRemaining = getDaysRemaining(goal.target_date);
               const isSelected = selectedGoal?.id === goal.id;
+              const linkedTodos = goal.id ? getTodosByGoal(goal.id) : [];
+              const completedTodos = linkedTodos.filter(t => t.is_completed);
 
               return (
                 <div
@@ -164,10 +169,19 @@ const GoalView: React.FC<GoalViewProps> = ({ onGoalClick, onAddGoal }) => {
                     <span className="goal-progress-text">{goal.progress}%</span>
                   </div>
 
+                  {/* 연결된 Todo 표시 */}
+                  {linkedTodos.length > 0 && (
+                    <div className="goal-card-todos">
+                      <span className="todo-count">
+                        ✓ {completedTodos.length}/{linkedTodos.length} 작업
+                      </span>
+                    </div>
+                  )}
+
                   <div className="goal-card-footer">
                     {goal.target_date && (
                       <span className={`goal-card-date ${daysRemaining?.isOverdue ? 'overdue' : ''}`}>
-                        📅 {formatDate(goal.target_date)}
+                        {formatDate(goal.target_date)}
                         {daysRemaining && ` (${daysRemaining.text})`}
                       </span>
                     )}
@@ -241,6 +255,12 @@ const GoalView: React.FC<GoalViewProps> = ({ onGoalClick, onAddGoal }) => {
 
               <div className="goal-detail-actions">
                 <button
+                  className="btn btn-secondary"
+                  onClick={() => setDecomposeGoal(selectedGoal)}
+                >
+                  목표 분해
+                </button>
+                <button
                   className="btn btn-primary"
                   onClick={() => onGoalClick(selectedGoal)}
                 >
@@ -262,6 +282,14 @@ const GoalView: React.FC<GoalViewProps> = ({ onGoalClick, onAddGoal }) => {
           </div>
         )}
       </div>
+
+      {/* Goal 분해 모달 */}
+      {decomposeGoal && (
+        <GoalDecomposition
+          goal={decomposeGoal}
+          onClose={() => setDecomposeGoal(null)}
+        />
+      )}
     </div>
   );
 };

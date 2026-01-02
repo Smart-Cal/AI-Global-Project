@@ -103,7 +103,7 @@ const TimePicker: React.FC<TimePickerProps> = ({
         className={`time-picker-input ${isOpen ? 'focused' : ''}`}
         onClick={() => setIsOpen(!isOpen)}
       >
-        <span className="time-picker-icon">🕐</span>
+        <span className="time-picker-icon"></span>
         <span className={`time-picker-value ${!value ? 'placeholder' : ''}`}>
           {value ? formatDisplay() : placeholder}
         </span>

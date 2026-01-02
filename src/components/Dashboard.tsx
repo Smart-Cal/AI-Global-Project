@@ -218,9 +218,9 @@ export const Dashboard: React.FC<DashboardProps> = ({
               </div>
               <div className="schedule-card-title">{event.title}</div>
               <div className="schedule-card-info">
-                <span>📅 {event.date}</span>
-                {event.start_time && <span>🕐 {event.start_time}</span>}
-                {event.location && <span>📍 {event.location}</span>}
+                <span>{event.date}</span>
+                {event.start_time && <span>{event.start_time}</span>}
+                {event.location && <span>{event.location}</span>}
               </div>
               {!isAdded && !isRejected && (
                 <div className="schedule-card-actions">
@@ -251,7 +251,7 @@ export const Dashboard: React.FC<DashboardProps> = ({
         {/* 오늘 일정 */}
         <div className="sidebar-section">
           <div className="sidebar-section-header">
-            <span>📅 오늘 일정</span>
+            <span>오늘 일정</span>
             <span className="sidebar-count">{todayEvents.length}</span>
           </div>
           {todayEvents.length === 0 ? (
@@ -277,7 +277,7 @@ export const Dashboard: React.FC<DashboardProps> = ({
         {/* 오늘 할 일 */}
         <div className="sidebar-section">
           <div className="sidebar-section-header">
-            <span>✅ 오늘 할 일</span>
+            <span>오늘 할 일</span>
             <span className="sidebar-count">{todayTodos.length + overdueTodos.length}</span>
           </div>
           {todayTodos.length + overdueTodos.length === 0 ? (
@@ -300,7 +300,7 @@ export const Dashboard: React.FC<DashboardProps> = ({
         {/* 진행 중인 목표 */}
         <div className="sidebar-section">
           <div className="sidebar-section-header">
-            <span>🎯 목표</span>
+            <span>목표</span>
             <span className="sidebar-count">{activeGoals.length}</span>
           </div>
           {activeGoals.length === 0 ? (
@@ -333,13 +333,13 @@ export const Dashboard: React.FC<DashboardProps> = ({
 
         <div className="sidebar-nav">
           <button className="sidebar-nav-btn" onClick={() => onViewChange('calendar')}>
-            📅 캘린더
+            캘린더
           </button>
           <button className="sidebar-nav-btn" onClick={() => onViewChange('todos')}>
-            ✅ 할 일
+            할 일
           </button>
           <button className="sidebar-nav-btn" onClick={() => onViewChange('goals')}>
-            🎯 목표
+            목표
           </button>
         </div>
       </aside>

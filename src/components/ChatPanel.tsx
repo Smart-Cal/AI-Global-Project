@@ -343,30 +343,25 @@ export const ChatPanel: React.FC<ChatPanelProps> = ({ onClose }) => {
 
           <div className="schedule-card-info">
             <div className="schedule-card-row">
-              <span className="schedule-card-icon">📅</span>
               <span>{event.date}</span>
             </div>
             {event.start_time && (
               <div className="schedule-card-row">
-                <span className="schedule-card-icon">🕐</span>
                 <span>{formatTime(event.start_time)}{event.end_time && ` ~ ${formatTime(event.end_time)}`}</span>
               </div>
             )}
             {event.location && (
               <div className="schedule-card-row">
-                <span className="schedule-card-icon">📍</span>
                 <span>{event.location}</span>
               </div>
             )}
             {event.description && (
               <div className="schedule-card-row description">
-                <span className="schedule-card-icon">📝</span>
                 <span>{event.description}</span>
               </div>
             )}
             {event.reason && (
               <div className="schedule-card-row reason">
-                <span className="schedule-card-icon">💡</span>
                 <span>{event.reason}</span>
               </div>
             )}
@@ -424,7 +419,6 @@ export const ChatPanel: React.FC<ChatPanelProps> = ({ onClose }) => {
       <div className="chat-messages">
         {messages.length === 0 && (
           <div className="empty-state">
-            <div className="empty-state-icon">🤖</div>
             <div className="empty-state-title">AI 스케줄러</div>
             <div className="empty-state-text">
               일정을 추천받고 싶은 내용을 말씀해주세요.
@@ -449,23 +443,20 @@ export const ChatPanel: React.FC<ChatPanelProps> = ({ onClose }) => {
               {msg.metadata?.place_recommendations?.map((place, idx) => (
                 <div key={idx} className="schedule-card">
                   <div className="schedule-card-header">
-                    <span className="schedule-card-category">📍 장소 추천</span>
+                    <span className="schedule-card-category">장소 추천</span>
                   </div>
                   <div className="schedule-card-title">{place.name}</div>
                   <div className="schedule-card-info">
                     <div className="schedule-card-row">
-                      <span className="schedule-card-icon">🏷️</span>
                       <span>{place.category}</span>
                     </div>
                     {place.address && (
                       <div className="schedule-card-row">
-                        <span className="schedule-card-icon">📍</span>
                         <span>{place.address}</span>
                       </div>
                     )}
                     {place.reason && (
                       <div className="schedule-card-row reason">
-                        <span className="schedule-card-icon">💡</span>
                         <span>{place.reason}</span>
                       </div>
                     )}

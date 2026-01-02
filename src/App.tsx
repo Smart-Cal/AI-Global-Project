@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { useAuthStore } from './store/authStore';
 import {
@@ -15,7 +15,9 @@ import ScheduleView from './components/views/ScheduleView';
 import GoalView from './components/views/GoalView';
 import AuthPage from './pages/AuthPage';
 import AuthCallback from './pages/AuthCallback';
-import { MenuIcon, PlusIcon } from './components/Icons';
+import { ToastProvider } from './components/Toast';
+import SearchModal from './components/SearchModal';
+import { MenuIcon, PlusIcon, SearchIcon } from './components/Icons';
 import type { CalendarView as CalendarViewType, CalendarEvent, Goal } from './types';
 
 // View types (기존 SidebarView 대체)
@@ -50,6 +52,19 @@ const MainLayout: React.FC = () => {
   const [eventDetailModalOpen, setEventDetailModalOpen] = useState(false);
   const [goalModalOpen, setGoalModalOpen] = useState(false);
   const [todoModalOpen, setTodoModalOpen] = useState(false);
+  const [searchModalOpen, setSearchModalOpen] = useState(false);
+
+  // 키보드 단축키: Ctrl+K로 검색 모달 열기
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if ((e.ctrlKey || e.metaKey) && e.key === 'k') {
+        e.preventDefault();
+        setSearchModalOpen(true);
+      }
+    };
+    document.addEventListener('keydown', handleKeyDown);
+    return () => document.removeEventListener('keydown', handleKeyDown);
+  }, []);
 
   // Editing states
   const [editingEvent, setEditingEvent] = useState<CalendarEvent | null>(null);
@@ -192,6 +207,11 @@ const MainLayout: React.FC = () => {
           </button>
           <h1 className="content-title">{getContentTitle()}</h1>
           <div className="content-actions">
+            <button className="search-btn" onClick={() => setSearchModalOpen(true)}>
+              <SearchIcon size={16} />
+              <span>검색</span>
+              <kbd>Ctrl+K</kbd>
+            </button>
             {currentView === 'calendar' && (
               <button className="btn btn-primary btn-sm" onClick={() => handleAddEvent()}>
                 <PlusIcon size={14} /> 새 일정
@@ -249,26 +269,35 @@ const MainLayout: React.FC = () => {
         isOpen={todoModalOpen}
         onClose={() => setTodoModalOpen(false)}
       />
+
+      <SearchModal
+        isOpen={searchModalOpen}
+        onClose={() => setSearchModalOpen(false)}
+        onEventClick={handleEventClick}
+        onGoalClick={handleGoalClick}
+      />
     </div>
   );
 };
 
 const App: React.FC = () => {
   return (
-    <BrowserRouter>
-      <Routes>
-        <Route path="/auth" element={<AuthPage />} />
-        <Route path="/auth/callback" element={<AuthCallback />} />
-        <Route
-          path="/*"
-          element={
-            <ProtectedRoute>
-              <MainLayout />
-            </ProtectedRoute>
-          }
-        />
-      </Routes>
-    </BrowserRouter>
+    <ToastProvider>
+      <BrowserRouter>
+        <Routes>
+          <Route path="/auth" element={<AuthPage />} />
+          <Route path="/auth/callback" element={<AuthCallback />} />
+          <Route
+            path="/*"
+            element={
+              <ProtectedRoute>
+                <MainLayout />
+              </ProtectedRoute>
+            }
+          />
+        </Routes>
+      </BrowserRouter>
+    </ToastProvider>
   );
 };
 
