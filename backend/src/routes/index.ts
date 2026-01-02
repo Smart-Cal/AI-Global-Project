@@ -7,6 +7,7 @@ import scheduleRoutes from './schedule.js';
 import categoriesRoutes from './categories.js';
 import goalsRoutes from './goals.js';
 import groupsRoutes from './groups.js';
+import briefingRoutes from './briefing.js';
 
 const router = Router();
 
@@ -24,5 +25,6 @@ router.use('/schedule', scheduleRoutes);
 router.use('/categories', categoriesRoutes);
 router.use('/goals', goalsRoutes);
 router.use('/groups', groupsRoutes);
+router.use('/briefing', briefingRoutes);
 
 export default router;
