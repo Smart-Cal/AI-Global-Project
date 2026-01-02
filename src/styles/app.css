@@ -6769,6 +6769,43 @@ textarea.form-input {
   font-size: 14px;
 }
 
+/* Sidebar Chronotype 버튼 */
+.sidebar-settings {
+  padding: 12px 14px;
+  border-top: 1px solid var(--border-light);
+  margin-top: auto;
+}
+
+.chronotype-btn {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  padding: 10px 12px;
+  background: var(--bg-hover);
+  border: 1px solid var(--border-light);
+  border-radius: var(--border-radius);
+  cursor: pointer;
+  transition: all 0.15s;
+  font-size: 13px;
+  color: var(--text-secondary);
+}
+
+.chronotype-btn:hover {
+  background: var(--bg-active);
+  border-color: var(--primary);
+  color: var(--text-primary);
+}
+
+.sidebar-settings .chronotype-icon {
+  font-size: 18px;
+}
+
+.chronotype-label {
+  flex: 1;
+  text-align: left;
+}
+
 @media (max-width: 600px) {
   .hours-grid {
     grid-template-columns: 1fr;
