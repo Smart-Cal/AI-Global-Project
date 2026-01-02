@@ -3,8 +3,9 @@ import { useAuthStore } from '../store/authStore';
 import { useGoalStore } from '../store/goalStore';
 import { useTodoStore } from '../store/todoStore';
 import { useCategoryStore } from '../store/categoryStore';
+import { useSettingsStore } from '../store/settingsStore';
 import type { SidebarView } from '../types';
-import { getIcon, PlusIcon, CalendarIcon } from './Icons';
+import { getIcon, PlusIcon, CalendarIcon, ClockIcon } from './Icons';
 
 interface SidebarProps {
   currentView: SidebarView;
@@ -12,6 +13,7 @@ interface SidebarProps {
   isOpen: boolean;
   onClose: () => void;
   onAddGoal: () => void;
+  onOpenChronotype?: () => void;
 }
 
 export const Sidebar: React.FC<SidebarProps> = ({
@@ -20,11 +22,13 @@ export const Sidebar: React.FC<SidebarProps> = ({
   isOpen,
   onClose,
   onAddGoal,
+  onOpenChronotype,
 }) => {
   const { user, logout } = useAuthStore();
   const { goals } = useGoalStore();
   const { todos } = useTodoStore();
   const { getCategoryById } = useCategoryStore();
+  const { getChronotypeInfo } = useSettingsStore();
 
   const activeGoals = goals.filter((g) => g.is_active);
   const pendingTodos = todos.filter((t) => !t.is_completed);
@@ -120,6 +124,17 @@ export const Sidebar: React.FC<SidebarProps> = ({
             <span>새 목표 추가</span>
           </button>
         </div>
+
+        {/* Chronotype 설정 버튼 */}
+        {onOpenChronotype && (
+          <div className="sidebar-settings">
+            <button className="chronotype-btn" onClick={onOpenChronotype}>
+              <span className="chronotype-icon">{getChronotypeInfo().icon}</span>
+              <span className="chronotype-label">{getChronotypeInfo().label}</span>
+              <ClockIcon size={14} />
+            </button>
+          </div>
+        )}
       </aside>
     </>
   );
