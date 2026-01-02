@@ -2101,6 +2101,7 @@ body {
 textarea.form-input {
   min-height: 80px;
   resize: vertical;
+  font-family: inherit;
 }
 
 /* Category Select */
