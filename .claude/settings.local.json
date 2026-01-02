@@ -11,7 +11,16 @@
       "Bash(git checkout:*)",
       "Bash(git merge:*)",
       "Bash(git stash:*)",
+      "Bash(git mv:*)",
+      "Bash(git add:*)",
+      "Bash(git commit:*)",
+      "Bash(git push:*)",
+      "Bash(find:*)",
+      "Bash(gh pr create --title \"Improve AI agent and event card UI\" --body \"$(cat <<''EOF''\n## Summary\n- AI agent now asks clarifying questions when event info is incomplete (time, location, duration)\n- Added conversation history for event confirmation/rejection results\n- Improved event card UI with custom DatePicker and TimePicker components\n- Duration selector now supports hours + minutes instead of minutes only\n- Added collapsible sidebar toggle to CalendarView\n\n## Test plan\n- [ ] Test AI agent with vague time expressions (e.g., \"내일 저녁약속\") - should ask for clarification\n- [ ] Test AI agent with precise time (e.g., \"내일 오후 3시 미팅\") - should create event directly\n- [ ] Test event confirmation/rejection - result message should appear in conversation history\n- [ ] Test DatePicker and TimePicker in event card editing\n- [ ] Test duration hours+minutes selector\n- [ ] Test CalendarView sidebar toggle button\n\n🤖 Generated with [Claude Code](https://claude.com/claude-code)\nEOF\n)\")",
+      "Bash(xargs ls:*)",
       "Bash(git pull:*)",
+      "Bash(git rebase:*)",
+      "Bash(GIT_EDITOR=true git rebase:*)",
       "Bash(git fetch:*)"
     ]
   }
