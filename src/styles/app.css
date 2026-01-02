@@ -5144,10 +5144,55 @@ textarea.form-input {
   margin-bottom: 10px;
 }
 
+.event-card-row-group.datetime-group {
+  gap: 8px;
+}
+
+.event-card-row-group.datetime-group .event-card-row {
+  flex: 1;
+  margin-bottom: 0;
+}
+
+.event-card-row-group.datetime-group .date-picker-container,
+.event-card-row-group.datetime-group .time-picker-container {
+  width: 100%;
+}
+
+.event-card-row-group.datetime-group .date-picker-input,
+.event-card-row-group.datetime-group .time-picker-input {
+  padding: 8px 10px;
+  font-size: 13px;
+}
+
 .event-card-row.half {
   flex: 1;
   margin-bottom: 0;
   position: relative;
+}
+
+.event-card-row.duration-row {
+  flex: 1;
+  margin-bottom: 0;
+}
+
+.duration-inputs {
+  display: flex;
+  gap: 6px;
+}
+
+.duration-inputs select {
+  flex: 1;
+  padding: 8px 10px;
+  border: 1px solid var(--border-light);
+  border-radius: var(--border-radius);
+  font-size: 13px;
+  background: var(--bg-main);
+  cursor: pointer;
+}
+
+.duration-inputs select:focus {
+  outline: none;
+  border-color: var(--primary);
 }
 
 .event-card-row.half .unit {

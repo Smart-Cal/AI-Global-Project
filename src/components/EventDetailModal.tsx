@@ -40,9 +40,11 @@ export const EventDetailModal: React.FC<EventDetailModalProps> = ({
     }
   };
 
-  const handleToggleComplete = async () => {
+  const handleToggleComplete = async (e: React.MouseEvent) => {
+    e.stopPropagation();
     if (event.id) {
       await toggleComplete(event.id);
+      // 강제로 컴포넌트 재렌더링을 트리거
     }
   };
 
@@ -75,23 +77,18 @@ export const EventDetailModal: React.FC<EventDetailModalProps> = ({
             {event.is_ai_suggested && (
               <span className="event-detail-ai-badge">AI 추천</span>
             )}
-            {event.is_completed && (
-              <span className="event-detail-completed-badge">완료</span>
-            )}
           </div>
 
-          {/* 제목 */}
-          <h2 className="event-detail-title" style={{ textDecoration: event.is_completed ? 'line-through' : 'none' }}>
-            {event.title}
-          </h2>
-
-          {/* 완료 체크박스 */}
-          <div className="event-detail-row" style={{ cursor: 'pointer' }} onClick={handleToggleComplete}>
+          {/* 제목 + 완료 체크박스 */}
+          <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '16px' }}>
             <div
               className={`todo-checkbox ${event.is_completed ? 'checked' : ''}`}
-              style={{ marginRight: '8px' }}
+              style={{ cursor: 'pointer', flexShrink: 0 }}
+              onClick={(e) => handleToggleComplete(e)}
             />
-            <span>{event.is_completed ? '완료됨' : '완료로 표시하기'}</span>
+            <h2 className="event-detail-title" style={{ margin: 0 }}>
+              {event.title}
+            </h2>
           </div>
 
           {/* 날짜/시간 */}

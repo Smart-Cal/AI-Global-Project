@@ -210,6 +210,32 @@ function findCategoryId(categories: { id: string; name: string }[], categoryName
 }
 
 /**
+ * POST /api/chat/save-result
+ * 일정 확정 결과 메시지를 대화 기록에 저장
+ */
+router.post('/save-result', authenticate, async (req: AuthRequest, res: Response) => {
+  try {
+    const { conversation_id, content } = req.body;
+
+    if (!conversation_id || !content) {
+      res.status(400).json({ error: 'conversation_id and content are required' });
+      return;
+    }
+
+    const message = await createMessage({
+      conversation_id,
+      role: 'assistant',
+      content
+    });
+
+    res.json({ message_id: message.id });
+  } catch (error) {
+    console.error('Save result error:', error);
+    res.status(500).json({ error: 'Failed to save result message' });
+  }
+});
+
+/**
  * POST /api/chat/confirm-events
  * 확인된 일정들을 저장
  */

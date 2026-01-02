@@ -151,6 +151,16 @@ export async function confirmEvents(events: PendingEvent[]): Promise<{ message: 
   });
 }
 
+export async function saveResultMessage(
+  conversationId: string,
+  content: string
+): Promise<{ message_id: string }> {
+  return apiRequest('/chat/save-result', {
+    method: 'POST',
+    body: JSON.stringify({ conversation_id: conversationId, content }),
+  });
+}
+
 export async function getConversations(): Promise<{ conversations: Conversation[] }> {
   return apiRequest<{ conversations: Conversation[] }>('/chat/conversations');
 }

@@ -2,16 +2,20 @@ import React, { useState, useRef, useEffect } from 'react';
 import { useAuthStore } from '../../store/authStore';
 import { useGoalStore } from '../../store/goalStore';
 import { useEventStore } from '../../store/eventStore';
+import { useCategoryStore } from '../../store/categoryStore';
 import {
   sendChatMessage,
   getConversations,
   getConversation,
   deleteConversation,
   confirmEvents,
+  saveResultMessage,
   type Conversation,
   type Message,
   type PendingEvent,
 } from '../../services/api';
+import DatePicker from '../DatePicker';
+import TimePicker from '../TimePicker';
 import type { Goal } from '../../types';
 
 interface LocalMessage {
@@ -22,10 +26,18 @@ interface LocalMessage {
   created_at: string;
 }
 
+// 각 이벤트의 선택 상태
+type EventDecision = 'pending' | 'confirmed' | 'rejected';
+
+interface EventDecisionState {
+  [index: number]: EventDecision;
+}
+
 const AssistantView: React.FC = () => {
   const { user } = useAuthStore();
   const { getActiveGoals } = useGoalStore();
   const { loadEvents, events } = useEventStore();
+  const { categories } = useCategoryStore();
 
   // Conversations state
   const [conversations, setConversations] = useState<Conversation[]>([]);
@@ -39,13 +51,16 @@ const AssistantView: React.FC = () => {
   const [showGoalSelector, setShowGoalSelector] = useState(false);
   const [showConversationList, setShowConversationList] = useState(true);
 
-  // Event confirmation state
-  const [pendingEvents, setPendingEvents] = useState<PendingEvent[]>([]);
-  const [currentEventIndex, setCurrentEventIndex] = useState(0);
-  const [editingEvent, setEditingEvent] = useState<PendingEvent | null>(null);
-  const [confirmedEvents, setConfirmedEvents] = useState<PendingEvent[]>([]);
-  const [processedIndexes, setProcessedIndexes] = useState<Set<number>>(new Set()); // 처리된 인덱스 추적
-  const [isSaving, setIsSaving] = useState(false); // 저장 중 상태
+  // Event confirmation state - 메시지 ID별로 관리
+  const [activeMessageId, setActiveMessageId] = useState<string | null>(null);
+  const [eventDecisions, setEventDecisions] = useState<EventDecisionState>({});
+  const [editingEvents, setEditingEvents] = useState<{ [index: number]: PendingEvent }>({});
+  const [isSaving, setIsSaving] = useState(false);
+  const [completedResults, setCompletedResults] = useState<{
+    messageId: string;
+    confirmed: PendingEvent[];
+    rejected: number;
+  } | null>(null);
 
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const activeGoals = getActiveGoals();
@@ -75,8 +90,10 @@ const AssistantView: React.FC = () => {
         pending_events: m.pending_events,
         created_at: m.created_at,
       })));
-      setPendingEvents([]);
-      setCurrentEventIndex(0);
+      setActiveMessageId(null);
+      setEventDecisions({});
+      setEditingEvents({});
+      setCompletedResults(null);
     } catch (error) {
       console.error('Failed to load conversation:', error);
     }
@@ -85,8 +102,10 @@ const AssistantView: React.FC = () => {
   const handleNewConversation = () => {
     setCurrentConversationId(null);
     setMessages([]);
-    setPendingEvents([]);
-    setCurrentEventIndex(0);
+    setActiveMessageId(null);
+    setEventDecisions({});
+    setEditingEvents({});
+    setCompletedResults(null);
   };
 
   const handleDeleteConversation = async (id: string, e: React.MouseEvent) => {
@@ -110,7 +129,7 @@ const AssistantView: React.FC = () => {
 
   useEffect(() => {
     scrollToBottom();
-  }, [messages]);
+  }, [messages, activeMessageId, completedResults]);
 
   // Send message
   const handleSend = async () => {
@@ -132,6 +151,7 @@ const AssistantView: React.FC = () => {
     setMessages(prev => [...prev, userMessage]);
     setInput('');
     setIsLoading(true);
+    setCompletedResults(null);
 
     try {
       const response = await sendChatMessage(messageContent, currentConversationId || undefined);
@@ -139,26 +159,27 @@ const AssistantView: React.FC = () => {
       // Update conversation ID if new
       if (!currentConversationId) {
         setCurrentConversationId(response.conversation_id);
-        loadConversations(); // Refresh conversation list
+        loadConversations();
       }
 
       // Add assistant message
       const assistantMessage: LocalMessage = {
         id: response.message_id,
         role: 'assistant',
-        content: response.message,
+        content: response.pending_events && response.pending_events.length > 0
+          ? '아래와 같은 일정은 어떠세요?'
+          : response.message,
         pending_events: response.pending_events,
         created_at: new Date().toISOString(),
       };
 
       setMessages(prev => [...prev, assistantMessage]);
 
-      // Set pending events for confirmation
+      // Set up event confirmation UI
       if (response.pending_events && response.pending_events.length > 0) {
-        setPendingEvents(response.pending_events);
-        setCurrentEventIndex(0);
-        setConfirmedEvents([]);
-        setProcessedIndexes(new Set()); // 새 일정 목록이면 처리 상태 초기화
+        setActiveMessageId(response.message_id);
+        setEventDecisions({});
+        setEditingEvents({});
       }
     } catch (error) {
       console.error('Chat error:', error);
@@ -183,76 +204,125 @@ const AssistantView: React.FC = () => {
     }
   };
 
-  // 다음 미처리 일정으로 이동하는 헬퍼 함수
-  const moveToNextUnprocessed = (processed: Set<number>) => {
-    // 다음 미처리 일정 찾기
-    for (let i = currentEventIndex + 1; i < pendingEvents.length; i++) {
-      if (!processed.has(i)) {
-        setCurrentEventIndex(i);
-        return;
-      }
-    }
-    // 이전에 미처리 일정이 있는지 확인
-    for (let i = 0; i < currentEventIndex; i++) {
-      if (!processed.has(i)) {
-        setCurrentEventIndex(i);
-        return;
-      }
-    }
-    // 모든 일정 처리 완료
-    setPendingEvents([]);
-    setCurrentEventIndex(0);
-    setConfirmedEvents([]);
-    setProcessedIndexes(new Set());
+  // Event decision handlers
+  const handleEventDecision = (index: number, decision: EventDecision) => {
+    setEventDecisions(prev => ({ ...prev, [index]: decision }));
   };
 
-  // Event confirmation handlers - 각 일정을 바로 저장
-  const handleConfirmEvent = async () => {
-    // 이미 처리된 일정이거나 저장 중이면 무시
-    if (processedIndexes.has(currentEventIndex) || isSaving) return;
+  const handleEditEvent = (index: number, field: keyof PendingEvent, value: string | number) => {
+    const currentEvents = messages.find(m => m.id === activeMessageId)?.pending_events || [];
+    const currentEvent = editingEvents[index] || currentEvents[index];
+    setEditingEvents(prev => ({
+      ...prev,
+      [index]: { ...currentEvent, [field]: value }
+    }));
+  };
 
-    const event = editingEvent || pendingEvents[currentEventIndex];
+  // datetime에서 날짜 부분만 추출 (YYYY-MM-DD)
+  const getDateFromDatetime = (datetime: string): string => {
+    return datetime.split('T')[0];
+  };
+
+  // datetime에서 시간 부분만 추출 (HH:mm)
+  const getTimeFromDatetime = (datetime: string): string => {
+    const timePart = datetime.split('T')[1];
+    return timePart ? timePart.slice(0, 5) : '';
+  };
+
+  // 날짜와 시간을 합쳐서 datetime 생성
+  const combineDatetime = (date: string, time: string): string => {
+    return `${date}T${time}:00`;
+  };
+
+  // duration을 시간과 분으로 분리
+  const getDurationHours = (duration: number): number => {
+    return Math.floor(duration / 60);
+  };
+
+  const getDurationMinutes = (duration: number): number => {
+    return duration % 60;
+  };
+
+  // 시간과 분을 합쳐서 duration(분) 생성
+  const combineDuration = (hours: number, minutes: number): number => {
+    return hours * 60 + minutes;
+  };
+
+  const getEventWithEdits = (index: number, originalEvent: PendingEvent): PendingEvent => {
+    return editingEvents[index] || originalEvent;
+  };
+
+  // 모든 일정이 처리되었는지 확인
+  const allEventsProcessed = (pendingEvents: PendingEvent[]) => {
+    return pendingEvents.every((_, index) =>
+      eventDecisions[index] === 'confirmed' || eventDecisions[index] === 'rejected'
+    );
+  };
+
+  // 최종 확정 처리
+  const handleFinalConfirm = async (pendingEvents: PendingEvent[]) => {
     setIsSaving(true);
 
+    const confirmedEvents: PendingEvent[] = [];
+    const rejectedCount = Object.values(eventDecisions).filter(d => d === 'rejected').length;
+
+    for (let i = 0; i < pendingEvents.length; i++) {
+      if (eventDecisions[i] === 'confirmed') {
+        const eventWithEdits = getEventWithEdits(i, pendingEvents[i]);
+        confirmedEvents.push(eventWithEdits);
+      }
+    }
+
     try {
-      await confirmEvents([event]);
-      loadEvents();
-      setConfirmedEvents(prev => [...prev, event]);
+      if (confirmedEvents.length > 0) {
+        await confirmEvents(confirmedEvents);
+        loadEvents();
+      }
 
-      // 현재 인덱스를 처리됨으로 표시
-      const newProcessed = new Set(processedIndexes);
-      newProcessed.add(currentEventIndex);
-      setProcessedIndexes(newProcessed);
+      // 결과 메시지 생성
+      let resultContent = '';
+      if (confirmedEvents.length > 0) {
+        resultContent = `✅ ${confirmedEvents.length}개의 일정이 추가되었습니다.`;
+        if (rejectedCount > 0) {
+          resultContent += ` (${rejectedCount}개 거절)`;
+        }
+      } else {
+        resultContent = '일정이 추가되지 않았습니다.';
+        if (rejectedCount > 0) {
+          resultContent += ` (${rejectedCount}개 거절)`;
+        }
+      }
 
-      // 다음 미처리 일정으로 이동 또는 종료
-      setEditingEvent(null);
-      moveToNextUnprocessed(newProcessed);
+      // 결과 메시지를 대화 기록에 저장
+      if (currentConversationId) {
+        const savedResult = await saveResultMessage(currentConversationId, resultContent);
+
+        // 결과 메시지를 로컬 메시지 목록에 추가
+        const resultMessage: LocalMessage = {
+          id: savedResult.message_id,
+          role: 'assistant',
+          content: resultContent,
+          created_at: new Date().toISOString(),
+        };
+        setMessages(prev => [...prev, resultMessage]);
+      }
+
+      // 결과 표시 (UI용)
+      setCompletedResults({
+        messageId: activeMessageId!,
+        confirmed: confirmedEvents,
+        rejected: rejectedCount,
+      });
+
+      // 상태 초기화
+      setActiveMessageId(null);
+      setEventDecisions({});
+      setEditingEvents({});
     } catch (error) {
-      console.error('Failed to save event:', error);
+      console.error('Failed to save events:', error);
     } finally {
       setIsSaving(false);
     }
-  };
-
-  const handleRejectEvent = () => {
-    // 이미 처리된 일정이면 무시
-    if (processedIndexes.has(currentEventIndex)) return;
-
-    // 현재 인덱스를 처리됨으로 표시
-    const newProcessed = new Set(processedIndexes);
-    newProcessed.add(currentEventIndex);
-    setProcessedIndexes(newProcessed);
-
-    setEditingEvent(null);
-    moveToNextUnprocessed(newProcessed);
-  };
-
-  const handleEditEvent = (field: keyof PendingEvent, value: string) => {
-    const currentEvent = editingEvent || pendingEvents[currentEventIndex];
-    setEditingEvent({
-      ...currentEvent,
-      [field]: value,
-    });
   };
 
   const formatEventDateTime = (datetime: string) => {
@@ -261,9 +331,24 @@ const AssistantView: React.FC = () => {
     const month = date.getMonth() + 1;
     const day = date.getDate();
     const weekday = weekdays[date.getDay()];
-    const hours = date.getHours().toString().padStart(2, '0');
+    const hours = date.getHours();
     const minutes = date.getMinutes().toString().padStart(2, '0');
-    return `${month}월 ${day}일 (${weekday}) ${hours}:${minutes}`;
+    const ampm = hours < 12 ? '오전' : '오후';
+    const displayHours = hours === 0 ? 12 : hours > 12 ? hours - 12 : hours;
+    return `${month}월 ${day}일 (${weekday}) ${ampm} ${displayHours}:${minutes}`;
+  };
+
+  const formatShortDateTime = (datetime: string) => {
+    const date = new Date(datetime);
+    const weekdays = ['일', '월', '화', '수', '목', '금', '토'];
+    const month = date.getMonth() + 1;
+    const day = date.getDate();
+    const weekday = weekdays[date.getDay()];
+    const hours = date.getHours();
+    const minutes = date.getMinutes().toString().padStart(2, '0');
+    const ampm = hours < 12 ? '오전' : '오후';
+    const displayHours = hours === 0 ? 12 : hours > 12 ? hours - 12 : hours;
+    return `${month}/${day}(${weekday}) ${ampm}${displayHours}:${minutes}`;
   };
 
   // 시간 충돌 검사 함수
@@ -274,12 +359,10 @@ const AssistantView: React.FC = () => {
       ? parseInt(pendingEvent.duration)
       : pendingEvent.duration || 60;
 
-    // pending event의 시작/종료 시간 (분 단위)
     const [startH, startM] = eventStartTime.split(':').map(Number);
     const pendingStart = startH * 60 + startM;
     const pendingEnd = pendingStart + duration;
 
-    // 같은 날짜의 기존 일정들과 비교
     const conflictingEvents = events.filter(existingEvent => {
       if (existingEvent.event_date !== eventDate) return false;
       if (!existingEvent.start_time || !existingEvent.end_time) return false;
@@ -289,15 +372,200 @@ const AssistantView: React.FC = () => {
       const existingStart = existH * 60 + existM;
       const existingEnd = endH * 60 + endM;
 
-      // 시간 겹침 검사: 시작이 기존 종료 전이고, 종료가 기존 시작 후이면 충돌
       return pendingStart < existingEnd && pendingEnd > existingStart;
     });
 
     return conflictingEvents;
   };
 
-  const currentEvent = editingEvent || pendingEvents[currentEventIndex];
-  const conflictingEvents = currentEvent ? checkTimeConflict(currentEvent) : [];
+  // 일정 카드 렌더링 (인라인)
+  const renderEventCard = (event: PendingEvent, index: number, isActive: boolean) => {
+    const eventWithEdits = getEventWithEdits(index, event);
+    const decision = eventDecisions[index];
+    const conflicts = checkTimeConflict(eventWithEdits);
+
+    if (!isActive) {
+      // 비활성 상태 - 간단한 표시
+      return (
+        <div key={index} className={`event-card-inline ${decision || ''}`}>
+          <div className="event-card-inline-info">
+            <span className="event-card-inline-title">{eventWithEdits.title}</span>
+            <span className="event-card-inline-datetime">{formatShortDateTime(eventWithEdits.datetime)}</span>
+            {eventWithEdits.category && (
+              <span className="event-card-inline-category">{eventWithEdits.category}</span>
+            )}
+            {eventWithEdits.location && (
+              <span className="event-card-inline-location">📍 {eventWithEdits.location}</span>
+            )}
+          </div>
+          {decision && (
+            <span className={`event-decision-badge ${decision}`}>
+              {decision === 'confirmed' ? '✓ 추가' : '✗ 거절'}
+            </span>
+          )}
+        </div>
+      );
+    }
+
+    // 활성 상태 - 편집 가능
+    return (
+      <div key={index} className={`event-card-editable ${decision || ''}`}>
+        <div className="event-card-header">
+          <span className="event-card-number">{index + 1}</span>
+          <div className="event-card-quick-actions">
+            <button
+              className={`quick-action-btn confirm ${decision === 'confirmed' ? 'active' : ''}`}
+              onClick={() => handleEventDecision(index, 'confirmed')}
+              disabled={isSaving}
+            >
+              ✓
+            </button>
+            <button
+              className={`quick-action-btn reject ${decision === 'rejected' ? 'active' : ''}`}
+              onClick={() => handleEventDecision(index, 'rejected')}
+              disabled={isSaving}
+            >
+              ✗
+            </button>
+          </div>
+        </div>
+
+        <div className="event-card-body">
+          <div className="event-card-row">
+            <label>제목</label>
+            <input
+              type="text"
+              value={eventWithEdits.title}
+              onChange={(e) => handleEditEvent(index, 'title', e.target.value)}
+              disabled={decision === 'rejected'}
+            />
+          </div>
+
+          <div className="event-card-row-group datetime-group">
+            <div className="event-card-row">
+              <label>날짜</label>
+              <DatePicker
+                value={getDateFromDatetime(eventWithEdits.datetime)}
+                onChange={(date) => {
+                  const time = getTimeFromDatetime(eventWithEdits.datetime) || '15:00';
+                  handleEditEvent(index, 'datetime', combineDatetime(date, time));
+                }}
+              />
+            </div>
+            <div className="event-card-row">
+              <label>시간</label>
+              <TimePicker
+                value={getTimeFromDatetime(eventWithEdits.datetime)}
+                onChange={(time) => {
+                  const date = getDateFromDatetime(eventWithEdits.datetime);
+                  handleEditEvent(index, 'datetime', combineDatetime(date, time));
+                }}
+              />
+            </div>
+          </div>
+
+          <div className="event-card-row-group">
+            <div className="event-card-row duration-row">
+              <label>소요시간</label>
+              <div className="duration-inputs">
+                <select
+                  value={getDurationHours(typeof eventWithEdits.duration === 'string' ? parseInt(eventWithEdits.duration) : eventWithEdits.duration)}
+                  onChange={(e) => {
+                    const hours = parseInt(e.target.value);
+                    const minutes = getDurationMinutes(typeof eventWithEdits.duration === 'string' ? parseInt(eventWithEdits.duration) : eventWithEdits.duration);
+                    handleEditEvent(index, 'duration', combineDuration(hours, minutes));
+                  }}
+                  disabled={decision === 'rejected'}
+                >
+                  {[0, 1, 2, 3, 4, 5, 6, 7, 8].map(h => (
+                    <option key={h} value={h}>{h}시간</option>
+                  ))}
+                </select>
+                <select
+                  value={getDurationMinutes(typeof eventWithEdits.duration === 'string' ? parseInt(eventWithEdits.duration) : eventWithEdits.duration)}
+                  onChange={(e) => {
+                    const minutes = parseInt(e.target.value);
+                    const hours = getDurationHours(typeof eventWithEdits.duration === 'string' ? parseInt(eventWithEdits.duration) : eventWithEdits.duration);
+                    handleEditEvent(index, 'duration', combineDuration(hours, minutes));
+                  }}
+                  disabled={decision === 'rejected'}
+                >
+                  {[0, 10, 15, 20, 30, 40, 45, 50].map(m => (
+                    <option key={m} value={m}>{m}분</option>
+                  ))}
+                </select>
+              </div>
+            </div>
+
+            <div className="event-card-row half">
+              <label>카테고리</label>
+              <select
+                value={eventWithEdits.category || ''}
+                onChange={(e) => handleEditEvent(index, 'category', e.target.value)}
+                disabled={decision === 'rejected'}
+              >
+                <option value="">선택</option>
+                {categories.map(cat => (
+                  <option key={cat.id} value={cat.name}>{cat.name}</option>
+                ))}
+              </select>
+            </div>
+          </div>
+
+          <div className="event-card-row">
+            <label>장소</label>
+            <input
+              type="text"
+              value={eventWithEdits.location || ''}
+              onChange={(e) => handleEditEvent(index, 'location', e.target.value)}
+              placeholder="장소 입력 (선택)"
+              disabled={decision === 'rejected'}
+            />
+          </div>
+
+          {conflicts.length > 0 && (
+            <div className="event-conflict-warning-inline">
+              ⚠️ 겹치는 일정: {conflicts.map(c => c.title).join(', ')}
+            </div>
+          )}
+        </div>
+      </div>
+    );
+  };
+
+  // 결과 메시지 렌더링
+  const renderCompletedResults = () => {
+    if (!completedResults) return null;
+
+    const { confirmed, rejected } = completedResults;
+
+    return (
+      <div className="chat-message assistant">
+        <div className="message-bubble result-message">
+          {confirmed.length > 0 ? (
+            <>
+              <div className="result-title">✅ {confirmed.length}개의 일정이 추가되었습니다!</div>
+              <div className="result-list">
+                {confirmed.map((event, idx) => (
+                  <div key={idx} className="result-item">
+                    <span className="result-item-title">{event.title}</span>
+                    <span className="result-item-datetime">{formatShortDateTime(event.datetime)}</span>
+                    {event.category && <span className="result-item-category">{event.category}</span>}
+                    {event.location && <span className="result-item-location">📍 {event.location}</span>}
+                  </div>
+                ))}
+              </div>
+            </>
+          ) : (
+            <div className="result-title">일정이 추가되지 않았습니다.</div>
+          )}
+          {rejected > 0 && (
+            <div className="result-rejected">{rejected}개의 일정은 거절되었습니다.</div>
+          )}
+        </div>
+      </div>
+    );
+  };
 
   return (
     <div className="assistant-view-container">
@@ -357,11 +625,45 @@ const AssistantView: React.FC = () => {
             </div>
           ) : (
             messages.map(msg => (
-              <div key={msg.id} className={`chat-message ${msg.role}`}>
-                <div className="message-bubble">
-                  {msg.content}
+              <React.Fragment key={msg.id}>
+                <div className={`chat-message ${msg.role}`}>
+                  <div className="message-bubble">
+                    {msg.content}
+                  </div>
                 </div>
-              </div>
+
+                {/* 일정 확인 UI - 메시지 바로 아래에 표시 */}
+                {msg.pending_events && msg.pending_events.length > 0 && msg.id === activeMessageId && (
+                  <div className="event-confirmation-inline">
+                    <div className="event-cards-container">
+                      {msg.pending_events.map((event, index) =>
+                        renderEventCard(event, index, true)
+                      )}
+                    </div>
+
+                    {allEventsProcessed(msg.pending_events) && (
+                      <div className="event-final-actions">
+                        <button
+                          className="btn-final-confirm"
+                          onClick={() => handleFinalConfirm(msg.pending_events!)}
+                          disabled={isSaving}
+                        >
+                          {isSaving ? '저장 중...' : '확정하기'}
+                        </button>
+                      </div>
+                    )}
+
+                    {!allEventsProcessed(msg.pending_events) && (
+                      <div className="event-pending-hint">
+                        각 일정에서 ✓(추가) 또는 ✗(거절)를 선택해주세요
+                      </div>
+                    )}
+                  </div>
+                )}
+
+                {/* 결과 메시지 - 해당 메시지 아래에 표시 */}
+                {completedResults && completedResults.messageId === msg.id && renderCompletedResults()}
+              </React.Fragment>
             ))
           )}
 
@@ -379,113 +681,6 @@ const AssistantView: React.FC = () => {
 
           <div ref={messagesEndRef} />
         </div>
-
-        {/* Event Confirmation Carousel */}
-        {pendingEvents.length > 0 && currentEvent && (
-          <div className="event-confirmation-panel">
-            <div className="event-confirmation-header">
-              <span>일정 확인</span>
-              <span className="event-counter">
-                {currentEventIndex + 1} / {pendingEvents.length}
-              </span>
-            </div>
-
-            <div className="event-card">
-              <div className="event-card-field">
-                <label>제목</label>
-                <input
-                  type="text"
-                  value={currentEvent.title}
-                  onChange={(e) => handleEditEvent('title', e.target.value)}
-                />
-              </div>
-
-              <div className="event-card-field">
-                <label>일시</label>
-                <input
-                  type="datetime-local"
-                  value={currentEvent.datetime.slice(0, 16)}
-                  onChange={(e) => handleEditEvent('datetime', e.target.value + ':00')}
-                />
-              </div>
-
-              <div className="event-card-field">
-                <label>소요 시간 (분)</label>
-                <input
-                  type="number"
-                  value={currentEvent.duration}
-                  onChange={(e) => handleEditEvent('duration', e.target.value)}
-                />
-              </div>
-
-              {currentEvent.location && (
-                <div className="event-card-field">
-                  <label>장소</label>
-                  <input
-                    type="text"
-                    value={currentEvent.location}
-                    onChange={(e) => handleEditEvent('location', e.target.value)}
-                  />
-                </div>
-              )}
-
-              <div className="event-card-preview">
-                {formatEventDateTime(currentEvent.datetime)} ({currentEvent.duration}분)
-              </div>
-
-              {/* 시간 충돌 경고 */}
-              {conflictingEvents.length > 0 && (
-                <div className="event-conflict-warning">
-                  ⚠️ 기존 일정과 시간이 겹칩니다:
-                  <ul>
-                    {conflictingEvents.map(conflict => (
-                      <li key={conflict.id}>
-                        {conflict.title} ({conflict.start_time} - {conflict.end_time})
-                      </li>
-                    ))}
-                  </ul>
-                </div>
-              )}
-            </div>
-
-            <div className="event-confirmation-actions">
-              <button
-                className="event-action-btn prev"
-                onClick={() => setCurrentEventIndex(prev => Math.max(0, prev - 1))}
-                disabled={currentEventIndex === 0}
-              >
-                ← 이전
-              </button>
-              <button
-                className="event-action-btn reject"
-                onClick={handleRejectEvent}
-                disabled={processedIndexes.has(currentEventIndex) || isSaving}
-              >
-                {processedIndexes.has(currentEventIndex) ? '처리됨' : '거절'}
-              </button>
-              <button
-                className="event-action-btn confirm"
-                onClick={handleConfirmEvent}
-                disabled={processedIndexes.has(currentEventIndex) || isSaving}
-              >
-                {isSaving ? '저장 중...' : processedIndexes.has(currentEventIndex) ? '추가됨' : '추가'}
-              </button>
-              <button
-                className="event-action-btn next"
-                onClick={() => setCurrentEventIndex(prev => Math.min(pendingEvents.length - 1, prev + 1))}
-                disabled={currentEventIndex === pendingEvents.length - 1}
-              >
-                다음 →
-              </button>
-            </div>
-
-            {confirmedEvents.length > 0 && (
-              <div className="confirmed-count">
-                {confirmedEvents.length}개 일정 추가 예정
-              </div>
-            )}
-          </div>
-        )}
 
         {/* Selected Goal Indicator */}
         {selectedGoal && (
