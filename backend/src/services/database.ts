@@ -583,3 +583,411 @@ export async function updateMessagePendingEvents(messageId: string, pendingEvent
 
   if (error) throw new Error(`Failed to update message: ${error.message}`);
 }
+
+// ==============================================
+// Group Operations
+// ==============================================
+
+export async function getGroupsByUser(userId: string): Promise<Group[]> {
+  // 사용자가 멤버인 그룹 목록 조회
+  const { data: memberships, error: memberError } = await supabase
+    .from('group_members')
+    .select('group_id')
+    .eq('user_id', userId);
+
+  if (memberError) throw new Error(`Failed to get group memberships: ${memberError.message}`);
+
+  if (!memberships || memberships.length === 0) return [];
+
+  const groupIds = memberships.map(m => m.group_id);
+
+  const { data, error } = await supabase
+    .from('groups')
+    .select('*')
+    .in('id', groupIds)
+    .order('created_at', { ascending: false });
+
+  if (error) throw new Error(`Failed to get groups: ${error.message}`);
+  return data || [];
+}
+
+export async function getGroupById(id: string): Promise<Group | null> {
+  const { data, error } = await supabase
+    .from('groups')
+    .select('*')
+    .eq('id', id)
+    .single();
+
+  if (error && error.code !== 'PGRST116') throw new Error(`Failed to get group: ${error.message}`);
+  return data;
+}
+
+export async function createGroup(name: string, creatorId: string): Promise<Group> {
+  // 1. 그룹 생성
+  const { data: group, error: groupError } = await supabase
+    .from('groups')
+    .insert({ name, created_by: creatorId })
+    .select()
+    .single();
+
+  if (groupError) throw new Error(`Failed to create group: ${groupError.message}`);
+
+  // 2. 생성자를 owner로 추가
+  const { error: memberError } = await supabase
+    .from('group_members')
+    .insert({
+      group_id: group.id,
+      user_id: creatorId,
+      role: 'owner'
+    });
+
+  if (memberError) throw new Error(`Failed to add owner to group: ${memberError.message}`);
+
+  return group;
+}
+
+export async function updateGroup(id: string, updates: Partial<Group>): Promise<Group> {
+  const { data, error } = await supabase
+    .from('groups')
+    .update(updates)
+    .eq('id', id)
+    .select()
+    .single();
+
+  if (error) throw new Error(`Failed to update group: ${error.message}`);
+  return data;
+}
+
+export async function deleteGroup(id: string): Promise<void> {
+  // 관련 데이터 순차 삭제
+  await supabase.from('group_invitations').delete().eq('group_id', id);
+  await supabase.from('group_members').delete().eq('group_id', id);
+
+  const { error } = await supabase
+    .from('groups')
+    .delete()
+    .eq('id', id);
+
+  if (error) throw new Error(`Failed to delete group: ${error.message}`);
+}
+
+// ==============================================
+// Group Member Operations
+// ==============================================
+
+export async function getGroupMembers(groupId: string): Promise<(GroupMember & { user?: User })[]> {
+  const { data, error } = await supabase
+    .from('group_members')
+    .select(`
+      *,
+      user:users(id, email, name, nickname, avatar_url, chronotype)
+    `)
+    .eq('group_id', groupId)
+    .order('joined_at', { ascending: true });
+
+  if (error) throw new Error(`Failed to get group members: ${error.message}`);
+  return data || [];
+}
+
+export async function getGroupMember(groupId: string, userId: string): Promise<GroupMember | null> {
+  const { data, error } = await supabase
+    .from('group_members')
+    .select('*')
+    .eq('group_id', groupId)
+    .eq('user_id', userId)
+    .single();
+
+  if (error && error.code !== 'PGRST116') throw new Error(`Failed to get group member: ${error.message}`);
+  return data;
+}
+
+export async function addGroupMember(groupId: string, userId: string, role: 'owner' | 'member' = 'member'): Promise<GroupMember> {
+  const { data, error } = await supabase
+    .from('group_members')
+    .insert({
+      group_id: groupId,
+      user_id: userId,
+      role
+    })
+    .select()
+    .single();
+
+  if (error) throw new Error(`Failed to add group member: ${error.message}`);
+  return data;
+}
+
+export async function removeGroupMember(groupId: string, userId: string): Promise<void> {
+  const { error } = await supabase
+    .from('group_members')
+    .delete()
+    .eq('group_id', groupId)
+    .eq('user_id', userId);
+
+  if (error) throw new Error(`Failed to remove group member: ${error.message}`);
+}
+
+export async function isGroupOwner(groupId: string, userId: string): Promise<boolean> {
+  const member = await getGroupMember(groupId, userId);
+  return member?.role === 'owner';
+}
+
+export async function isGroupMember(groupId: string, userId: string): Promise<boolean> {
+  const member = await getGroupMember(groupId, userId);
+  return member !== null;
+}
+
+// ==============================================
+// Group Invitation Operations
+// ==============================================
+
+export async function getInvitationsByGroup(groupId: string): Promise<GroupInvitation[]> {
+  const { data, error } = await supabase
+    .from('group_invitations')
+    .select('*')
+    .eq('group_id', groupId)
+    .order('created_at', { ascending: false });
+
+  if (error) throw new Error(`Failed to get invitations: ${error.message}`);
+  return data || [];
+}
+
+export async function getInvitationsByUser(email: string): Promise<(GroupInvitation & { group?: Group })[]> {
+  const { data, error } = await supabase
+    .from('group_invitations')
+    .select(`
+      *,
+      group:groups(id, name, created_by)
+    `)
+    .eq('invitee_email', email)
+    .eq('status', 'pending')
+    .order('created_at', { ascending: false });
+
+  if (error) throw new Error(`Failed to get user invitations: ${error.message}`);
+  return data || [];
+}
+
+export async function getInvitationById(id: string): Promise<GroupInvitation | null> {
+  const { data, error } = await supabase
+    .from('group_invitations')
+    .select('*')
+    .eq('id', id)
+    .single();
+
+  if (error && error.code !== 'PGRST116') throw new Error(`Failed to get invitation: ${error.message}`);
+  return data;
+}
+
+export async function createInvitation(groupId: string, inviterId: string, inviteeEmail: string): Promise<GroupInvitation> {
+  // 이미 보낸 초대가 있는지 확인
+  const { data: existing } = await supabase
+    .from('group_invitations')
+    .select('*')
+    .eq('group_id', groupId)
+    .eq('invitee_email', inviteeEmail)
+    .eq('status', 'pending')
+    .single();
+
+  if (existing) {
+    throw new Error('Invitation already sent to this email');
+  }
+
+  // 이미 멤버인지 확인
+  const user = await getUserByEmail(inviteeEmail);
+  if (user) {
+    const isMember = await isGroupMember(groupId, user.id);
+    if (isMember) {
+      throw new Error('User is already a member of this group');
+    }
+  }
+
+  const { data, error } = await supabase
+    .from('group_invitations')
+    .insert({
+      group_id: groupId,
+      inviter_id: inviterId,
+      invitee_email: inviteeEmail,
+      status: 'pending'
+    })
+    .select()
+    .single();
+
+  if (error) throw new Error(`Failed to create invitation: ${error.message}`);
+  return data;
+}
+
+export async function respondToInvitation(invitationId: string, accept: boolean, userId: string): Promise<GroupInvitation> {
+  const invitation = await getInvitationById(invitationId);
+  if (!invitation) throw new Error('Invitation not found');
+  if (invitation.status !== 'pending') throw new Error('Invitation already responded');
+
+  const status = accept ? 'accepted' : 'declined';
+
+  const { data, error } = await supabase
+    .from('group_invitations')
+    .update({
+      status,
+      responded_at: new Date().toISOString()
+    })
+    .eq('id', invitationId)
+    .select()
+    .single();
+
+  if (error) throw new Error(`Failed to respond to invitation: ${error.message}`);
+
+  // 수락한 경우 멤버로 추가
+  if (accept) {
+    await addGroupMember(invitation.group_id, userId, 'member');
+  }
+
+  return data;
+}
+
+export async function cancelInvitation(invitationId: string): Promise<void> {
+  const { error } = await supabase
+    .from('group_invitations')
+    .delete()
+    .eq('id', invitationId);
+
+  if (error) throw new Error(`Failed to cancel invitation: ${error.message}`);
+}
+
+// ==============================================
+// Group Schedule Matching
+// ==============================================
+
+/**
+ * 그룹 멤버들의 공통 빈 시간대 찾기
+ * @param groupId 그룹 ID
+ * @param startDate 시작 날짜 (YYYY-MM-DD)
+ * @param endDate 종료 날짜 (YYYY-MM-DD)
+ * @param minDuration 최소 시간 (분)
+ * @param workStartHour 업무 시작 시간 (기본 9)
+ * @param workEndHour 업무 종료 시간 (기본 21)
+ */
+export async function findGroupAvailableSlots(
+  groupId: string,
+  startDate: string,
+  endDate: string,
+  minDuration: number = 60,
+  workStartHour: number = 9,
+  workEndHour: number = 21
+): Promise<import('../types/index.js').GroupMatchSlot[]> {
+  // 1. 그룹 멤버 목록 가져오기
+  const members = await getGroupMembers(groupId);
+  if (members.length === 0) return [];
+
+  const memberIds = members.map(m => m.user_id);
+
+  // 2. 모든 멤버의 일정 가져오기
+  const allEvents: (Event & { user_id: string })[] = [];
+  for (const memberId of memberIds) {
+    const events = await getEventsByUser(memberId, startDate, endDate);
+    allEvents.push(...events.map(e => ({ ...e, user_id: memberId })));
+  }
+
+  // 3. 날짜별로 가용 슬롯 계산
+  const slots: import('../types/index.js').GroupMatchSlot[] = [];
+  const start = new Date(startDate);
+  const end = new Date(endDate);
+
+  for (let d = new Date(start); d <= end; d.setDate(d.getDate() + 1)) {
+    const dateStr = d.toISOString().split('T')[0];
+    const dayEvents = allEvents.filter(e => e.event_date === dateStr);
+
+    // 시간대별 바쁜 멤버 추적 (분 단위)
+    const busyMap: Map<number, { fixed: string[]; flexible: string[] }> = new Map();
+
+    for (let minute = workStartHour * 60; minute < workEndHour * 60; minute++) {
+      busyMap.set(minute, { fixed: [], flexible: [] });
+    }
+
+    // 각 이벤트에 대해 해당 시간대 표시
+    for (const event of dayEvents) {
+      if (!event.start_time || !event.end_time) continue;
+
+      const [startH, startM] = event.start_time.split(':').map(Number);
+      const [endH, endM] = event.end_time.split(':').map(Number);
+      const eventStart = startH * 60 + startM;
+      const eventEnd = endH * 60 + endM;
+
+      for (let m = eventStart; m < eventEnd; m++) {
+        const slot = busyMap.get(m);
+        if (slot) {
+          if (event.is_fixed) {
+            slot.fixed.push(event.user_id);
+          } else {
+            slot.flexible.push(event.user_id);
+          }
+        }
+      }
+    }
+
+    // 연속 가용 슬롯 찾기
+    let slotStart: number | null = null;
+    let slotType: 'available' | 'negotiable' | null = null;
+    let conflictingMembers: Set<string> = new Set();
+
+    const closeSlot = (endMinute: number) => {
+      if (slotStart !== null && slotType !== null) {
+        const duration = endMinute - slotStart;
+        if (duration >= minDuration) {
+          const startTimeStr = `${Math.floor(slotStart / 60).toString().padStart(2, '0')}:${(slotStart % 60).toString().padStart(2, '0')}`;
+          const endTimeStr = `${Math.floor(endMinute / 60).toString().padStart(2, '0')}:${(endMinute % 60).toString().padStart(2, '0')}`;
+
+          slots.push({
+            date: dateStr,
+            start_time: startTimeStr,
+            end_time: endTimeStr,
+            type: slotType,
+            conflicting_members: slotType === 'negotiable' ? Array.from(conflictingMembers) : undefined
+          });
+        }
+      }
+      slotStart = null;
+      slotType = null;
+      conflictingMembers = new Set();
+    };
+
+    for (let m = workStartHour * 60; m < workEndHour * 60; m++) {
+      const slot = busyMap.get(m)!;
+      const fixedCount = slot.fixed.length;
+      const flexibleCount = slot.flexible.length;
+
+      let currentType: 'available' | 'negotiable' | 'blocked';
+
+      if (fixedCount > 0) {
+        // 고정 일정이 있으면 해당 시간은 불가
+        currentType = 'blocked';
+      } else if (flexibleCount > 0) {
+        // 유동 일정만 있으면 협의 가능
+        currentType = 'negotiable';
+      } else {
+        // 아무도 바쁘지 않으면 가용
+        currentType = 'available';
+      }
+
+      if (currentType === 'blocked') {
+        closeSlot(m);
+      } else if (slotType === null) {
+        slotStart = m;
+        slotType = currentType;
+        if (currentType === 'negotiable') {
+          slot.flexible.forEach(id => conflictingMembers.add(id));
+        }
+      } else if (slotType !== currentType) {
+        closeSlot(m);
+        slotStart = m;
+        slotType = currentType;
+        if (currentType === 'negotiable') {
+          slot.flexible.forEach(id => conflictingMembers.add(id));
+        }
+      } else if (currentType === 'negotiable') {
+        slot.flexible.forEach(id => conflictingMembers.add(id));
+      }
+    }
+
+    closeSlot(workEndHour * 60);
+  }
+
+  return slots;
+}

@@ -6,6 +6,7 @@ import todosRoutes from './todos.js';
 import scheduleRoutes from './schedule.js';
 import categoriesRoutes from './categories.js';
 import goalsRoutes from './goals.js';
+import groupsRoutes from './groups.js';
 
 const router = Router();
 
@@ -22,5 +23,6 @@ router.use('/todos', todosRoutes);
 router.use('/schedule', scheduleRoutes);
 router.use('/categories', categoriesRoutes);
 router.use('/goals', goalsRoutes);
+router.use('/groups', groupsRoutes);
 
 export default router;
