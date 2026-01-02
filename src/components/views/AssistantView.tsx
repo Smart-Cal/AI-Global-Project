@@ -21,6 +21,7 @@ import {
 } from '../../services/api';
 import DatePicker from '../DatePicker';
 import TimePicker from '../TimePicker';
+import { useToast } from '../Toast';
 import type { Goal } from '../../types';
 
 interface LocalMessage {
@@ -49,6 +50,7 @@ const AssistantView: React.FC = () => {
   const { getActiveGoals } = useGoalStore();
   const { loadEvents, events } = useEventStore();
   const { categories } = useCategoryStore();
+  const { showToast } = useToast();
 
   // Conversations state
   const [conversations, setConversations] = useState<Conversation[]>([]);
@@ -366,8 +368,14 @@ const AssistantView: React.FC = () => {
 
       // 상태 초기화
       resetConfirmationState();
+
+      // 토스트 알림
+      if (confirmedEvents.length > 0) {
+        showToast(`${confirmedEvents.length}개의 일정이 추가되었습니다`, 'success');
+      }
     } catch (error) {
       console.error('Failed to save events:', error);
+      showToast('일정 저장에 실패했습니다', 'error');
     } finally {
       setIsSaving(false);
     }
@@ -427,8 +435,14 @@ const AssistantView: React.FC = () => {
       });
 
       resetConfirmationState();
+
+      // 토스트 알림
+      if (confirmedTodos.length > 0) {
+        showToast(`${confirmedTodos.length}개의 할 일이 추가되었습니다`, 'success');
+      }
     } catch (error) {
       console.error('Failed to save todos:', error);
+      showToast('할 일 저장에 실패했습니다', 'error');
     } finally {
       setIsSaving(false);
     }
@@ -488,8 +502,14 @@ const AssistantView: React.FC = () => {
       });
 
       resetConfirmationState();
+
+      // 토스트 알림
+      if (confirmedGoals.length > 0) {
+        showToast(`${confirmedGoals.length}개의 목표가 추가되었습니다`, 'success');
+      }
     } catch (error) {
       console.error('Failed to save goals:', error);
+      showToast('목표 저장에 실패했습니다', 'error');
     } finally {
       setIsSaving(false);
     }

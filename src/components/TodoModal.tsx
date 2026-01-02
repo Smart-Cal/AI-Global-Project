@@ -3,6 +3,7 @@ import { useTodoStore } from '../store/todoStore';
 import { useGoalStore } from '../store/goalStore';
 import { useAuthStore } from '../store/authStore';
 import { useCategoryStore } from '../store/categoryStore';
+import { useToast } from './Toast';
 import type { Todo } from '../types';
 
 interface TodoModalProps {
@@ -22,6 +23,7 @@ export const TodoModal: React.FC<TodoModalProps> = ({
   const { addTodo, updateTodo } = useTodoStore();
   const { goals } = useGoalStore();
   const { getCategoryById } = useCategoryStore();
+  const { showToast } = useToast();
 
   const [title, setTitle] = useState(editingTodo?.title || '');
   const [description, setDescription] = useState(editingTodo?.description || '');
@@ -58,12 +60,15 @@ export const TodoModal: React.FC<TodoModalProps> = ({
 
       if (editingTodo?.id) {
         updateTodo(editingTodo.id, todoData);
+        showToast('할 일이 수정되었습니다', 'success');
       } else {
         await addTodo(todoData);
+        showToast('할 일이 추가되었습니다', 'success');
       }
       onClose();
     } catch (error) {
       console.error('Failed to save todo:', error);
+      showToast('할 일 저장에 실패했습니다', 'error');
     } finally {
       setIsLoading(false);
     }
