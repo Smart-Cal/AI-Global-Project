@@ -1694,9 +1694,7 @@ body {
 }
 
 .schedule-card-icon {
-  flex-shrink: 0;
-  width: 18px;
-  text-align: center;
+  display: none;
 }
 
 .schedule-card-actions {
@@ -2032,9 +2030,7 @@ body {
 }
 
 .event-detail-icon {
-  font-size: 16px;
-  width: 24px;
-  text-align: center;
+  display: none;
 }
 
 .event-detail-section {
@@ -2402,8 +2398,7 @@ textarea.form-input {
 }
 
 .empty-state-icon {
-  font-size: 48px;
-  margin-bottom: 16px;
+  display: none;
 }
 
 .empty-state-title {
@@ -3691,9 +3686,7 @@ textarea.form-input {
 }
 
 .schedule-empty-icon {
-  font-size: 40px;
-  display: block;
-  margin-bottom: 12px;
+  display: none;
 }
 
 .schedule-date-group {
@@ -3913,9 +3906,7 @@ textarea.form-input {
 }
 
 .goal-empty-icon {
-  font-size: 48px;
-  display: block;
-  margin-bottom: 16px;
+  display: none;
 }
 
 .goal-empty p {
@@ -4346,8 +4337,7 @@ textarea.form-input {
 }
 
 .time-picker-icon {
-  font-size: 16px;
-  flex-shrink: 0;
+  display: none;
 }
 
 .time-picker-value {
@@ -4567,8 +4557,7 @@ textarea.form-input {
 }
 
 .date-picker-icon {
-  font-size: 16px;
-  flex-shrink: 0;
+  display: none;
 }
 
 .date-picker-value {
@@ -4854,11 +4843,20 @@ textarea.form-input {
   font-size: 12px;
   color: var(--text-muted);
   transition: all 0.2s;
-  z-index: 10;
+  z-index: 100;
 }
 
 .conversation-sidebar.closed + .toggle-sidebar-btn {
   left: 0;
+}
+
+/* assistant-view에 토글 버튼 공간 확보 */
+.conversation-sidebar:not(.closed) ~ .assistant-view {
+  margin-left: 24px;
+}
+
+.conversation-sidebar.closed ~ .assistant-view {
+  margin-left: 24px;
 }
 
 .toggle-sidebar-btn:hover {
