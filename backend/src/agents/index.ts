@@ -15,3 +15,15 @@ export {
   getGoals,
   suggestScheduleForGoal
 } from './tools/calendarTools.js';
+
+// PALM Tools (Goal 분해, Chronotype, Briefing)
+export {
+  palmToolDefinitions,
+  executePalmTool,
+  decomposeGoalToTodos,
+  scheduleWithChronotype,
+  generateBriefing,
+  generateWeeklyReview,
+  getOptimalTimeForActivity,
+  type Chronotype
+} from './tools/palmTools.js';
