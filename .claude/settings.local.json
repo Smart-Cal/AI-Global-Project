@@ -10,7 +10,16 @@
       "Bash(curl:*)",
       "Bash(git checkout:*)",
       "Bash(git merge:*)",
-      "Bash(git stash:*)"
+      "Bash(git stash:*)",
+      "Bash(cat:*)",
+      "Bash(git pull:*)",
+      "Bash(git add:*)",
+      "Bash(git commit:*)",
+      "Bash(git push:*)",
+      "Bash(npx tsc:*)",
+      "Bash(npx typescript --noEmit)",
+      "Bash(./node_modules/.bin/tsc:*)",
+      "Bash(npm install:*)"
     ]
   }
 }

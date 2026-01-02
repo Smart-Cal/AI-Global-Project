@@ -1,35 +1,13 @@
 import { getEventsByUser, createEvent, getGoalsByUser } from '../../services/database.js';
-import { DBEvent, Event, Goal } from '../../types/index.js';
+import { DBEvent, LegacyEvent, dbEventToLegacy, Goal } from '../../types/index.js';
 
 /**
  * Calendar Tools - AI Agent가 사용할 캘린더 도구들
  */
 
-// DBEvent를 Event로 변환
-function dbEventToEvent(dbEvent: DBEvent): Event {
-  const datetime = `${dbEvent.event_date}T${dbEvent.start_time || '09:00'}:00`;
-  let duration = 60;
-  if (dbEvent.start_time && dbEvent.end_time) {
-    const start = new Date(`2000-01-01T${dbEvent.start_time}`);
-    const end = new Date(`2000-01-01T${dbEvent.end_time}`);
-    duration = Math.round((end.getTime() - start.getTime()) / 60000);
-    if (duration <= 0) duration = 60;
-  }
-
-  return {
-    id: dbEvent.id,
-    user_id: dbEvent.user_id,
-    category_id: dbEvent.category_id,
-    title: dbEvent.title,
-    description: dbEvent.description,
-    datetime,
-    duration,
-    type: 'personal',
-    location: dbEvent.location,
-    is_completed: dbEvent.is_completed,
-    completed_at: dbEvent.completed_at,
-    created_at: dbEvent.created_at,
-  };
+// DBEvent를 LegacyEvent로 변환
+function dbEventToEvent(dbEvent: DBEvent): LegacyEvent {
+  return dbEventToLegacy(dbEvent);
 }
 
 /**
@@ -39,7 +17,7 @@ export async function getEvents(
   userId: string,
   startDate?: string,
   endDate?: string
-): Promise<{ events: Event[]; summary: string }> {
+): Promise<{ events: LegacyEvent[]; summary: string }> {
   const dbEvents = await getEventsByUser(userId, startDate, endDate);
   const events = dbEvents.map(dbEventToEvent);
 
@@ -60,7 +38,7 @@ export async function checkConflicts(
   userId: string,
   datetime: string,
   duration: number
-): Promise<{ hasConflict: boolean; conflictingEvents: Event[]; message: string }> {
+): Promise<{ hasConflict: boolean; conflictingEvents: LegacyEvent[]; message: string }> {
   const targetDate = datetime.split('T')[0];
   const dbEvents = await getEventsByUser(userId, targetDate, targetDate);
   const events = dbEvents.map(dbEventToEvent);
@@ -158,7 +136,8 @@ export async function findFreeSlots(
  */
 export async function getGoals(userId: string): Promise<{ goals: Goal[]; summary: string }> {
   const goals = await getGoalsByUser(userId);
-  const activeGoals = goals.filter(g => g.is_active);
+  // 활성 목표: completed, failed가 아닌 것들
+  const activeGoals = goals.filter(g => !['completed', 'failed'].includes(g.status));
 
   let summary = '';
   if (activeGoals.length === 0) {
