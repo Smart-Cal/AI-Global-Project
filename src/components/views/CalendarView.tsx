@@ -27,6 +27,7 @@ const CalendarView: React.FC<CalendarViewProps> = ({
   // 선택된 카테고리 ID 목록 (체크된 것만 보임)
   const [categoryFilters, setCategoryFilters] = useState<Set<string>>(new Set());
   const [filtersInitialized, setFiltersInitialized] = useState(false);
+  const [isSidebarOpen, setIsSidebarOpen] = useState(true);
 
   useEffect(() => {
     loadEvents();
@@ -306,8 +307,9 @@ const CalendarView: React.FC<CalendarViewProps> = ({
   };
 
   return (
-    <div className="calendar-view">
-      <aside className="calendar-sidebar">
+    <div className="calendar-view-container">
+      {/* Category Sidebar */}
+      <div className={`calendar-sidebar ${isSidebarOpen ? 'open' : 'closed'}`}>
         <div className="calendar-sidebar-header">
           <h3>My calendars</h3>
         </div>
@@ -324,7 +326,15 @@ const CalendarView: React.FC<CalendarViewProps> = ({
             </label>
           ))}
         </div>
-      </aside>
+      </div>
+
+      {/* Toggle sidebar button */}
+      <button
+        className="toggle-sidebar-btn calendar-toggle"
+        onClick={() => setIsSidebarOpen(!isSidebarOpen)}
+      >
+        {isSidebarOpen ? '◀' : '▶'}
+      </button>
 
       <div className="calendar-main">
         {viewMode === 'month' && renderMonthView()}

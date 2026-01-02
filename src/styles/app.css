@@ -3008,6 +3008,14 @@ textarea.form-input {
   overflow: hidden;
 }
 
+/* Calendar View Container - same pattern as assistant-view-container */
+.calendar-view-container {
+  display: flex;
+  height: 100%;
+  width: 100%;
+  position: relative;
+}
+
 .calendar-sidebar {
   width: 220px;
   background: var(--bg-sidebar);
@@ -3015,10 +3023,47 @@ textarea.form-input {
   padding: 16px;
   overflow-y: auto;
   flex-shrink: 0;
+  transition: width 0.2s ease, margin-left 0.2s ease;
+}
+
+.calendar-sidebar.closed {
+  width: 0;
+  margin-left: -1px;
+  overflow: hidden;
+  padding: 0;
+}
+
+.toggle-sidebar-btn.calendar-toggle {
+  position: absolute;
+  left: 220px;
+  top: 12px;
+  width: 16px;
+  height: 24px;
+  border: none;
+  background: var(--bg-sidebar);
+  border-radius: 0 3px 3px 0;
+  cursor: pointer;
+  font-size: 10px;
+  color: var(--text-secondary);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: left 0.2s ease, background 0.15s;
+  z-index: 10;
+}
+
+.calendar-sidebar.closed + .toggle-sidebar-btn.calendar-toggle {
+  left: 0;
+}
+
+.toggle-sidebar-btn.calendar-toggle:hover {
+  background: var(--bg-hover);
+  color: var(--text-primary);
 }
 
 .calendar-sidebar-header {
   margin-bottom: 16px;
+  padding-right: 32px;
 }
 
 .calendar-sidebar-header h3 {
@@ -3419,6 +3464,14 @@ textarea.form-input {
   overflow: hidden;
 }
 
+/* Schedule View Container - same pattern as assistant-view-container */
+.schedule-view-container {
+  display: flex;
+  height: 100%;
+  width: 100%;
+  position: relative;
+}
+
 .schedule-sidebar {
   width: 240px;
   background: var(--bg-sidebar);
@@ -3426,6 +3479,42 @@ textarea.form-input {
   padding: 16px;
   overflow-y: auto;
   flex-shrink: 0;
+  transition: width 0.2s ease, margin-left 0.2s ease;
+}
+
+.schedule-sidebar.closed {
+  width: 0;
+  margin-left: -1px;
+  overflow: hidden;
+  padding: 0;
+}
+
+.toggle-sidebar-btn.schedule-toggle {
+  position: absolute;
+  left: 240px;
+  top: 16px;
+  width: 24px;
+  height: 32px;
+  border: none;
+  background: var(--bg-sidebar);
+  border-radius: 0 4px 4px 0;
+  cursor: pointer;
+  font-size: 12px;
+  color: var(--text-secondary);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: left 0.2s ease, background 0.15s;
+  z-index: 10;
+}
+
+.schedule-sidebar.closed + .toggle-sidebar-btn.schedule-toggle {
+  left: 0;
+}
+
+.toggle-sidebar-btn.schedule-toggle:hover {
+  background: var(--bg-hover);
+  color: var(--text-primary);
 }
 
 .schedule-sidebar-header {
@@ -4384,6 +4473,207 @@ textarea.form-input {
   background: var(--primary-light);
 }
 
+/* Three columns layout for time picker */
+.time-picker-columns.three-columns {
+  display: flex;
+}
+
+.time-picker-columns.three-columns .time-picker-column {
+  border-right: 1px solid var(--border-light);
+}
+
+.time-picker-columns.three-columns .time-picker-column:last-child {
+  border-right: none;
+}
+
+.time-picker-column.period-column {
+  flex: 0.8;
+}
+
+.period-scroll {
+  display: flex;
+  flex-direction: column;
+  padding: 8px;
+  gap: 4px;
+}
+
+.period-option {
+  justify-content: center;
+  font-weight: 600;
+  padding: 12px !important;
+}
+
+/* ==================== DatePicker Styles ==================== */
+
+.date-picker-container {
+  position: relative;
+  width: 100%;
+}
+
+.date-picker-input {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 12px;
+  background: var(--bg-main);
+  border: 1px solid var(--border-medium);
+  border-radius: var(--border-radius);
+  cursor: pointer;
+  transition: all 0.2s ease;
+  min-height: 42px;
+}
+
+.date-picker-input:hover {
+  border-color: var(--primary);
+}
+
+.date-picker-input.focused {
+  border-color: var(--primary);
+  box-shadow: 0 0 0 3px var(--primary-light);
+}
+
+.date-picker-icon {
+  font-size: 16px;
+  flex-shrink: 0;
+}
+
+.date-picker-value {
+  flex: 1;
+  font-size: 14px;
+  color: var(--text-primary);
+  font-weight: 500;
+}
+
+.date-picker-value.placeholder {
+  color: var(--text-placeholder);
+  font-weight: 400;
+}
+
+.date-picker-clear {
+  width: 20px;
+  height: 20px;
+  border: none;
+  background: var(--bg-hover);
+  border-radius: 50%;
+  font-size: 14px;
+  color: var(--text-muted);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.15s;
+}
+
+.date-picker-clear:hover {
+  background: var(--error);
+  color: white;
+}
+
+.date-picker-dropdown {
+  position: absolute;
+  top: calc(100% + 4px);
+  left: 0;
+  min-width: 280px;
+  background: var(--bg-main);
+  border: 1px solid var(--border-medium);
+  border-radius: var(--border-radius-lg);
+  box-shadow: var(--shadow-lg);
+  z-index: 1000;
+  overflow: hidden;
+}
+
+.date-picker-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 16px;
+  background: var(--bg-sidebar);
+  border-bottom: 1px solid var(--border-light);
+}
+
+.date-picker-nav {
+  width: 28px;
+  height: 28px;
+  border: none;
+  background: var(--bg-main);
+  border-radius: var(--border-radius);
+  font-size: 12px;
+  color: var(--text-secondary);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.15s;
+}
+
+.date-picker-nav:hover {
+  background: var(--primary-light);
+  color: var(--primary);
+}
+
+.date-picker-title {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+.date-picker-weekdays {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  padding: 8px 8px 4px;
+  gap: 2px;
+}
+
+.date-picker-weekday {
+  text-align: center;
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--text-muted);
+  padding: 4px;
+}
+
+.date-picker-days {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  padding: 4px 8px 12px;
+  gap: 2px;
+}
+
+.date-picker-day {
+  aspect-ratio: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 13px;
+  color: var(--text-primary);
+  border-radius: 50%;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+
+.date-picker-day.empty {
+  cursor: default;
+}
+
+.date-picker-day:not(.empty):hover {
+  background: var(--bg-hover);
+}
+
+.date-picker-day.today {
+  font-weight: 600;
+  color: var(--primary);
+}
+
+.date-picker-day.selected {
+  background: var(--primary);
+  color: white;
+  font-weight: 600;
+}
+
+.date-picker-day.selected.today {
+  color: white;
+}
+
 /* ==================== Conversation Sidebar ==================== */
 
 .assistant-view-container {
@@ -4700,6 +4990,342 @@ textarea.form-input {
   font-size: 13px;
   color: var(--success);
   font-weight: 500;
+}
+
+/* ==================== Inline Event Confirmation UI ==================== */
+
+.event-confirmation-inline {
+  margin: 8px 0 16px 0;
+  padding: 0 16px;
+}
+
+.event-cards-container {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.event-card-editable {
+  background: var(--bg-main);
+  border: 1px solid var(--border-light);
+  border-radius: var(--border-radius-lg);
+  overflow: hidden;
+  transition: all 0.2s;
+}
+
+.event-card-editable.confirmed {
+  border-color: var(--success);
+  background: #f0fdf4;
+}
+
+.event-card-editable.rejected {
+  border-color: var(--error);
+  background: #fef2f2;
+  opacity: 0.7;
+}
+
+.event-card-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px 14px;
+  background: var(--bg-sidebar);
+  border-bottom: 1px solid var(--border-light);
+}
+
+.event-card-number {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text-muted);
+  background: var(--bg-main);
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.event-card-quick-actions {
+  display: flex;
+  gap: 8px;
+}
+
+.quick-action-btn {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  border: 2px solid;
+  cursor: pointer;
+  font-size: 14px;
+  font-weight: bold;
+  transition: all 0.15s;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.quick-action-btn.confirm {
+  border-color: var(--success);
+  background: transparent;
+  color: var(--success);
+}
+
+.quick-action-btn.confirm:hover,
+.quick-action-btn.confirm.active {
+  background: var(--success);
+  color: white;
+}
+
+.quick-action-btn.reject {
+  border-color: var(--error);
+  background: transparent;
+  color: var(--error);
+}
+
+.quick-action-btn.reject:hover,
+.quick-action-btn.reject.active {
+  background: var(--error);
+  color: white;
+}
+
+.quick-action-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.event-card-body {
+  padding: 14px;
+}
+
+.event-card-row {
+  margin-bottom: 10px;
+}
+
+.event-card-row:last-child {
+  margin-bottom: 0;
+}
+
+.event-card-row label {
+  display: block;
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  margin-bottom: 4px;
+}
+
+.event-card-row input,
+.event-card-row select {
+  width: 100%;
+  padding: 8px 10px;
+  border: 1px solid var(--border-medium);
+  border-radius: var(--border-radius);
+  font-size: 13px;
+  outline: none;
+  transition: border-color 0.15s;
+  background: var(--bg-main);
+}
+
+.event-card-row input:focus,
+.event-card-row select:focus {
+  border-color: var(--primary);
+}
+
+.event-card-row input:disabled,
+.event-card-row select:disabled {
+  background: var(--bg-sidebar);
+  color: var(--text-muted);
+}
+
+.event-card-row-group {
+  display: flex;
+  gap: 12px;
+  margin-bottom: 10px;
+}
+
+.event-card-row.half {
+  flex: 1;
+  margin-bottom: 0;
+  position: relative;
+}
+
+.event-card-row.half .unit {
+  position: absolute;
+  right: 10px;
+  bottom: 8px;
+  font-size: 12px;
+  color: var(--text-muted);
+}
+
+.event-card-row.half input[type="number"] {
+  padding-right: 30px;
+}
+
+.event-conflict-warning-inline {
+  margin-top: 10px;
+  padding: 8px 10px;
+  background: #fff3cd;
+  border-radius: var(--border-radius);
+  font-size: 12px;
+  color: #856404;
+}
+
+.event-final-actions {
+  margin-top: 16px;
+  text-align: center;
+}
+
+.btn-final-confirm {
+  padding: 12px 32px;
+  background: var(--primary);
+  color: white;
+  border: none;
+  border-radius: var(--border-radius);
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+
+.btn-final-confirm:hover:not(:disabled) {
+  background: var(--primary-dark);
+}
+
+.btn-final-confirm:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.event-pending-hint {
+  margin-top: 12px;
+  text-align: center;
+  font-size: 12px;
+  color: var(--text-muted);
+}
+
+/* Result message styles */
+.result-message {
+  background: var(--bg-sidebar) !important;
+}
+
+.result-title {
+  font-size: 14px;
+  font-weight: 600;
+  margin-bottom: 10px;
+  color: var(--success);
+}
+
+.result-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.result-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 12px;
+  background: var(--bg-main);
+  border-radius: var(--border-radius);
+  font-size: 13px;
+}
+
+.result-item-title {
+  font-weight: 500;
+  flex-shrink: 0;
+}
+
+.result-item-datetime {
+  color: var(--text-secondary);
+  font-size: 12px;
+}
+
+.result-item-category {
+  font-size: 11px;
+  padding: 2px 8px;
+  background: var(--primary-light);
+  color: var(--primary);
+  border-radius: 10px;
+}
+
+.result-item-location {
+  font-size: 12px;
+  color: var(--text-muted);
+}
+
+.result-rejected {
+  margin-top: 10px;
+  font-size: 12px;
+  color: var(--text-muted);
+}
+
+/* Inline card for inactive state */
+.event-card-inline {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px 14px;
+  background: var(--bg-sidebar);
+  border-radius: var(--border-radius);
+  font-size: 13px;
+}
+
+.event-card-inline.confirmed {
+  background: #f0fdf4;
+}
+
+.event-card-inline.rejected {
+  background: #fef2f2;
+  text-decoration: line-through;
+  opacity: 0.7;
+}
+
+.event-card-inline-info {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.event-card-inline-title {
+  font-weight: 500;
+}
+
+.event-card-inline-datetime {
+  color: var(--text-secondary);
+  font-size: 12px;
+}
+
+.event-card-inline-category {
+  font-size: 11px;
+  padding: 2px 8px;
+  background: var(--primary-light);
+  color: var(--primary);
+  border-radius: 10px;
+}
+
+.event-card-inline-location {
+  font-size: 12px;
+  color: var(--text-muted);
+}
+
+.event-decision-badge {
+  font-size: 11px;
+  padding: 3px 8px;
+  border-radius: 10px;
+  font-weight: 500;
+}
+
+.event-decision-badge.confirmed {
+  background: var(--success);
+  color: white;
+}
+
+.event-decision-badge.rejected {
+  background: var(--error);
+  color: white;
 }
 
 /* ==================== Chat Welcome Examples ==================== */
