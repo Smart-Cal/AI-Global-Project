@@ -1805,6 +1805,40 @@ body {
   padding: 12px 16px;
 }
 
+/* Chat Mode Selector */
+.chat-mode-selector {
+  display: flex;
+  gap: 6px;
+  margin-bottom: 10px;
+  flex-wrap: wrap;
+}
+
+.chat-mode-btn {
+  padding: 6px 12px;
+  border: 1px solid var(--border-medium);
+  border-radius: 16px;
+  background: var(--bg-main);
+  font-size: 12px;
+  cursor: pointer;
+  transition: all 0.15s;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  color: var(--text-secondary);
+}
+
+.chat-mode-btn:hover {
+  background: var(--bg-hover);
+  border-color: var(--primary);
+}
+
+.chat-mode-btn.active {
+  background: var(--primary-light);
+  border-color: var(--primary);
+  color: var(--primary);
+  font-weight: 500;
+}
+
 .chat-input-wrapper {
   display: flex;
   gap: 8px;
@@ -4578,7 +4612,7 @@ textarea.form-input {
   border: 1px solid var(--border-medium);
   border-radius: var(--border-radius-lg);
   box-shadow: var(--shadow-lg);
-  z-index: 1000;
+  z-index: 9999;
   overflow: hidden;
 }
 
@@ -5009,7 +5043,7 @@ textarea.form-input {
   background: var(--bg-main);
   border: 1px solid var(--border-light);
   border-radius: var(--border-radius-lg);
-  overflow: hidden;
+  overflow: visible;
   transition: all 0.2s;
 }
 
@@ -5371,6 +5405,371 @@ textarea.form-input {
 .event-decision-badge.rejected {
   background: var(--error);
   color: white;
+}
+
+/* ==================== Generic Item Confirmation UI (TODO, Goal) ==================== */
+
+.item-confirmation-inline {
+  margin: 8px 0 16px 0;
+  padding: 0 16px;
+}
+
+.item-cards-container {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.item-final-actions {
+  margin-top: 16px;
+  text-align: center;
+}
+
+.item-pending-hint {
+  margin-top: 12px;
+  text-align: center;
+  font-size: 12px;
+  color: var(--text-muted);
+}
+
+/* Item Card Header (shared) */
+.item-card-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px 14px;
+  background: var(--bg-sidebar);
+  border-bottom: 1px solid var(--border-light);
+}
+
+.item-card-number {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text-muted);
+  background: var(--bg-main);
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.item-card-quick-actions {
+  display: flex;
+  gap: 8px;
+}
+
+/* Item Card Body (shared) */
+.item-card-body {
+  padding: 14px;
+}
+
+.item-card-row {
+  margin-bottom: 10px;
+}
+
+.item-card-row:last-child {
+  margin-bottom: 0;
+}
+
+.item-card-row label {
+  display: block;
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  margin-bottom: 4px;
+}
+
+.item-card-row input,
+.item-card-row select {
+  width: 100%;
+  padding: 8px 10px;
+  border: 1px solid var(--border-medium);
+  border-radius: var(--border-radius);
+  font-size: 13px;
+  outline: none;
+  transition: border-color 0.15s;
+  background: var(--bg-main);
+}
+
+.item-card-row input:focus,
+.item-card-row select:focus {
+  border-color: var(--primary);
+}
+
+.item-card-row input:disabled,
+.item-card-row select:disabled {
+  background: var(--bg-sidebar);
+  color: var(--text-muted);
+}
+
+.item-card-row-group {
+  display: flex;
+  gap: 12px;
+  margin-bottom: 10px;
+}
+
+.item-card-row-group .item-card-row {
+  flex: 1;
+  margin-bottom: 0;
+}
+
+/* Item Decision Badge (shared) */
+.item-decision-badge {
+  font-size: 11px;
+  padding: 3px 8px;
+  border-radius: 10px;
+  font-weight: 500;
+}
+
+.item-decision-badge.confirmed {
+  background: var(--success);
+  color: white;
+}
+
+.item-decision-badge.rejected {
+  background: var(--error);
+  color: white;
+}
+
+/* ==================== TODO Card Styles ==================== */
+
+.todo-card-editable {
+  background: var(--bg-main);
+  border: 1px solid var(--border-light);
+  border-radius: var(--border-radius-lg);
+  overflow: visible;
+  transition: all 0.2s;
+}
+
+.todo-card-editable.confirmed {
+  border-color: var(--success);
+  background: #f0fdf4;
+}
+
+.todo-card-editable.rejected {
+  border-color: var(--error);
+  background: #fef2f2;
+  opacity: 0.7;
+}
+
+.todo-card-inline {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px 14px;
+  background: var(--bg-sidebar);
+  border-radius: var(--border-radius);
+  font-size: 13px;
+}
+
+.todo-card-inline.confirmed {
+  background: #f0fdf4;
+}
+
+.todo-card-inline.rejected {
+  background: #fef2f2;
+  text-decoration: line-through;
+  opacity: 0.7;
+}
+
+.todo-card-inline-info {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.todo-card-inline-title {
+  font-weight: 500;
+}
+
+.todo-card-inline-duration {
+  color: var(--text-secondary);
+  font-size: 12px;
+}
+
+.todo-card-inline-priority {
+  font-size: 11px;
+  padding: 2px 8px;
+  border-radius: 10px;
+}
+
+.todo-card-inline-priority.high {
+  background: #fee2e2;
+  color: #dc2626;
+}
+
+.todo-card-inline-priority.medium {
+  background: #fef3c7;
+  color: #d97706;
+}
+
+.todo-card-inline-priority.low {
+  background: #dbeafe;
+  color: #2563eb;
+}
+
+.todo-card-inline-category {
+  font-size: 11px;
+  padding: 2px 8px;
+  background: var(--primary-light);
+  color: var(--primary);
+  border-radius: 10px;
+}
+
+/* ==================== Goal Card Styles ==================== */
+
+.goal-card-editable {
+  background: var(--bg-main);
+  border: 1px solid var(--border-light);
+  border-radius: var(--border-radius-lg);
+  overflow: visible;
+  transition: all 0.2s;
+}
+
+.goal-card-editable.confirmed {
+  border-color: var(--success);
+  background: #f0fdf4;
+}
+
+.goal-card-editable.rejected {
+  border-color: var(--error);
+  background: #fef2f2;
+  opacity: 0.7;
+}
+
+.goal-card-inline {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px 14px;
+  background: var(--bg-sidebar);
+  border-radius: var(--border-radius);
+  font-size: 13px;
+}
+
+.goal-card-inline.confirmed {
+  background: #f0fdf4;
+}
+
+.goal-card-inline.rejected {
+  background: #fef2f2;
+  text-decoration: line-through;
+  opacity: 0.7;
+}
+
+.goal-card-inline-info {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.goal-card-inline-title {
+  font-weight: 500;
+}
+
+.goal-card-inline-date {
+  color: var(--text-secondary);
+  font-size: 12px;
+}
+
+.goal-card-inline-priority {
+  font-size: 11px;
+  padding: 2px 8px;
+  border-radius: 10px;
+}
+
+.goal-card-inline-priority.high {
+  background: #fee2e2;
+  color: #dc2626;
+}
+
+.goal-card-inline-priority.medium {
+  background: #fef3c7;
+  color: #d97706;
+}
+
+.goal-card-inline-priority.low {
+  background: #dbeafe;
+  color: #2563eb;
+}
+
+/* Decomposed TODOs in Goal Card */
+.goal-decomposed-todos {
+  margin-top: 10px;
+  padding-top: 10px;
+  border-top: 1px solid var(--border-light);
+}
+
+.goal-decomposed-todos > label {
+  display: block;
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  margin-bottom: 8px;
+}
+
+.decomposed-todo-list {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.decomposed-todo-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 10px;
+  background: var(--bg-sidebar);
+  border-radius: var(--border-radius);
+  font-size: 12px;
+}
+
+.decomposed-todo-order {
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  background: var(--primary-light);
+  color: var(--primary);
+  font-size: 10px;
+  font-weight: 600;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.decomposed-todo-title {
+  flex: 1;
+  color: var(--text-primary);
+}
+
+.decomposed-todo-duration {
+  color: var(--text-muted);
+  font-size: 11px;
+}
+
+/* Result item additional styles */
+.result-item-duration {
+  color: var(--text-secondary);
+  font-size: 12px;
+}
+
+.result-item-date {
+  color: var(--text-secondary);
+  font-size: 12px;
+}
+
+.result-item-todos {
+  font-size: 11px;
+  padding: 2px 8px;
+  background: var(--primary-light);
+  color: var(--primary);
+  border-radius: 10px;
 }
 
 /* ==================== Chat Welcome Examples ==================== */

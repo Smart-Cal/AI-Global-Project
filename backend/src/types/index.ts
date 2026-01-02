@@ -61,7 +61,9 @@ export interface DBEvent {
 export interface Todo {
   id: string;
   user_id: string;
+  category_id?: string; // 연결된 Category
   event_id?: string; // 연결된 Event (PALM 스펙)
+  goal_id?: string; // 연결된 Goal
   title: string;
   description?: string;
   timing: 'before' | 'during' | 'after';
@@ -195,6 +197,7 @@ export interface AgentResponse {
   message: string;
   events_to_create?: Partial<Event>[];
   todos_to_create?: Partial<Todo>[];
+  goals_to_create?: Partial<Goal>[];
   todos_to_schedule?: ScheduledItem[];
   needs_user_input?: boolean;
   suggestions?: string[];

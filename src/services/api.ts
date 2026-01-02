@@ -106,12 +106,32 @@ export interface PendingEvent {
   category?: string; // AI가 추천한 카테고리 이름
 }
 
+export interface PendingTodo {
+  title: string;
+  duration: number;
+  order: number;
+  priority?: 'high' | 'medium' | 'low';
+  deadline?: string;
+  description?: string;
+  category?: string; // AI가 추천한 카테고리 이름
+}
+
+export interface PendingGoal {
+  title: string;
+  description?: string;
+  target_date?: string;
+  priority?: 'high' | 'medium' | 'low';
+  category?: string;
+  decomposed_todos?: PendingTodo[];
+}
+
 export interface ChatResponse {
   conversation_id: string;
   message_id: string;
   message: string;
   pending_events?: PendingEvent[];
-  todos?: any[];
+  pending_todos?: PendingTodo[];
+  pending_goals?: PendingGoal[];
   scheduled_items?: any[];
   needs_user_input?: boolean;
   suggestions?: string[];
@@ -131,16 +151,21 @@ export interface Message {
   role: 'user' | 'assistant' | 'system';
   content: string;
   pending_events?: PendingEvent[];
+  pending_todos?: PendingTodo[];
+  pending_goals?: PendingGoal[];
   created_at: string;
 }
 
+export type ChatMode = 'auto' | 'event' | 'todo' | 'goal' | 'briefing';
+
 export async function sendChatMessage(
   message: string,
-  conversationId?: string
+  conversationId?: string,
+  mode: ChatMode = 'auto'
 ): Promise<ChatResponse> {
   return apiRequest<ChatResponse>('/chat', {
     method: 'POST',
-    body: JSON.stringify({ message, conversation_id: conversationId }),
+    body: JSON.stringify({ message, conversation_id: conversationId, mode }),
   });
 }
 
@@ -148,6 +173,20 @@ export async function confirmEvents(events: PendingEvent[]): Promise<{ message: 
   return apiRequest('/chat/confirm-events', {
     method: 'POST',
     body: JSON.stringify({ events }),
+  });
+}
+
+export async function confirmTodos(todos: PendingTodo[]): Promise<{ message: string; todos: Todo[] }> {
+  return apiRequest('/chat/confirm-todos', {
+    method: 'POST',
+    body: JSON.stringify({ todos }),
+  });
+}
+
+export async function confirmGoals(goals: PendingGoal[]): Promise<{ message: string; goals: Goal[] }> {
+  return apiRequest('/chat/confirm-goals', {
+    method: 'POST',
+    body: JSON.stringify({ goals }),
   });
 }
 

@@ -1,5 +1,5 @@
 import { Router, Response } from 'express';
-import { createOrchestrator } from '../agents/index.js';
+import { createAgentLoop } from '../agents/index.js';
 import {
   getEventsByUser,
   getTodosByUser,
@@ -7,6 +7,7 @@ import {
   getCategoriesByUser,
   createEvent,
   createTodo,
+  createGoal,
   getConversationsByUser,
   getConversationById,
   createConversation,
@@ -16,7 +17,7 @@ import {
   createMessage
 } from '../services/database.js';
 import { AuthRequest, authenticate } from '../middleware/auth.js';
-import { ChatMessage, OrchestratorContext, Event, Todo, DBEvent, Conversation } from '../types/index.js';
+import { ChatMessage, OrchestratorContext, Event, Todo, Goal, DBEvent, Conversation } from '../types/index.js';
 
 // DBEvent를 Event로 변환하는 헬퍼 함수
 function dbEventToEvent(dbEvent: DBEvent): Event {
@@ -58,14 +59,19 @@ function eventToDbEvent(event: Partial<Event>): Partial<DBEvent> {
   };
 
   if (event.datetime) {
-    const dt = new Date(event.datetime);
-    dbEvent.event_date = dt.toISOString().split('T')[0];
-    dbEvent.start_time = dt.toTimeString().slice(0, 5);
+    // datetime 문자열에서 직접 날짜와 시간 추출 (타임존 문제 방지)
+    // 형식: "YYYY-MM-DDTHH:mm:ss" 또는 "YYYY-MM-DDTHH:mm"
+    const [datePart, timePart] = event.datetime.split('T');
+    dbEvent.event_date = datePart;
+    dbEvent.start_time = timePart ? timePart.slice(0, 5) : '09:00';
 
     // duration으로 end_time 계산
     const duration = event.duration || 60;
-    const endDt = new Date(dt.getTime() + duration * 60000);
-    dbEvent.end_time = endDt.toTimeString().slice(0, 5);
+    const [hours, minutes] = (dbEvent.start_time).split(':').map(Number);
+    const totalMinutes = hours * 60 + minutes + duration;
+    const endHours = Math.floor(totalMinutes / 60) % 24;
+    const endMinutes = totalMinutes % 60;
+    dbEvent.end_time = `${endHours.toString().padStart(2, '0')}:${endMinutes.toString().padStart(2, '0')}`;
   }
 
   return dbEvent;
@@ -79,7 +85,7 @@ const router = Router();
  */
 router.post('/', authenticate, async (req: AuthRequest, res: Response) => {
   try {
-    const { message, conversation_id } = req.body;
+    const { message, conversation_id, mode = 'auto' } = req.body;
     const userId = req.userId!;
 
     if (!message) {
@@ -137,27 +143,35 @@ router.post('/', authenticate, async (req: AuthRequest, res: Response) => {
       conversation_history: history
     };
 
-    // Orchestrator로 메시지 처리
-    const orchestrator = createOrchestrator(context);
-    const response = await orchestrator.processMessage(message);
+    // Agent Loop로 메시지 처리 (Function Calling 사용)
+    const agent = createAgentLoop(context);
+    const response = await agent.processMessage(message, mode);
 
-    // 일정이 있으면 pending_events로 저장 (바로 저장하지 않음)
+    // 응답에서 pending 항목들 추출
     const pendingEvents = response.events_to_create || [];
+    const pendingTodos = response.todos_to_create || [];
+    const pendingGoals = response.goals_to_create || [];
 
-    // AI 응답 메시지 저장 (pending_events 포함)
+    // AI 응답 메시지 저장 (pending 항목들 포함)
+    const pendingData: any = {};
+    if (pendingEvents.length > 0) pendingData.pending_events = pendingEvents;
+    if (pendingTodos.length > 0) pendingData.pending_todos = pendingTodos;
+    if (pendingGoals.length > 0) pendingData.pending_goals = pendingGoals;
+
     const assistantMessage = await createMessage({
       conversation_id: conversation.id,
       role: 'assistant',
       content: response.message,
-      pending_events: pendingEvents.length > 0 ? pendingEvents : null
+      pending_events: Object.keys(pendingData).length > 0 ? pendingData : null
     });
 
     res.json({
       conversation_id: conversation.id,
       message_id: assistantMessage.id,
       message: response.message,
-      pending_events: pendingEvents, // 확인 대기 중인 일정들
-      todos: response.todos_to_create,
+      pending_events: pendingEvents,
+      pending_todos: pendingTodos,
+      pending_goals: pendingGoals,
       scheduled_items: response.todos_to_schedule,
       needs_user_input: response.needs_user_input,
       suggestions: response.suggestions
@@ -274,6 +288,122 @@ router.post('/confirm-events', authenticate, async (req: AuthRequest, res: Respo
   } catch (error) {
     console.error('Confirm events error:', error);
     res.status(500).json({ error: 'Failed to save events' });
+  }
+});
+
+/**
+ * POST /api/chat/confirm-todos
+ * 확인된 TODO들을 저장
+ */
+router.post('/confirm-todos', authenticate, async (req: AuthRequest, res: Response) => {
+  try {
+    const { todos } = req.body;
+    const userId = req.userId!;
+
+    if (!todos || !Array.isArray(todos)) {
+      res.status(400).json({ error: 'Todos array is required' });
+      return;
+    }
+
+    // 사용자의 카테고리 목록 가져오기
+    const categories = await getCategoriesByUser(userId);
+
+    const createdTodos: Todo[] = [];
+
+    for (const todo of todos) {
+      // 카테고리 이름으로 category_id 찾기
+      const categoryId = findCategoryId(categories, todo.category);
+
+      const todoData: Partial<Todo> = {
+        user_id: userId,
+        category_id: categoryId,
+        title: todo.title,
+        description: todo.description || null,
+        priority: todo.priority || 'medium',
+        duration: todo.duration || 60,
+        is_completed: false
+      };
+
+      // deadline이 있으면 due_date로 변환
+      if (todo.deadline) {
+        (todoData as any).due_date = todo.deadline.split('T')[0];
+      }
+
+      const created = await createTodo(todoData);
+      createdTodos.push(created);
+    }
+
+    res.json({
+      message: `${createdTodos.length}개의 할 일이 저장되었습니다.`,
+      todos: createdTodos
+    });
+  } catch (error) {
+    console.error('Confirm todos error:', error);
+    res.status(500).json({ error: 'Failed to save todos' });
+  }
+});
+
+/**
+ * POST /api/chat/confirm-goals
+ * 확인된 Goal들을 저장
+ */
+router.post('/confirm-goals', authenticate, async (req: AuthRequest, res: Response) => {
+  try {
+    const { goals } = req.body;
+    const userId = req.userId!;
+
+    if (!goals || !Array.isArray(goals)) {
+      res.status(400).json({ error: 'Goals array is required' });
+      return;
+    }
+
+    // 카테고리 목록 가져오기
+    const categories = await getCategoriesByUser(userId);
+
+    const createdGoals: Goal[] = [];
+
+    for (const goal of goals) {
+      // 카테고리 이름으로 ID 찾기
+      const categoryId = findCategoryId(categories, goal.category);
+
+      const goalData: Partial<Goal> = {
+        user_id: userId,
+        category_id: categoryId,
+        title: goal.title,
+        description: goal.description || null,
+        target_date: goal.target_date || null,
+        priority: goal.priority || 'medium',
+        progress: 0,
+        is_active: true
+      };
+
+      const created = await createGoal(goalData);
+      createdGoals.push(created);
+
+      // Goal에 연결된 TODO들도 생성
+      if (goal.decomposed_todos && goal.decomposed_todos.length > 0) {
+        for (const todo of goal.decomposed_todos) {
+          const todoData: Partial<Todo> = {
+            user_id: userId,
+            goal_id: created.id,
+            title: todo.title,
+            description: todo.description || null,
+            priority: todo.priority || 'medium',
+            duration: todo.duration || 60,
+            is_completed: false
+          };
+          await createTodo(todoData);
+        }
+      }
+    }
+
+    res.json({
+      message: `${createdGoals.length}개의 목표가 저장되었습니다.`,
+      goals: createdGoals
+    });
+  } catch (error) {
+    console.error('Confirm goals error:', error);
+    res.status(500).json({ error: 'Failed to save goals' });
   }
 });
 
