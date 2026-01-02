@@ -1,43 +1,16 @@
 import { Router, Response } from 'express';
 import {
   getEventsByUser,
+  getEventById,
   createEvent,
   updateEvent,
-  deleteEvent
+  deleteEvent,
+  completeEvent
 } from '../services/database.js';
 import { AuthRequest, authenticate } from '../middleware/auth.js';
-import { DBEvent, Event } from '../types/index.js';
+import { Event, CreateEventRequest } from '../types/index.js';
 
 const router = Router();
-
-// DB Event를 API Event 형식으로 변환하는 헬퍼 함수
-function dbEventToApiEvent(dbEvent: DBEvent): Event {
-  const datetime = `${dbEvent.event_date}T${dbEvent.start_time || '09:00'}:00`;
-
-  // start_time과 end_time으로 duration 계산
-  let duration = 60;
-  if (dbEvent.start_time && dbEvent.end_time) {
-    const start = new Date(`2000-01-01T${dbEvent.start_time}`);
-    const end = new Date(`2000-01-01T${dbEvent.end_time}`);
-    duration = Math.round((end.getTime() - start.getTime()) / 60000);
-    if (duration <= 0) duration = 60;
-  }
-
-  return {
-    id: dbEvent.id,
-    user_id: dbEvent.user_id,
-    category_id: dbEvent.category_id,
-    title: dbEvent.title,
-    description: dbEvent.description,
-    datetime,
-    duration,
-    type: 'personal',
-    location: dbEvent.location,
-    is_completed: dbEvent.is_completed,
-    completed_at: dbEvent.completed_at,
-    created_at: dbEvent.created_at,
-  };
-}
 
 /**
  * GET /api/events
@@ -46,16 +19,24 @@ function dbEventToApiEvent(dbEvent: DBEvent): Event {
 router.get('/', authenticate, async (req: AuthRequest, res: Response) => {
   try {
     const userId = req.userId!;
-    const { start_date, end_date } = req.query;
+    const { start_date, end_date, is_fixed, include_completed } = req.query;
 
-    const dbEvents = await getEventsByUser(
+    let events = await getEventsByUser(
       userId,
       start_date as string | undefined,
       end_date as string | undefined
     );
 
-    // DB Event를 API Event 형식으로 변환
-    const events = dbEvents.map(dbEventToApiEvent);
+    // is_fixed 필터링
+    if (is_fixed !== undefined) {
+      const fixed = is_fixed === 'true';
+      events = events.filter(e => e.is_fixed === fixed);
+    }
+
+    // 완료된 일정 제외 (기본값)
+    if (include_completed !== 'true') {
+      events = events.filter(e => !e.is_completed);
+    }
 
     res.json({ events });
   } catch (error) {
@@ -70,11 +51,8 @@ router.get('/', authenticate, async (req: AuthRequest, res: Response) => {
  */
 router.get('/:id', authenticate, async (req: AuthRequest, res: Response) => {
   try {
-    const userId = req.userId!;
     const { id } = req.params;
-
-    const events = await getEventsByUser(userId);
-    const event = events.find(e => e.id === id);
+    const event = await getEventById(id);
 
     if (!event) {
       res.status(404).json({ error: 'Event not found' });
@@ -95,49 +73,42 @@ router.get('/:id', authenticate, async (req: AuthRequest, res: Response) => {
 router.post('/', authenticate, async (req: AuthRequest, res: Response) => {
   try {
     const userId = req.userId!;
-    const { title, datetime, duration, type, location, description, category_id } = req.body;
-
-    if (!title || !datetime) {
-      res.status(400).json({ error: 'Title and datetime are required' });
-      return;
-    }
-
-    // datetime을 event_date와 start_time으로 변환 (타임존 문제 방지)
-    // 형식: "YYYY-MM-DDTHH:mm:ss" 또는 "YYYY-MM-DDTHH:mm"
-    const [datePart, timePart] = datetime.split('T');
-    const event_date = datePart;
-    const start_time = timePart ? timePart.slice(0, 5) : '09:00';
-
-    // duration으로 end_time 계산
-    const eventDuration = duration || 60;
-    const [hours, minutes] = start_time.split(':').map(Number);
-    const totalMinutes = hours * 60 + minutes + eventDuration;
-    const endHours = Math.floor(totalMinutes / 60) % 24;
-    const endMinutes = totalMinutes % 60;
-    const end_time = `${endHours.toString().padStart(2, '0')}:${endMinutes.toString().padStart(2, '0')}`;
-
-    const dbEvent = await createEvent({
-      user_id: userId,
+    const {
       title,
+      description,
       event_date,
       start_time,
       end_time,
-      is_all_day: false,
+      is_all_day,
       location,
-      description,
+      is_fixed,
+      priority,
       category_id,
+      related_todo_id
+    }: CreateEventRequest = req.body;
+
+    if (!title || !event_date) {
+      res.status(400).json({ error: 'Title and event_date are required' });
+      return;
+    }
+
+    const event = await createEvent({
+      user_id: userId,
+      title,
+      description,
+      event_date,
+      start_time,
+      end_time,
+      is_all_day: is_all_day || false,
+      location,
+      is_fixed: is_fixed !== false, // 기본값 true
+      priority: priority || 3,
+      category_id,
+      related_todo_id,
       is_completed: false
     });
 
-    // API 응답은 datetime 형식으로 변환하여 반환
-    const responseEvent = {
-      ...dbEvent,
-      datetime: `${dbEvent.event_date}T${dbEvent.start_time || '09:00'}:00`,
-      duration: duration || 60,
-      type: type || 'personal'
-    };
-
-    res.status(201).json({ event: responseEvent });
+    res.status(201).json({ event });
   } catch (error) {
     console.error('Create event error:', error);
     res.status(500).json({ error: 'Failed to create event' });
@@ -151,37 +122,15 @@ router.post('/', authenticate, async (req: AuthRequest, res: Response) => {
 router.put('/:id', authenticate, async (req: AuthRequest, res: Response) => {
   try {
     const { id } = req.params;
-    const { datetime, duration, title, description, location, category_id, is_completed } = req.body;
+    const updates = req.body;
 
-    // datetime을 event_date, start_time, end_time으로 변환
-    const dbUpdates: Record<string, any> = {};
+    // 수정 불가 필드 제거
+    delete updates.id;
+    delete updates.user_id;
+    delete updates.created_at;
+    delete updates.completed_at; // 별도 API로만 수정
 
-    if (title !== undefined) dbUpdates.title = title;
-    if (description !== undefined) dbUpdates.description = description;
-    if (location !== undefined) dbUpdates.location = location;
-    if (category_id !== undefined) dbUpdates.category_id = category_id;
-    if (is_completed !== undefined) dbUpdates.is_completed = is_completed;
-
-    if (datetime) {
-      // datetime 문자열에서 직접 날짜와 시간 추출 (타임존 문제 방지)
-      const [datePart, timePart] = datetime.split('T');
-      dbUpdates.event_date = datePart;
-      dbUpdates.start_time = timePart ? timePart.slice(0, 5) : '09:00';
-
-      // duration으로 end_time 계산
-      if (duration) {
-        const [hours, minutes] = (dbUpdates.start_time).split(':').map(Number);
-        const totalMinutes = hours * 60 + minutes + duration;
-        const endHours = Math.floor(totalMinutes / 60) % 24;
-        const endMinutes = totalMinutes % 60;
-        dbUpdates.end_time = `${endHours.toString().padStart(2, '0')}:${endMinutes.toString().padStart(2, '0')}`;
-      }
-    }
-
-    const dbEvent = await updateEvent(id, dbUpdates);
-
-    // API 응답은 Event 형식으로 변환
-    const event = dbEventToApiEvent(dbEvent as unknown as DBEvent);
+    const event = await updateEvent(id, updates);
     res.json({ event });
   } catch (error) {
     console.error('Update event error:', error);
@@ -196,7 +145,6 @@ router.put('/:id', authenticate, async (req: AuthRequest, res: Response) => {
 router.delete('/:id', authenticate, async (req: AuthRequest, res: Response) => {
   try {
     const { id } = req.params;
-
     await deleteEvent(id);
     res.json({ message: 'Event deleted successfully' });
   } catch (error) {
@@ -207,20 +155,26 @@ router.delete('/:id', authenticate, async (req: AuthRequest, res: Response) => {
 
 /**
  * PATCH /api/events/:id/complete
- * 일정 완료 처리
+ * 일정 완료 처리 (연결된 Todo, Goal 진행률도 업데이트)
  */
 router.patch('/:id/complete', authenticate, async (req: AuthRequest, res: Response) => {
   try {
     const { id } = req.params;
     const { is_completed } = req.body;
 
-    const dbEvent = await updateEvent(id, {
-      is_completed: is_completed !== false,
-      completed_at: is_completed !== false ? new Date().toISOString() : undefined
-    });
+    let event: Event;
 
-    // API 응답은 Event 형식으로 변환
-    const event = dbEventToApiEvent(dbEvent as unknown as DBEvent);
+    if (is_completed === false) {
+      // 완료 취소
+      event = await updateEvent(id, {
+        is_completed: false,
+        completed_at: undefined
+      });
+    } else {
+      // 완료 처리 (Todo, Goal 진행률 업데이트 포함)
+      event = await completeEvent(id);
+    }
+
     res.json({ event });
   } catch (error) {
     console.error('Complete event error:', error);

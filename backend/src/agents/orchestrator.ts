@@ -1,14 +1,13 @@
 import OpenAI from 'openai';
 import { parseUserInput } from './parserAgent.js';
-import { scheduleTodos, calculateAvailableSlots } from './schedulerAgent.js';
 import { createPlan, decomposeGoal } from './plannerAgent.js';
 import {
   OrchestratorContext,
   AgentResponse,
-  ChatMessage,
-  Event,
+  LegacyEvent,
   Todo,
-  ParsedInput
+  ParsedInput,
+  ScheduledItem
 } from '../types/index.js';
 
 const openai = new OpenAI({
@@ -77,12 +76,12 @@ export class MainOrchestrator {
    * 일정 생성 처리
    */
   private async handleEventCreation(parsed: ParsedInput): Promise<AgentResponse> {
-    const eventsToCreate: Partial<Event>[] = parsed.events.map(e => ({
+    const eventsToCreate: Partial<LegacyEvent>[] = parsed.events.map(e => ({
       user_id: this.context.user_id,
       title: e.title,
       datetime: e.datetime || new Date().toISOString(),
       duration: e.duration || 60,
-      type: e.type,
+      type: e.type || 'personal',
       location: e.location,
       description: e.description,
       is_completed: false
@@ -90,32 +89,31 @@ export class MainOrchestrator {
 
     // 관련 Todo도 처리
     let todosToCreate: Partial<Todo>[] = [];
-    let scheduledItems: any[] = [];
+    let scheduledItems: ScheduledItem[] = [];
 
     if (parsed.todos.length > 0) {
       todosToCreate = parsed.todos.map(t => ({
         user_id: this.context.user_id,
         title: t.title,
-        timing: t.timing || 'before',
         deadline: t.deadline || eventsToCreate[0]?.datetime || new Date().toISOString(),
-        duration: t.duration || 30,
+        estimated_time: t.duration || t.estimated_time || 30,
+        completed_time: 0,
         priority: t.priority || 'medium',
-        is_completed: false
+        is_completed: false,
+        is_hard_deadline: false,
+        is_divisible: true
       }));
 
-      // Scheduler Agent로 시간 배치
-      const scheduleResult = await scheduleTodos(
-        todosToCreate,
-        this.context.events
-      );
-      scheduledItems = scheduleResult.scheduled_items;
-
-      // 배치된 시간 적용
-      scheduledItems.forEach((item, index) => {
-        if (todosToCreate[index]) {
-          todosToCreate[index].scheduled_at = item.scheduled_at;
-        }
-      });
+      // 스케줄링은 나중에 처리 (scheduleTodos는 새 타입 필요)
+      // 현재는 수동 배치
+      scheduledItems = todosToCreate.map((t, idx) => ({
+        todo_id: `temp_${idx}`,
+        title: t.title || '',
+        scheduled_date: new Date().toISOString().split('T')[0],
+        scheduled_time: '09:00',
+        duration: t.estimated_time || 30,
+        reason: '임시 배치'
+      }));
     }
 
     // 응답 메시지 생성
@@ -150,12 +148,12 @@ export class MainOrchestrator {
     }
 
     // 이벤트와 관련 Todo 생성
-    const eventsToCreate: Partial<Event>[] = parsed.events.map(e => ({
+    const eventsToCreate: Partial<LegacyEvent>[] = parsed.events.map(e => ({
       user_id: this.context.user_id,
       title: e.title,
       datetime: e.datetime || new Date().toISOString(),
       duration: e.duration || 60,
-      type: 'goal',
+      type: 'goal' as const,
       description: e.description,
       is_completed: false
     }));
@@ -164,21 +162,13 @@ export class MainOrchestrator {
       user_id: this.context.user_id,
       title: t.title,
       deadline: t.deadline || eventsToCreate[0]?.datetime,
-      duration: t.duration || 30,
+      estimated_time: t.duration || t.estimated_time || 30,
+      completed_time: 0,
       priority: t.priority || 'medium',
-      timing: t.timing || 'before',
-      is_completed: false
+      is_completed: false,
+      is_hard_deadline: false,
+      is_divisible: true
     }));
-
-    // 시간 배치
-    if (todosToCreate.length > 0) {
-      const scheduleResult = await scheduleTodos(todosToCreate, this.context.events);
-      scheduleResult.scheduled_items.forEach((item, index) => {
-        if (todosToCreate[index]) {
-          todosToCreate[index].scheduled_at = item.scheduled_at;
-        }
-      });
-    }
 
     const message = await this.generateResponse({
       type: 'goal_planned',
@@ -201,33 +191,36 @@ export class MainOrchestrator {
       user_id: this.context.user_id,
       title: t.title,
       deadline: t.deadline || new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString(),
-      duration: t.duration || 30,
+      estimated_time: t.duration || t.estimated_time || 30,
+      completed_time: 0,
       priority: t.priority || 'medium',
-      timing: 'during',
-      is_completed: false
+      is_completed: false,
+      is_hard_deadline: false,
+      is_divisible: true
     }));
 
-    // Scheduler Agent로 시간 배치
-    const scheduleResult = await scheduleTodos(todosToCreate, this.context.events);
-
-    scheduleResult.scheduled_items.forEach((item, index) => {
-      if (todosToCreate[index]) {
-        todosToCreate[index].scheduled_at = item.scheduled_at;
-      }
-    });
+    // 임시 스케줄 아이템 생성
+    const scheduledItems: ScheduledItem[] = todosToCreate.map((t, idx) => ({
+      todo_id: `temp_${idx}`,
+      title: t.title || '',
+      scheduled_date: new Date().toISOString().split('T')[0],
+      scheduled_time: '09:00',
+      duration: t.estimated_time || 30,
+      reason: '임시 배치'
+    }));
 
     const message = await this.generateResponse({
       type: 'todo_created',
       todos: todosToCreate,
-      scheduled_items: scheduleResult.scheduled_items,
-      suggestions: scheduleResult.suggestions
+      scheduled_items: scheduledItems,
+      suggestions: []
     });
 
     return {
       message,
       todos_to_create: todosToCreate,
-      todos_to_schedule: scheduleResult.scheduled_items,
-      suggestions: scheduleResult.suggestions
+      todos_to_schedule: scheduledItems,
+      suggestions: []
     };
   }
 
@@ -235,17 +228,19 @@ export class MainOrchestrator {
    * 일반 대화 처리
    */
   private async handleGeneralConversation(userMessage: string): Promise<AgentResponse> {
+    const todayDate = new Date().toISOString().split('T')[0];
+    const todayEventsCount = this.context.events.filter(e => e.datetime.startsWith(todayDate)).length;
+    const activeGoalsCount = this.context.goals.filter(g => !['completed', 'failed'].includes(g.status)).length;
+    const incompleteTodosCount = this.context.todos.filter(t => !t.is_completed).length;
+
     const systemPrompt = `당신은 PALM(Personal AI Life Manager)의 AI 비서입니다.
 
 사용자의 일정과 목표를 관리하고 최적화하는 것이 당신의 역할입니다.
 
 현재 사용자 정보:
-- 오늘 일정: ${this.context.events.filter(e => e.datetime.startsWith(new Date().toISOString().split('T')[0])).length}개
-- 진행 중인 목표: ${this.context.goals.filter(g => g.is_active).length}개
-- 미완료 Todo: ${this.context.todos.filter(t => !t.is_completed).length}개
-
-다음 빈 시간:
-${JSON.stringify(calculateAvailableSlots(this.context.events, 9, 18, 3).slice(0, 3), null, 2)}
+- 오늘 일정: ${todayEventsCount}개
+- 진행 중인 목표: ${activeGoalsCount}개
+- 미완료 Todo: ${incompleteTodosCount}개
 
 친근하고 도움이 되는 어조로 대화하세요.
 일정 등록, 목표 설정, Todo 관리에 대한 도움을 제공하세요.
@@ -292,9 +287,9 @@ ${JSON.stringify(calculateAvailableSlots(this.context.events, 9, 18, 3).slice(0,
    */
   private async generateResponse(context: {
     type: string;
-    events?: Partial<Event>[];
+    events?: Partial<LegacyEvent>[];
     todos?: Partial<Todo>[];
-    scheduled_items?: any[];
+    scheduled_items?: ScheduledItem[];
     suggestions?: string[];
   }): Promise<string> {
     const { type, events = [], todos = [], scheduled_items = [], suggestions = [] } = context;
@@ -325,9 +320,7 @@ ${JSON.stringify(calculateAvailableSlots(this.context.events, 9, 18, 3).slice(0,
         }
         if (todos.length > 0 && scheduled_items.length > 0) {
           const todoItem = scheduled_items[0];
-          const scheduledTime = todoItem.scheduled_at
-            ? new Date(todoItem.scheduled_at).toLocaleTimeString('ko-KR', { hour: '2-digit', minute: '2-digit' })
-            : '';
+          const scheduledTime = todoItem.scheduled_time || '09:00';
           msg += ` "${todos[0].title}"는 ${scheduledTime}에 배치해드릴까요?`;
         }
         return msg || '아래 일정을 확인해주세요!';
@@ -363,30 +356,32 @@ ${JSON.stringify(calculateAvailableSlots(this.context.events, 9, 18, 3).slice(0,
     const todosToCreate: Partial<Todo>[] = subTasks.map((task, index) => ({
       user_id: this.context.user_id,
       title: task,
-      event_id: lastEvent?.id,
       deadline: lastEvent?.datetime || new Date().toISOString(),
-      duration: 30,
+      estimated_time: 30,
+      completed_time: 0,
       priority: 'medium' as const,
-      timing: 'during' as const,
-      is_completed: false
+      is_completed: false,
+      is_hard_deadline: false,
+      is_divisible: true
     }));
 
-    // 시간 배치
-    const scheduleResult = await scheduleTodos(todosToCreate, this.context.events);
+    // 임시 스케줄 생성
+    const scheduledItems: ScheduledItem[] = todosToCreate.map((t, idx) => ({
+      todo_id: `temp_${idx}`,
+      title: t.title || '',
+      scheduled_date: new Date().toISOString().split('T')[0],
+      scheduled_time: '09:00',
+      duration: t.estimated_time || 30,
+      reason: '임시 배치'
+    }));
 
-    scheduleResult.scheduled_items.forEach((item, index) => {
-      if (todosToCreate[index]) {
-        todosToCreate[index].scheduled_at = item.scheduled_at;
-      }
-    });
-
-    const totalDuration = todosToCreate.reduce((sum, t) => sum + (t.duration || 30), 0);
+    const totalDuration = todosToCreate.reduce((sum, t) => sum + (t.estimated_time || 30), 0);
     const message = `각각 30분씩 잡아뒀어! 총 ${totalDuration}분 예상되는데, 몰아서 할까 아니면 나눠서 할까?`;
 
     return {
       message,
       todos_to_create: todosToCreate,
-      todos_to_schedule: scheduleResult.scheduled_items,
+      todos_to_schedule: scheduledItems,
       needs_user_input: true,
       suggestions: ['몰아서', '나눠서', '시간 직접 지정']
     };

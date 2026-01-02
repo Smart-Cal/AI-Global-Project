@@ -1,5 +1,5 @@
 import OpenAI from 'openai';
-import { PlanResult, PlanItem, Goal, Event } from '../types/index.js';
+import { PlanResult, PlanItem, Goal, LegacyEvent } from '../types/index.js';
 
 const openai = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY
@@ -14,7 +14,7 @@ const openai = new OpenAI({
 export async function createPlan(
   goalDescription: string,
   deadline: string,
-  existingEvents: Event[],
+  existingEvents: LegacyEvent[],
   context?: {
     available_hours_per_day?: number;
     preferred_time?: 'morning' | 'afternoon' | 'evening';

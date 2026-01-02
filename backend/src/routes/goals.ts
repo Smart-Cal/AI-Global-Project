@@ -1,11 +1,15 @@
 import { Router, Response } from 'express';
 import {
   getGoalsByUser,
+  getGoalById,
   createGoal,
   updateGoal,
-  deleteGoal
+  deleteGoal,
+  getTodosByGoal,
+  recalculateGoalProgress
 } from '../services/database.js';
 import { AuthRequest, authenticate } from '../middleware/auth.js';
+import { Goal, CreateGoalRequest } from '../types/index.js';
 
 const router = Router();
 
@@ -16,11 +20,54 @@ const router = Router();
 router.get('/', authenticate, async (req: AuthRequest, res: Response) => {
   try {
     const userId = req.userId!;
-    const goals = await getGoalsByUser(userId);
+    const { status, active_only } = req.query;
+
+    let goals = await getGoalsByUser(userId);
+
+    // 상태 필터링
+    if (status && typeof status === 'string') {
+      goals = goals.filter(g => g.status === status);
+    }
+
+    // 활성 목표만 (completed, failed 제외)
+    if (active_only === 'true') {
+      goals = goals.filter(g => !['completed', 'failed'].includes(g.status));
+    }
+
     res.json({ goals });
   } catch (error) {
     console.error('Get goals error:', error);
     res.status(500).json({ error: 'Failed to get goals' });
+  }
+});
+
+/**
+ * GET /api/goals/:id
+ * 단일 목표 조회 (연결된 Todo 포함)
+ */
+router.get('/:id', authenticate, async (req: AuthRequest, res: Response) => {
+  try {
+    const { id } = req.params;
+    const goal = await getGoalById(id);
+
+    if (!goal) {
+      res.status(404).json({ error: 'Goal not found' });
+      return;
+    }
+
+    // 연결된 Todo 목록도 함께 반환
+    const todos = await getTodosByGoal(id);
+
+    res.json({
+      goal,
+      todos,
+      progress: goal.total_estimated_time > 0
+        ? Math.round((goal.completed_time / goal.total_estimated_time) * 100)
+        : 0
+    });
+  } catch (error) {
+    console.error('Get goal error:', error);
+    res.status(500).json({ error: 'Failed to get goal' });
   }
 });
 
@@ -31,10 +78,21 @@ router.get('/', authenticate, async (req: AuthRequest, res: Response) => {
 router.post('/', authenticate, async (req: AuthRequest, res: Response) => {
   try {
     const userId = req.userId!;
-    const { title, description, target_date, priority, category_id } = req.body;
+    const {
+      title,
+      description,
+      target_date,
+      priority,
+      category_id
+    }: CreateGoalRequest = req.body;
 
     if (!title) {
       res.status(400).json({ error: 'Goal title is required' });
+      return;
+    }
+
+    if (!target_date) {
+      res.status(400).json({ error: 'Target date is required' });
       return;
     }
 
@@ -45,8 +103,9 @@ router.post('/', authenticate, async (req: AuthRequest, res: Response) => {
       target_date,
       priority: priority || 'medium',
       category_id,
-      progress: 0,
-      is_active: true
+      status: 'planning',
+      total_estimated_time: 0,
+      completed_time: 0
     });
 
     res.status(201).json({ goal });
@@ -69,6 +128,7 @@ router.put('/:id', authenticate, async (req: AuthRequest, res: Response) => {
     delete updates.id;
     delete updates.user_id;
     delete updates.created_at;
+    delete updates.completed_time; // 자동 계산 필드
 
     const goal = await updateGoal(id, updates);
     res.json({ goal });
@@ -79,24 +139,46 @@ router.put('/:id', authenticate, async (req: AuthRequest, res: Response) => {
 });
 
 /**
- * PATCH /api/goals/:id/progress
- * 목표 진행률 업데이트
+ * PATCH /api/goals/:id/status
+ * 목표 상태 변경
  */
-router.patch('/:id/progress', authenticate, async (req: AuthRequest, res: Response) => {
+router.patch('/:id/status', authenticate, async (req: AuthRequest, res: Response) => {
   try {
     const { id } = req.params;
-    const { progress } = req.body;
+    const { status } = req.body;
 
-    if (progress === undefined || progress < 0 || progress > 100) {
-      res.status(400).json({ error: 'Invalid progress value (0-100)' });
+    const validStatuses = ['planning', 'scheduled', 'in_progress', 'completed', 'failed'];
+    if (!validStatuses.includes(status)) {
+      res.status(400).json({ error: `Invalid status. Must be one of: ${validStatuses.join(', ')}` });
       return;
     }
 
-    const goal = await updateGoal(id, { progress });
+    const goal = await updateGoal(id, { status });
     res.json({ goal });
   } catch (error) {
-    console.error('Update goal progress error:', error);
-    res.status(500).json({ error: 'Failed to update goal progress' });
+    console.error('Update goal status error:', error);
+    res.status(500).json({ error: 'Failed to update goal status' });
+  }
+});
+
+/**
+ * POST /api/goals/:id/recalculate
+ * 목표 진행률 재계산
+ */
+router.post('/:id/recalculate', authenticate, async (req: AuthRequest, res: Response) => {
+  try {
+    const { id } = req.params;
+    const goal = await recalculateGoalProgress(id);
+
+    res.json({
+      goal,
+      progress: goal.total_estimated_time > 0
+        ? Math.round((goal.completed_time / goal.total_estimated_time) * 100)
+        : 0
+    });
+  } catch (error) {
+    console.error('Recalculate goal progress error:', error);
+    res.status(500).json({ error: 'Failed to recalculate goal progress' });
   }
 });
 

@@ -2,11 +2,12 @@ import { Router, Response } from 'express';
 import {
   getEventsByUser,
   getTodosByUser,
+  getUserById,
   updateTodo
 } from '../services/database.js';
-import { scheduleTodos, calculateAvailableSlots } from '../agents/index.js';
+import { scheduleTodos, calculateAvailableSlots } from '../agents/schedulerAgent.js';
 import { AuthRequest, authenticate } from '../middleware/auth.js';
-import { Event, Todo } from '../types/index.js';
+import { Event, Todo, Chronotype, ScheduleRequest } from '../types/index.js';
 
 const router = Router();
 
@@ -19,22 +20,27 @@ router.post('/optimize', authenticate, async (req: AuthRequest, res: Response) =
     const userId = req.userId!;
     const {
       todo_ids,
+      date_range,
       preferences
     } = req.body;
 
     // 사용자 데이터 로드
-    const [events, allTodos] = await Promise.all([
+    const [events, allTodos, user] = await Promise.all([
       getEventsByUser(userId),
-      getTodosByUser(userId)
+      getTodosByUser(userId),
+      getUserById(userId)
     ]);
+
+    // 사용자 Chronotype (기본값: afternoon)
+    const userChronotype: Chronotype = user?.chronotype || 'afternoon';
 
     // 최적화할 Todo 필터링
     let todosToSchedule = allTodos as Todo[];
     if (todo_ids && todo_ids.length > 0) {
       todosToSchedule = todosToSchedule.filter(t => todo_ids.includes(t.id));
     } else {
-      // 미완료 + 시간 미배정 Todo만
-      todosToSchedule = todosToSchedule.filter(t => !t.is_completed && !t.scheduled_at);
+      // 미완료 Todo만
+      todosToSchedule = todosToSchedule.filter(t => !t.is_completed);
     }
 
     if (todosToSchedule.length === 0) {
@@ -47,28 +53,28 @@ router.post('/optimize', authenticate, async (req: AuthRequest, res: Response) =
       return;
     }
 
-    // Scheduler Agent 호출
-    // Note: DBEvent[] -> Event[] 변환 필요 (실제로는 헬퍼 함수 사용 권장)
-    const result = await scheduleTodos(
-      todosToSchedule,
-      events as unknown as Event[],
-      preferences
-    );
+    // 날짜 범위 설정 (기본: 오늘부터 7일)
+    const today = new Date();
+    const defaultStart = today.toISOString().split('T')[0];
+    const defaultEnd = new Date(today.getTime() + 7 * 24 * 60 * 60 * 1000).toISOString().split('T')[0];
 
-    // 결과 저장 (선택적)
-    const { auto_apply = false } = req.body;
-    if (auto_apply) {
-      for (const item of result.scheduled_items) {
-        const todo = todosToSchedule.find(t => t.title === item.title);
-        if (todo && todo.id) {
-          await updateTodo(todo.id, { scheduled_at: item.scheduled_at });
-        }
+    // Scheduler Agent 호출
+    const scheduleRequest: ScheduleRequest = {
+      todos: todosToSchedule,
+      existing_events: events as Event[],
+      user_chronotype: userChronotype,
+      date_range: {
+        start: date_range?.start || defaultStart,
+        end: date_range?.end || defaultEnd
       }
-    }
+    };
+
+    const result = await scheduleTodos(scheduleRequest);
 
     res.json({
       message: `${result.scheduled_items.length}개 항목 스케줄링 완료`,
       scheduled_items: result.scheduled_items,
+      unscheduled_todos: result.unscheduled_todos,
       conflicts: result.conflicts,
       suggestions: result.suggestions
     });
@@ -86,18 +92,31 @@ router.get('/available-slots', authenticate, async (req: AuthRequest, res: Respo
   try {
     const userId = req.userId!;
     const {
-      days = '7',
-      work_start = '9',
-      work_end = '18'
+      start_date,
+      end_date,
+      work_start = '8',
+      work_end = '22'
     } = req.query;
 
-    const events = await getEventsByUser(userId) as unknown as Event[];
+    const [events, user] = await Promise.all([
+      getEventsByUser(userId),
+      getUserById(userId)
+    ]);
+
+    const userChronotype: Chronotype = user?.chronotype || 'afternoon';
+
+    // 날짜 범위 설정
+    const today = new Date();
+    const defaultStart = today.toISOString().split('T')[0];
+    const defaultEnd = new Date(today.getTime() + 7 * 24 * 60 * 60 * 1000).toISOString().split('T')[0];
 
     const slots = calculateAvailableSlots(
-      events,
+      events as Event[],
+      userChronotype,
+      (start_date as string) || defaultStart,
+      (end_date as string) || defaultEnd,
       parseInt(work_start as string),
-      parseInt(work_end as string),
-      parseInt(days as string)
+      parseInt(work_end as string)
     );
 
     res.json({ slots });
@@ -109,7 +128,7 @@ router.get('/available-slots', authenticate, async (req: AuthRequest, res: Respo
 
 /**
  * POST /api/schedule/apply
- * 스케줄링 결과 적용
+ * 스케줄링 결과 적용 (Todo에 예약 시간 저장 - 현재는 Event 생성으로 대체 권장)
  */
 router.post('/apply', authenticate, async (req: AuthRequest, res: Response) => {
   try {
@@ -120,19 +139,12 @@ router.post('/apply', authenticate, async (req: AuthRequest, res: Response) => {
       return;
     }
 
-    const updated = [];
-    for (const item of scheduled_items) {
-      if (item.todo_id) {
-        const todo = await updateTodo(item.todo_id, {
-          scheduled_at: item.scheduled_at
-        });
-        updated.push(todo);
-      }
-    }
-
+    // Note: Todo에 직접 시간을 저장하는 대신,
+    // Event를 생성하고 related_todo_id로 연결하는 것을 권장
     res.json({
-      message: `${updated.length}개 항목에 시간 적용 완료`,
-      updated
+      message: `${scheduled_items.length}개 항목 스케줄 확인`,
+      scheduled_items,
+      note: 'Event 생성은 /api/events POST 엔드포인트를 사용하세요'
     });
   } catch (error) {
     console.error('Apply schedule error:', error);

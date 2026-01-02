@@ -313,7 +313,7 @@ export class AgentLoop {
     const todayEvents = this.context.events.filter(e =>
       e.datetime.startsWith(today)
     );
-    const activeGoals = this.context.goals.filter(g => g.is_active);
+    const activeGoals = this.context.goals.filter(g => !['completed', 'failed'].includes(g.status));
     const incompleteTodos = this.context.todos.filter(t => !t.is_completed);
 
     // 모드별 지시사항

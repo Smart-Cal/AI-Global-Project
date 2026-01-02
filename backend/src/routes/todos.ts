@@ -60,11 +60,11 @@ router.post('/', authenticate, async (req: AuthRequest, res: Response) => {
     const {
       title,
       description,
-      event_id,
-      timing,
+      goal_id,
       deadline,
-      scheduled_at,
-      duration,
+      is_hard_deadline,
+      estimated_time,
+      is_divisible,
       priority
     } = req.body;
 
@@ -77,11 +77,12 @@ router.post('/', authenticate, async (req: AuthRequest, res: Response) => {
       user_id: userId,
       title,
       description,
-      event_id,
-      timing: timing || 'before',
+      goal_id,
       deadline,
-      scheduled_at,
-      duration: duration || 30,
+      is_hard_deadline: is_hard_deadline || false,
+      estimated_time: estimated_time || 60,
+      completed_time: 0,
+      is_divisible: is_divisible !== false, // 기본값 true
       priority: priority || 'medium',
       is_completed: false
     });

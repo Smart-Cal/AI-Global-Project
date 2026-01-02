@@ -1,12 +1,12 @@
 import { getEventsByUser, getGoalsByUser, getTodosByUser, createTodo, createEvent } from '../../services/database.js';
-import { DBEvent, Event, Goal, Todo } from '../../types/index.js';
+import { DBEvent, LegacyEvent, dbEventToLegacy, Goal, Todo, LegacyChronotype } from '../../types/index.js';
 
 /**
  * PALM Tools - Goal 분해, Chronotype 스케줄링, Briefing 등
  */
 
-// Chronotype 정의
-export type Chronotype = 'morning' | 'evening' | 'neutral';
+// 레거시 호환 Chronotype (기존 3단계)
+export type Chronotype = LegacyChronotype;
 
 // Chronotype별 최적 시간대
 const CHRONOTYPE_PREFERENCES: Record<Chronotype, {
@@ -47,31 +47,9 @@ const ACTIVITY_SETTINGS: Record<string, {
   default: { duration: 60, preferChronotype: 'focus', category: '기본' }
 };
 
-// DBEvent를 Event로 변환
-function dbEventToEvent(dbEvent: DBEvent): Event {
-  const datetime = `${dbEvent.event_date}T${dbEvent.start_time || '09:00'}:00`;
-  let duration = 60;
-  if (dbEvent.start_time && dbEvent.end_time) {
-    const start = new Date(`2000-01-01T${dbEvent.start_time}`);
-    const end = new Date(`2000-01-01T${dbEvent.end_time}`);
-    duration = Math.round((end.getTime() - start.getTime()) / 60000);
-    if (duration <= 0) duration = 60;
-  }
-
-  return {
-    id: dbEvent.id,
-    user_id: dbEvent.user_id,
-    category_id: dbEvent.category_id,
-    title: dbEvent.title,
-    description: dbEvent.description,
-    datetime,
-    duration,
-    type: 'personal',
-    location: dbEvent.location,
-    is_completed: dbEvent.is_completed,
-    completed_at: dbEvent.completed_at,
-    created_at: dbEvent.created_at,
-  };
+// DBEvent를 LegacyEvent로 변환 (types/index.ts에서 가져온 함수 사용)
+function dbEventToEvent(dbEvent: DBEvent): LegacyEvent {
+  return dbEventToLegacy(dbEvent);
 }
 
 /**
@@ -362,7 +340,7 @@ export async function generateWeeklyReview(
     t.completed_at &&
     t.completed_at >= weekAgoStr
   ).length;
-  const activeGoals = goals.filter(g => g.is_active).length;
+  const activeGoals = goals.filter(g => !['completed', 'failed'].includes(g.status)).length;
 
   const suggestions: string[] = [];
 
