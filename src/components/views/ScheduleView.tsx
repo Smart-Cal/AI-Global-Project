@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useEventStore } from '../../store/eventStore';
 import { useTodoStore } from '../../store/todoStore';
 import { useCategoryStore } from '../../store/categoryStore';
+import { useToast } from '../Toast';
 import { DEFAULT_CATEGORY_COLOR, type CalendarEvent } from '../../types';
 
 // deadline에서 날짜와 시간 추출
@@ -25,10 +26,12 @@ interface ScheduleViewProps {
 const ScheduleView: React.FC<ScheduleViewProps> = ({ onEventClick, onAddEvent, onAddTodo }) => {
   const { events, loadEvents } = useEventStore();
   const { todos, fetchTodos, toggleComplete } = useTodoStore();
-  const { categories, fetchCategories, getCategoryById } = useCategoryStore();
+  const { categories, fetchCategories, getCategoryById, deleteCategory } = useCategoryStore();
+  const { showToast } = useToast();
 
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
   const [viewType, setViewType] = useState<'events' | 'todos' | 'all'>('all');
+  const [showCategoryManager, setShowCategoryManager] = useState(false);
 
   useEffect(() => {
     loadEvents();
@@ -81,6 +84,25 @@ const ScheduleView: React.FC<ScheduleViewProps> = ({ onEventClick, onAddEvent, o
     }
   };
 
+  const handleDeleteCategory = async (categoryId: string, categoryName: string, isDefault: boolean) => {
+    if (isDefault) {
+      showToast('기본 카테고리는 삭제할 수 없습니다', 'error');
+      return;
+    }
+    if (confirm(`"${categoryName}" 카테고리를 삭제하시겠습니까?`)) {
+      try {
+        await deleteCategory(categoryId);
+        showToast(`"${categoryName}" 카테고리가 삭제되었습니다`, 'success');
+        // 삭제된 카테고리가 선택된 상태였다면 전체로 변경
+        if (selectedCategory === categoryId) {
+          setSelectedCategory(null);
+        }
+      } catch (error) {
+        showToast('카테고리 삭제에 실패했습니다', 'error');
+      }
+    }
+  };
+
   const filteredEvents = getFilteredEvents();
   const filteredTodos = getFilteredTodos();
   const groupedEvents = groupEventsByDate(filteredEvents);
@@ -89,8 +111,28 @@ const ScheduleView: React.FC<ScheduleViewProps> = ({ onEventClick, onAddEvent, o
   return (
     <div className="schedule-view">
       <aside className="schedule-sidebar">
-        <div className="schedule-sidebar-header">
+        <div className="schedule-sidebar-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
           <h3>카테고리</h3>
+          <button
+            onClick={() => setShowCategoryManager(!showCategoryManager)}
+            style={{
+              width: '24px',
+              height: '24px',
+              border: '1px solid var(--border-light)',
+              borderRadius: '4px',
+              backgroundColor: showCategoryManager ? 'var(--primary)' : 'var(--bg-sidebar)',
+              color: showCategoryManager ? 'white' : 'var(--text-secondary)',
+              fontSize: '14px',
+              cursor: 'pointer',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              padding: 0,
+            }}
+            title="카테고리 관리"
+          >
+            ⚙
+          </button>
         </div>
         <div className="schedule-category-list">
           <button
@@ -104,15 +146,47 @@ const ScheduleView: React.FC<ScheduleViewProps> = ({ onEventClick, onAddEvent, o
           {categories.map(category => {
             const count = events.filter(e => e.category_id === category.id).length;
             return (
-              <button
+              <div
                 key={category.id}
-                className={`schedule-category-item ${selectedCategory === category.id ? 'active' : ''}`}
-                onClick={() => setSelectedCategory(category.id)}
+                style={{ display: 'flex', alignItems: 'center', gap: '4px' }}
               >
-                <span className="category-color-dot" style={{ backgroundColor: category.color }} />
-                <span className="category-name">{category.name}</span>
-                <span className="category-count">{count}</span>
-              </button>
+                <button
+                  className={`schedule-category-item ${selectedCategory === category.id ? 'active' : ''}`}
+                  onClick={() => setSelectedCategory(category.id)}
+                  style={{ flex: 1 }}
+                >
+                  <span className="category-color-dot" style={{ backgroundColor: category.color }} />
+                  <span className="category-name">{category.name}</span>
+                  <span className="category-count">{count}</span>
+                </button>
+                {showCategoryManager && !category.is_default && (
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      handleDeleteCategory(category.id, category.name, category.is_default);
+                    }}
+                    style={{
+                      width: '20px',
+                      height: '20px',
+                      border: 'none',
+                      borderRadius: '50%',
+                      backgroundColor: '#E03E3E',
+                      color: 'white',
+                      fontSize: '14px',
+                      lineHeight: '18px',
+                      cursor: 'pointer',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      padding: 0,
+                      flexShrink: 0,
+                    }}
+                    title={`${category.name} 삭제`}
+                  >
+                    −
+                  </button>
+                )}
+              </div>
             );
           })}
         </div>

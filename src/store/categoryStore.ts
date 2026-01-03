@@ -53,8 +53,10 @@ export const useCategoryStore = create<CategoryState>()((set, get) => ({
   },
 
   addCategory: async (name, color) => {
+    console.log('[CategoryStore] addCategory called with:', { name, color });
     const response = await api.createCategory(name, color);
     const newCategory = response.category;
+    console.log('[CategoryStore] addCategory response:', newCategory);
 
     set((state) => ({
       categories: [...state.categories, newCategory].sort((a, b) => {

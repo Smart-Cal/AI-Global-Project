@@ -3,6 +3,7 @@ import { useTodoStore } from '../store/todoStore';
 import { useGoalStore } from '../store/goalStore';
 import { useAuthStore } from '../store/authStore';
 import { useCategoryStore } from '../store/categoryStore';
+import { useToast } from './Toast';
 import type { Todo } from '../types';
 
 interface TodosViewProps {
@@ -34,10 +35,12 @@ export const TodosView: React.FC<TodosViewProps> = ({ onAddTodo }) => {
     getPendingTodos,
   } = useTodoStore();
   const { goals } = useGoalStore();
-  const { getCategoryById } = useCategoryStore();
+  const { categories, getCategoryById, deleteCategory } = useCategoryStore();
+  const { showToast } = useToast();
 
   const [filter, setFilter] = useState<'all' | 'today' | 'upcoming' | 'overdue' | 'completed'>('all');
   const [newTodoTitle, setNewTodoTitle] = useState('');
+  const [showCategoryManager, setShowCategoryManager] = useState(false);
 
   const getFilteredTodos = () => {
     switch (filter) {
@@ -76,6 +79,21 @@ export const TodosView: React.FC<TodosViewProps> = ({ onAddTodo }) => {
   const handleDelete = (todoId: string) => {
     if (confirm('이 할 일을 삭제하시겠습니까?')) {
       deleteTodo(todoId);
+    }
+  };
+
+  const handleDeleteCategory = async (categoryId: string, categoryName: string, isDefault: boolean) => {
+    if (isDefault) {
+      showToast('기본 카테고리는 삭제할 수 없습니다', 'error');
+      return;
+    }
+    if (confirm(`"${categoryName}" 카테고리를 삭제하시겠습니까?`)) {
+      try {
+        await deleteCategory(categoryId);
+        showToast(`"${categoryName}" 카테고리가 삭제되었습니다`, 'success');
+      } catch (error) {
+        showToast('카테고리 삭제에 실패했습니다', 'error');
+      }
     }
   };
 
@@ -150,6 +168,89 @@ export const TodosView: React.FC<TodosViewProps> = ({ onAddTodo }) => {
             {f.count > 0 && ` (${f.count})`}
           </button>
         ))}
+      </div>
+
+      {/* Categories Section */}
+      <div
+        style={{
+          display: 'flex',
+          alignItems: 'center',
+          gap: '8px',
+          marginBottom: '20px',
+          flexWrap: 'wrap',
+        }}
+      >
+        <span style={{ fontSize: '13px', color: 'var(--text-secondary)', marginRight: '4px' }}>
+          카테고리:
+        </span>
+        {categories.map((cat) => (
+          <div
+            key={cat.id}
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: '4px',
+              padding: '4px 8px',
+              borderRadius: '4px',
+              backgroundColor: cat.color + '20',
+              border: `1px solid ${cat.color}40`,
+            }}
+          >
+            <span
+              style={{
+                width: '8px',
+                height: '8px',
+                borderRadius: '50%',
+                backgroundColor: cat.color,
+              }}
+            />
+            <span style={{ fontSize: '12px', color: cat.color }}>{cat.name}</span>
+            {showCategoryManager && !cat.is_default && (
+              <button
+                onClick={() => handleDeleteCategory(cat.id, cat.name, cat.is_default)}
+                style={{
+                  marginLeft: '2px',
+                  width: '16px',
+                  height: '16px',
+                  border: 'none',
+                  borderRadius: '50%',
+                  backgroundColor: '#E03E3E',
+                  color: 'white',
+                  fontSize: '12px',
+                  lineHeight: '14px',
+                  cursor: 'pointer',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  padding: 0,
+                }}
+                title={`${cat.name} 삭제`}
+              >
+                −
+              </button>
+            )}
+          </div>
+        ))}
+        <button
+          onClick={() => setShowCategoryManager(!showCategoryManager)}
+          style={{
+            width: '24px',
+            height: '24px',
+            border: '1px solid var(--border-light)',
+            borderRadius: '4px',
+            backgroundColor: showCategoryManager ? 'var(--primary)' : 'var(--bg-sidebar)',
+            color: showCategoryManager ? 'white' : 'var(--text-secondary)',
+            fontSize: '14px',
+            cursor: 'pointer',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            padding: 0,
+          }}
+          title="카테고리 관리"
+        >
+          ⚙
+        </button>
       </div>
 
       {/* Todo List */}

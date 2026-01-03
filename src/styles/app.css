@@ -6865,8 +6865,26 @@ textarea.form-input {
 /* 새 카테고리 추가 인라인 입력 */
 .new-category-input-container {
   display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.new-category-input-row {
+  display: flex;
   gap: 4px;
   align-items: center;
+}
+
+.new-category-color-preview {
+  width: 24px;
+  height: 24px;
+  min-width: 24px;
+  min-height: 24px;
+  border-radius: 4px;
+  flex-shrink: 0;
+  border: 2px solid white;
+  box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.2);
+  display: block;
 }
 
 .new-category-input {
@@ -6876,6 +6894,7 @@ textarea.form-input {
   border-radius: var(--border-radius);
   font-size: 13px;
   outline: none;
+  min-width: 100px;
 }
 
 .new-category-input:focus {
@@ -6885,16 +6904,17 @@ textarea.form-input {
 
 .new-category-confirm-btn,
 .new-category-cancel-btn {
-  width: 32px;
-  height: 32px;
+  width: 28px;
+  height: 28px;
   border: none;
   border-radius: var(--border-radius);
   cursor: pointer;
-  font-size: 14px;
+  font-size: 13px;
   display: flex;
   align-items: center;
   justify-content: center;
   transition: all 0.15s;
+  flex-shrink: 0;
 }
 
 .new-category-confirm-btn {
@@ -6922,5 +6942,86 @@ textarea.form-input {
 
 .new-category-cancel-btn:disabled {
   opacity: 0.5;
+  cursor: not-allowed;
+}
+
+/* 색상 팔레트 */
+.new-category-color-palette {
+  display: flex !important;
+  gap: 6px;
+  flex-wrap: wrap;
+  padding: 6px 0;
+  margin-top: 4px;
+}
+
+.color-palette-item {
+  width: 22px;
+  height: 22px;
+  border-radius: 4px;
+  border: 2px solid transparent;
+  cursor: pointer;
+  transition: all 0.15s;
+  padding: 0;
+}
+
+.color-palette-item:hover:not(:disabled) {
+  transform: scale(1.15);
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+}
+
+.color-palette-item.selected {
+  border-color: var(--text-primary);
+  box-shadow: 0 0 0 2px white, 0 0 0 4px rgba(0, 0, 0, 0.2);
+}
+
+.color-palette-item:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+/* 카테고리 선택 with 색상 박스 */
+.category-select-wrapper {
+  position: relative;
+  width: 100%;
+}
+
+.category-select-current {
+  display: flex;
+  align-items: center;
+  position: relative;
+}
+
+.category-color-box {
+  position: absolute;
+  left: 8px;
+  width: 12px;
+  height: 12px;
+  border-radius: 3px;
+  pointer-events: none;
+  z-index: 1;
+}
+
+.category-select-current select {
+  width: 100%;
+  padding: 8px 10px 8px 28px;
+  border: 1px solid var(--border-medium);
+  border-radius: var(--border-radius);
+  font-size: 13px;
+  background: white;
+  cursor: pointer;
+  appearance: none;
+  -webkit-appearance: none;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%236b7280' d='M3 4.5l3 3 3-3'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 8px center;
+}
+
+.category-select-current select:focus {
+  outline: none;
+  border-color: var(--primary);
+}
+
+.category-select-current select:disabled {
+  background-color: var(--bg-sidebar);
   cursor: not-allowed;
 }

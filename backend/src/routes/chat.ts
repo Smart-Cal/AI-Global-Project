@@ -227,6 +227,8 @@ router.post('/confirm-events', authenticate, async (req: AuthRequest, res: Respo
     const { events } = req.body;
     const userId = req.userId!;
 
+    console.log('[confirm-events] Received events:', JSON.stringify(events, null, 2));
+
     if (!events || !Array.isArray(events)) {
       res.status(400).json({ error: 'Events array is required' });
       return;
@@ -234,18 +236,22 @@ router.post('/confirm-events', authenticate, async (req: AuthRequest, res: Respo
 
     // 사용자의 카테고리 목록 가져오기
     const categories = await getCategoriesByUser(userId);
+    console.log('[confirm-events] User categories:', categories.map(c => ({ id: c.id, name: c.name })));
 
     const createdEvents: LegacyEvent[] = [];
 
     for (const event of events) {
+      console.log('[confirm-events] Processing event:', { title: event.title, category: event.category });
       // AI가 추천한 카테고리 이름으로 category_id 찾기
       const categoryId = findCategoryId(categories, event.category);
+      console.log('[confirm-events] Found categoryId:', categoryId, 'for category name:', event.category);
 
       const dbEvent = eventToDbEvent({
         ...event,
         user_id: userId,
         category_id: categoryId
       } as Partial<LegacyEvent>);
+      console.log('[confirm-events] dbEvent to create:', dbEvent);
       const created = await createEvent(dbEvent);
       createdEvents.push(dbEventToEvent(created));
     }

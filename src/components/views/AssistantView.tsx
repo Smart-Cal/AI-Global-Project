@@ -68,6 +68,8 @@ const AssistantView: React.FC = () => {
   const [activeItemType, setActiveItemType] = useState<'event' | 'todo' | 'goal' | null>(null);
   const [eventDecisions, setEventDecisions] = useState<EventDecisionState>({});
   const [editingEvents, setEditingEvents] = useState<{ [index: number]: PendingEvent }>({});
+  // useRef로 editingEvents의 최신 값을 항상 참조
+  const editingEventsRef = useRef<{ [index: number]: PendingEvent }>({});
 
   // TODO confirmation state
   const [todoDecisions, setTodoDecisions] = useState<DecisionState>({});
@@ -92,7 +94,23 @@ const AssistantView: React.FC = () => {
     index: number;
   } | null>(null);
   const [newCategoryName, setNewCategoryName] = useState('');
+  const [newCategoryColor, setNewCategoryColor] = useState('#6366f1');
   const [isCreatingCategory, setIsCreatingCategory] = useState(false);
+  const [showColorPalette, setShowColorPalette] = useState(false);
+
+  // 색상 팔레트
+  const colorPalette = [
+    '#ef4444', // 빨강
+    '#f97316', // 주황
+    '#f59e0b', // 노랑
+    '#22c55e', // 초록
+    '#14b8a6', // 청록
+    '#3b82f6', // 파랑
+    '#6366f1', // 남색
+    '#8b5cf6', // 보라
+    '#ec4899', // 분홍
+    '#6b7280', // 회색
+  ];
 
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const activeGoals = getActiveGoals();
@@ -141,6 +159,7 @@ const AssistantView: React.FC = () => {
     setActiveItemType(null);
     setEventDecisions({});
     setEditingEvents({});
+    editingEventsRef.current = {}; // ref도 초기화
     setTodoDecisions({});
     setEditingTodos({});
     setGoalDecisions({});
@@ -278,12 +297,35 @@ const AssistantView: React.FC = () => {
   };
 
   const handleEditEvent = (index: number, field: keyof PendingEvent, value: string | number) => {
+    console.log('[handleEditEvent] Called with:', { index, field, value, activeMessageId });
     const currentEvents = messages.find(m => m.id === activeMessageId)?.pending_events || [];
-    const currentEvent = editingEvents[index] || currentEvents[index];
-    setEditingEvents(prev => ({
-      ...prev,
-      [index]: { ...currentEvent, [field]: value }
-    }));
+    console.log('[handleEditEvent] currentEvents:', currentEvents);
+    // editingEventsRef에서 최신 값을 가져옴
+    const currentEvent = editingEventsRef.current[index] || currentEvents[index];
+    console.log('[handleEditEvent] currentEvent:', currentEvent);
+    if (!currentEvent) {
+      console.error('[handleEditEvent] No currentEvent found!');
+      return;
+    }
+    const updatedEvent = { ...currentEvent, [field]: value };
+    console.log('[handleEditEvent] updatedEvent:', updatedEvent);
+
+    // ref를 먼저 업데이트 (동기적)
+    editingEventsRef.current = {
+      ...editingEventsRef.current,
+      [index]: updatedEvent
+    };
+    console.log('[handleEditEvent] Updated editingEventsRef:', editingEventsRef.current);
+
+    // 상태도 업데이트 (UI 리렌더링용)
+    setEditingEvents(prev => {
+      const newState = {
+        ...prev,
+        [index]: updatedEvent
+      };
+      console.log('[handleEditEvent] New editingEvents state:', newState);
+      return newState;
+    });
   };
 
   // datetime에서 날짜 부분만 추출 (YYYY-MM-DD)
@@ -317,7 +359,10 @@ const AssistantView: React.FC = () => {
   };
 
   const getEventWithEdits = (index: number, originalEvent: PendingEvent): PendingEvent => {
-    return editingEvents[index] || originalEvent;
+    // editingEventsRef에서 최신 값을 가져옴 (클로저 문제 방지)
+    const edited = editingEventsRef.current[index];
+    console.log('[getEventWithEdits] index:', index, 'edited:', edited, 'original:', originalEvent);
+    return edited || originalEvent;
   };
 
   // 모든 일정이 처리되었는지 확인
@@ -334,12 +379,18 @@ const AssistantView: React.FC = () => {
     const confirmedEvents: PendingEvent[] = [];
     const rejectedCount = Object.values(eventDecisions).filter(d => d === 'rejected').length;
 
+    console.log('[handleFinalConfirmEvents] editingEvents:', editingEvents);
+    console.log('[handleFinalConfirmEvents] pendingEvents:', pendingEvents);
+
     for (let i = 0; i < pendingEvents.length; i++) {
       if (eventDecisions[i] === 'confirmed') {
         const eventWithEdits = getEventWithEdits(i, pendingEvents[i]);
+        console.log(`[handleFinalConfirmEvents] Event ${i} with edits:`, eventWithEdits);
         confirmedEvents.push(eventWithEdits);
       }
     }
+
+    console.log('[handleFinalConfirmEvents] confirmedEvents to save:', confirmedEvents);
 
     try {
       if (confirmedEvents.length > 0) {
@@ -641,27 +692,65 @@ const AssistantView: React.FC = () => {
 
   // 새 카테고리 생성 핸들러
   const handleCreateCategory = async (type: 'event' | 'todo' | 'goal', index: number) => {
-    if (!newCategoryName.trim()) {
+    // 이미 생성 중이면 중복 호출 방지
+    if (isCreatingCategory) {
+      console.log('[handleCreateCategory] Already creating, skipping...');
+      return;
+    }
+
+    const categoryName = newCategoryName.trim();
+    if (!categoryName) {
       showToast('카테고리 이름을 입력해주세요', 'error');
       return;
     }
 
+    // 이미 존재하는 카테고리인지 확인
+    const existingCategory = categories.find(
+      cat => cat.name.toLowerCase() === categoryName.toLowerCase()
+    );
+    if (existingCategory) {
+      console.log('[handleCreateCategory] Category already exists:', existingCategory);
+      // 기존 카테고리를 선택
+      if (type === 'event') {
+        handleEditEvent(index, 'category', existingCategory.name);
+      } else if (type === 'todo') {
+        handleEditTodo(index, 'category', existingCategory.name);
+      } else if (type === 'goal') {
+        handleEditGoal(index, 'category', existingCategory.name);
+      }
+      showToast(`"${existingCategory.name}" 카테고리를 선택했습니다`, 'info');
+      setShowNewCategoryInput(null);
+      setNewCategoryName('');
+      setNewCategoryColor('#6366f1');
+      setShowColorPalette(false);
+      return;
+    }
+
+    console.log('[handleCreateCategory] Creating category:', { type, index, name: categoryName, color: newCategoryColor });
+    console.log('[handleCreateCategory] activeMessageId:', activeMessageId);
+
     setIsCreatingCategory(true);
     try {
-      const newCategory = await addCategory(newCategoryName.trim(), '#6366f1');
+      const newCategory = await addCategory(categoryName, newCategoryColor);
+      console.log('[handleCreateCategory] Created category:', newCategory);
 
       // 생성된 카테고리를 해당 항목에 설정
       if (type === 'event') {
+        console.log('[handleCreateCategory] Calling handleEditEvent for index:', index);
         handleEditEvent(index, 'category', newCategory.name);
       } else if (type === 'todo') {
+        console.log('[handleCreateCategory] Calling handleEditTodo for index:', index);
         handleEditTodo(index, 'category', newCategory.name);
       } else if (type === 'goal') {
+        console.log('[handleCreateCategory] Calling handleEditGoal for index:', index);
         handleEditGoal(index, 'category', newCategory.name);
       }
 
       showToast(`"${newCategory.name}" 카테고리가 생성되었습니다`, 'success');
       setShowNewCategoryInput(null);
       setNewCategoryName('');
+      setNewCategoryColor('#6366f1');
+      setShowColorPalette(false);
     } catch (error) {
       console.error('Failed to create category:', error);
       showToast('카테고리 생성에 실패했습니다', 'error');
@@ -682,13 +771,32 @@ const AssistantView: React.FC = () => {
 
     if (isAddingNew) {
       return (
-        <div className="new-category-input-container">
+        <div style={{
+          position: 'relative',
+          display: 'flex',
+          flexDirection: 'row',
+          alignItems: 'center',
+          gap: '6px',
+          width: '100%',
+          flexWrap: 'nowrap',
+          height: '36px'
+        }}>
           <input
             type="text"
             value={newCategoryName}
             onChange={(e) => setNewCategoryName(e.target.value)}
-            placeholder="새 카테고리 이름"
-            className="new-category-input"
+            placeholder="카테고리명"
+            style={{
+              flex: '1 1 auto',
+              minWidth: '80px',
+              height: '36px',
+              padding: '8px 12px',
+              fontSize: '14px',
+              border: '1px solid var(--primary)',
+              borderRadius: '6px',
+              outline: 'none',
+              boxSizing: 'border-box'
+            }}
             autoFocus
             onKeyDown={(e) => {
               if (e.key === 'Enter') {
@@ -696,50 +804,178 @@ const AssistantView: React.FC = () => {
               } else if (e.key === 'Escape') {
                 setShowNewCategoryInput(null);
                 setNewCategoryName('');
+                setNewCategoryColor('#6366f1');
+                setShowColorPalette(false);
               }
             }}
             disabled={isCreatingCategory}
           />
+          {/* 색상 선택 버튼 */}
           <button
-            className="new-category-confirm-btn"
+            type="button"
+            style={{
+              width: '36px',
+              height: '36px',
+              minWidth: '36px',
+              padding: '4px',
+              border: '1px solid #ddd',
+              borderRadius: '6px',
+              cursor: 'pointer',
+              backgroundColor: 'white',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              flexShrink: 0,
+              boxSizing: 'border-box'
+            }}
+            onClick={() => setShowColorPalette(!showColorPalette)}
+            disabled={isCreatingCategory}
+            title="색상 선택"
+          >
+            <span style={{
+              width: '22px',
+              height: '22px',
+              borderRadius: '4px',
+              backgroundColor: newCategoryColor,
+              display: 'block'
+            }} />
+          </button>
+          {/* 확인 버튼 */}
+          <button
+            style={{
+              width: '36px',
+              height: '36px',
+              minWidth: '36px',
+              border: 'none',
+              borderRadius: '6px',
+              cursor: 'pointer',
+              backgroundColor: '#10b981',
+              color: 'white',
+              fontSize: '16px',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              flexShrink: 0,
+              boxSizing: 'border-box'
+            }}
             onClick={() => handleCreateCategory(type, index)}
             disabled={isCreatingCategory || !newCategoryName.trim()}
           >
-            {isCreatingCategory ? '...' : '✓'}
+            {isCreatingCategory ? '·' : '✓'}
           </button>
+          {/* 취소 버튼 */}
           <button
-            className="new-category-cancel-btn"
+            style={{
+              width: '36px',
+              height: '36px',
+              minWidth: '36px',
+              border: '1px solid #ddd',
+              borderRadius: '6px',
+              cursor: 'pointer',
+              backgroundColor: '#f3f4f6',
+              color: '#6b7280',
+              fontSize: '16px',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              flexShrink: 0,
+              boxSizing: 'border-box'
+            }}
             onClick={() => {
               setShowNewCategoryInput(null);
               setNewCategoryName('');
+              setNewCategoryColor('#6366f1');
+              setShowColorPalette(false);
             }}
             disabled={isCreatingCategory}
           >
-            ✗
+            ✕
           </button>
+          {/* 색상 팔레트 드롭다운 */}
+          {showColorPalette && (
+            <div style={{
+              position: 'absolute',
+              top: '100%',
+              left: 0,
+              marginTop: '4px',
+              padding: '8px',
+              backgroundColor: 'white',
+              border: '1px solid #ddd',
+              borderRadius: '6px',
+              boxShadow: '0 4px 12px rgba(0,0,0,0.15)',
+              display: 'flex',
+              gap: '6px',
+              flexWrap: 'wrap',
+              zIndex: 100,
+              width: 'max-content'
+            }}>
+              {colorPalette.map((color) => (
+                <button
+                  key={color}
+                  type="button"
+                  style={{
+                    width: '28px',
+                    height: '28px',
+                    borderRadius: '4px',
+                    backgroundColor: color,
+                    border: newCategoryColor === color ? '2px solid #333' : '2px solid transparent',
+                    cursor: 'pointer',
+                    padding: 0,
+                    outline: 'none',
+                    boxShadow: newCategoryColor === color ? '0 0 0 2px white, 0 0 0 4px rgba(0,0,0,0.2)' : '0 1px 3px rgba(0,0,0,0.1)'
+                  }}
+                  onClick={(e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    setNewCategoryColor(color);
+                    setShowColorPalette(false);
+                  }}
+                  disabled={isCreatingCategory}
+                  title={color}
+                />
+              ))}
+            </div>
+          )}
         </div>
       );
     }
 
+    const selectedCategory = categories.find(cat => cat.name === currentValue);
+
     return (
-      <select
-        value={currentValue || ''}
-        onChange={(e) => {
-          if (e.target.value === '__new__') {
-            setShowNewCategoryInput({ type, index });
-            setNewCategoryName('');
-          } else {
-            onChange(e.target.value);
-          }
-        }}
-        disabled={disabled}
-      >
-        <option value="">선택</option>
-        {categories.map(cat => (
-          <option key={cat.id} value={cat.name}>{cat.name}</option>
-        ))}
-        <option value="__new__">+ 새 카테고리 추가</option>
-      </select>
+      <div className="category-select-wrapper">
+        <div
+          className="category-select-current"
+          style={{ borderLeftColor: selectedCategory?.color || 'transparent' }}
+        >
+          {selectedCategory && (
+            <span
+              className="category-color-box"
+              style={{ backgroundColor: selectedCategory.color }}
+            />
+          )}
+          <select
+            value={currentValue || ''}
+            onChange={(e) => {
+              console.log('[renderCategorySelect] onChange:', { type, index, value: e.target.value });
+              if (e.target.value === '__new__') {
+                setShowNewCategoryInput({ type, index });
+                setNewCategoryName('');
+              } else {
+                console.log('[renderCategorySelect] Calling onChange callback with:', e.target.value);
+                onChange(e.target.value);
+              }
+            }}
+            disabled={disabled}
+          >
+            <option value="">선택</option>
+            {categories.map(cat => (
+              <option key={cat.id} value={cat.name}>{cat.name}</option>
+            ))}
+            <option value="__new__">+ 새 카테고리 추가</option>
+          </select>
+        </div>
+      </div>
     );
   };
 
