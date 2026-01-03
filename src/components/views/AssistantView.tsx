@@ -95,6 +95,11 @@ const AssistantView: React.FC = () => {
     fetchCategories();
   }, []);
 
+  // 디버깅: 카테고리 상태 확인
+  useEffect(() => {
+    console.log('[AssistantView] Categories updated:', categories);
+  }, [categories]);
+
   const loadConversations = async () => {
     try {
       const response = await getConversations();

@@ -33,17 +33,20 @@ export const useCategoryStore = create<CategoryState>()((set, get) => ({
   },
 
   fetchCategories: async () => {
+    console.log('[CategoryStore] fetchCategories called');
     set({ isLoading: true });
     try {
       // 백엔드 API를 통해 카테고리 조회 (기본 카테고리도 자동 생성됨)
       const response = await api.getCategories();
+      console.log('[CategoryStore] API response:', response);
       const categories = response.categories.sort((a, b) => {
         if (a.is_default !== b.is_default) return a.is_default ? -1 : 1;
         return a.name.localeCompare(b.name);
       });
+      console.log('[CategoryStore] Sorted categories:', categories);
       set({ categories });
     } catch (error) {
-      console.error('Failed to fetch categories:', error);
+      console.error('[CategoryStore] Failed to fetch categories:', error);
     } finally {
       set({ isLoading: false });
     }
