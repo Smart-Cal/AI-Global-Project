@@ -1,11 +1,22 @@
 import React from 'react';
 import { useAuthStore } from '../store/authStore';
-import { useGoalStore } from '../store/goalStore';
+import { useGoalStore, calculateGoalProgress } from '../store/goalStore';
 import { useTodoStore } from '../store/todoStore';
 import { useCategoryStore } from '../store/categoryStore';
 import { useSettingsStore } from '../store/settingsStore';
-import type { SidebarView } from '../types';
+import type { SidebarView, Goal } from '../types';
 import { getIcon, PlusIcon, CalendarIcon, ClockIcon } from './Icons';
+
+// Goal이 활성 상태인지 확인
+function isGoalActive(goal: Goal): boolean {
+  return !['completed', 'failed'].includes(goal.status);
+}
+
+// deadline에서 날짜 추출
+function getDeadlineDate(deadline?: string): string | undefined {
+  if (!deadline) return undefined;
+  return deadline.split('T')[0];
+}
 
 interface SidebarProps {
   currentView: SidebarView;
@@ -30,11 +41,12 @@ export const Sidebar: React.FC<SidebarProps> = ({
   const { getCategoryById } = useCategoryStore();
   const { getChronotypeInfo } = useSettingsStore();
 
-  const activeGoals = goals.filter((g) => g.is_active);
+  const activeGoals = goals.filter(isGoalActive);
   const pendingTodos = todos.filter((t) => !t.is_completed);
   const overdueTodos = todos.filter((t) => {
-    if (t.is_completed || !t.due_date) return false;
-    return t.due_date < new Date().toISOString().split('T')[0];
+    const deadlineDate = getDeadlineDate(t.deadline);
+    if (t.is_completed || !deadlineDate) return false;
+    return deadlineDate < new Date().toISOString().split('T')[0];
   });
 
   const handleLogout = () => {
@@ -44,7 +56,8 @@ export const Sidebar: React.FC<SidebarProps> = ({
   };
 
   const navItems = [
-    { id: 'dashboard' as SidebarView, icon: 'home', label: '비서' },
+    { id: 'dashboard' as SidebarView, icon: 'home', label: '대시보드' },
+    { id: 'assistant' as SidebarView, icon: 'sparkle', label: 'AI 비서' },
     { id: 'calendar' as SidebarView, icon: 'calendar', label: '캘린더' },
     { id: 'goals' as SidebarView, icon: 'target', label: '목표', badge: activeGoals.length || undefined },
     { id: 'todos' as SidebarView, icon: 'check', label: '할 일', badge: pendingTodos.length || undefined },
@@ -115,7 +128,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
                 <span style={{ flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                   {goal.title}
                 </span>
-                <span className="goal-progress">{goal.progress}%</span>
+                <span className="goal-progress">{calculateGoalProgress(goal)}%</span>
               </div>
             );
           })}

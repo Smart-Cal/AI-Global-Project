@@ -62,7 +62,7 @@ export const GoalModal: React.FC<GoalModalProps> = ({ isOpen, onClose, editingGo
           description: description.trim() || undefined,
           category_id: categoryId || undefined,
           priority,
-          target_date: targetDate || undefined,
+          target_date: targetDate || new Date().toISOString().split('T')[0],
         });
         showToast('목표가 수정되었습니다', 'success');
       } else {
@@ -71,9 +71,7 @@ export const GoalModal: React.FC<GoalModalProps> = ({ isOpen, onClose, editingGo
           description: description.trim() || undefined,
           category_id: categoryId || undefined,
           priority,
-          target_date: targetDate || undefined,
-          progress: 0,
-          is_active: true,
+          target_date: targetDate || new Date().toISOString().split('T')[0],
         });
         showToast('목표가 추가되었습니다', 'success');
       }

@@ -218,10 +218,20 @@ export async function createTodo(todo: Partial<Todo>): Promise<Todo> {
     .single();
 
   if (error) throw new Error(`Failed to create todo: ${error.message}`);
+
+  // Goal과 연결된 경우 진행률 재계산 (total_estimated_time 업데이트)
+  if (data.goal_id) {
+    await recalculateGoalProgress(data.goal_id);
+  }
+
   return data;
 }
 
 export async function updateTodo(id: string, updates: Partial<Todo>): Promise<Todo> {
+  // 기존 Todo 정보 가져오기 (goal_id 변경 감지용)
+  const existingTodo = await getTodoById(id);
+  const oldGoalId = existingTodo?.goal_id;
+
   const { data, error } = await supabase
     .from('todos')
     .update(updates)
@@ -230,16 +240,38 @@ export async function updateTodo(id: string, updates: Partial<Todo>): Promise<To
     .single();
 
   if (error) throw new Error(`Failed to update todo: ${error.message}`);
+
+  // estimated_time이나 goal_id가 변경된 경우 진행률 재계산
+  if (updates.estimated_time !== undefined || updates.goal_id !== undefined) {
+    // 이전 Goal 업데이트
+    if (oldGoalId && oldGoalId !== data.goal_id) {
+      await recalculateGoalProgress(oldGoalId);
+    }
+    // 현재 Goal 업데이트
+    if (data.goal_id) {
+      await recalculateGoalProgress(data.goal_id);
+    }
+  }
+
   return data;
 }
 
 export async function deleteTodo(id: string): Promise<void> {
+  // 삭제 전 Todo 정보 가져오기
+  const todo = await getTodoById(id);
+  const goalId = todo?.goal_id;
+
   const { error } = await supabase
     .from('todos')
     .delete()
     .eq('id', id);
 
   if (error) throw new Error(`Failed to delete todo: ${error.message}`);
+
+  // Goal과 연결되어 있었다면 진행률 재계산
+  if (goalId) {
+    await recalculateGoalProgress(goalId);
+  }
 }
 
 export async function completeTodo(id: string): Promise<Todo> {
@@ -1078,4 +1110,287 @@ export async function upsertLifeLog(log: Partial<LifeLog>): Promise<LifeLog> {
     // 새 로그 생성
     return createLifeLog(log);
   }
+}
+
+// ==============================================
+// Tool Execution Operations (MCP-style)
+// ==============================================
+
+export interface ToolExecution {
+  id: string;
+  user_id: string;
+  conversation_id?: string;
+  tool_name: string;
+  tool_category: 'internal' | 'external' | 'integration';
+  risk_level: 'low' | 'medium' | 'high';
+  input_params: any;
+  output_result?: any;
+  preview_data?: any;
+  status: 'pending' | 'confirmed' | 'executing' | 'completed' | 'failed' | 'cancelled' | 'expired';
+  requires_confirmation: boolean;
+  confirmed_at?: string;
+  executed_at?: string;
+  expires_at?: string;
+  error_message?: string;
+  created_at: string;
+}
+
+export async function createToolExecution(execution: {
+  user_id: string;
+  conversation_id?: string;
+  tool_name: string;
+  tool_category: 'internal' | 'external' | 'integration';
+  risk_level: 'low' | 'medium' | 'high';
+  input_params: any;
+  preview_data?: any;
+  requires_confirmation: boolean;
+  expires_at?: string;
+}): Promise<string> {
+  const { data, error } = await supabase
+    .from('tool_executions')
+    .insert({
+      ...execution,
+      status: 'pending',
+      created_at: new Date().toISOString()
+    })
+    .select('id')
+    .single();
+
+  if (error) throw new Error(`Failed to create tool execution: ${error.message}`);
+  return data.id;
+}
+
+export async function getToolExecutionById(id: string): Promise<ToolExecution | null> {
+  const { data, error } = await supabase
+    .from('tool_executions')
+    .select('*')
+    .eq('id', id)
+    .single();
+
+  if (error && error.code !== 'PGRST116') throw new Error(`Failed to get tool execution: ${error.message}`);
+  return data;
+}
+
+export async function getPendingToolExecutions(userId: string): Promise<ToolExecution[]> {
+  const { data, error } = await supabase
+    .from('tool_executions')
+    .select('*')
+    .eq('user_id', userId)
+    .eq('status', 'pending')
+    .gte('expires_at', new Date().toISOString())
+    .order('created_at', { ascending: false });
+
+  if (error) throw new Error(`Failed to get pending executions: ${error.message}`);
+  return data || [];
+}
+
+export async function updateToolExecutionStatus(
+  id: string,
+  status: ToolExecution['status'],
+  additionalData?: {
+    output_result?: any;
+    error_message?: string;
+    confirmed_at?: string;
+    executed_at?: string;
+  }
+): Promise<ToolExecution> {
+  const { data, error } = await supabase
+    .from('tool_executions')
+    .update({
+      status,
+      ...additionalData
+    })
+    .eq('id', id)
+    .select()
+    .single();
+
+  if (error) throw new Error(`Failed to update tool execution: ${error.message}`);
+  return data;
+}
+
+export async function expireOldToolExecutions(): Promise<number> {
+  const { data, error } = await supabase
+    .from('tool_executions')
+    .update({ status: 'expired' })
+    .eq('status', 'pending')
+    .lt('expires_at', new Date().toISOString())
+    .select('id');
+
+  if (error) throw new Error(`Failed to expire old executions: ${error.message}`);
+  return data?.length || 0;
+}
+
+// ==============================================
+// External Service Operations (MCP-style)
+// ==============================================
+
+export interface ExternalService {
+  id: string;
+  user_id: string;
+  service_type: 'weather' | 'shopping' | 'location' | 'google_calendar' | 'notion';
+  service_name: string;
+  api_key_encrypted?: string;
+  config: any;
+  is_enabled: boolean;
+  last_synced_at?: string;
+  created_at: string;
+  updated_at: string;
+}
+
+export async function getExternalServicesByUser(userId: string): Promise<ExternalService[]> {
+  const { data, error } = await supabase
+    .from('external_services')
+    .select('*')
+    .eq('user_id', userId)
+    .order('created_at', { ascending: true });
+
+  if (error) throw new Error(`Failed to get external services: ${error.message}`);
+  return data || [];
+}
+
+export async function getExternalServiceConfig(
+  userId: string,
+  serviceType: string
+): Promise<ExternalService | null> {
+  const { data, error } = await supabase
+    .from('external_services')
+    .select('*')
+    .eq('user_id', userId)
+    .eq('service_type', serviceType)
+    .single();
+
+  if (error && error.code !== 'PGRST116') throw new Error(`Failed to get external service: ${error.message}`);
+  return data;
+}
+
+export async function upsertExternalService(service: {
+  user_id: string;
+  service_type: ExternalService['service_type'];
+  service_name: string;
+  api_key_encrypted?: string;
+  config?: any;
+  is_enabled?: boolean;
+}): Promise<ExternalService> {
+  const { data, error } = await supabase
+    .from('external_services')
+    .upsert({
+      ...service,
+      config: service.config || {},
+      is_enabled: service.is_enabled ?? true,
+      updated_at: new Date().toISOString()
+    }, { onConflict: 'user_id,service_type' })
+    .select()
+    .single();
+
+  if (error) throw new Error(`Failed to upsert external service: ${error.message}`);
+  return data;
+}
+
+export async function updateExternalServiceSyncTime(
+  userId: string,
+  serviceType: string
+): Promise<void> {
+  const { error } = await supabase
+    .from('external_services')
+    .update({ last_synced_at: new Date().toISOString() })
+    .eq('user_id', userId)
+    .eq('service_type', serviceType);
+
+  if (error) throw new Error(`Failed to update sync time: ${error.message}`);
+}
+
+export async function deleteExternalService(userId: string, serviceType: string): Promise<void> {
+  const { error } = await supabase
+    .from('external_services')
+    .delete()
+    .eq('user_id', userId)
+    .eq('service_type', serviceType);
+
+  if (error) throw new Error(`Failed to delete external service: ${error.message}`);
+}
+
+// ==============================================
+// Action Log Operations (Audit Trail)
+// ==============================================
+
+export interface ActionLog {
+  id: string;
+  user_id: string;
+  action_type: 'create' | 'update' | 'delete' | 'external_call' | 'sync';
+  entity_type: 'event' | 'todo' | 'goal' | 'category' | 'external_service';
+  entity_id?: string;
+  previous_state?: any;
+  new_state?: any;
+  metadata?: any;
+  risk_level: 'low' | 'medium' | 'high';
+  is_reversible: boolean;
+  reversed_at?: string;
+  created_at: string;
+}
+
+export async function createActionLog(log: {
+  user_id: string;
+  action_type: ActionLog['action_type'];
+  entity_type: ActionLog['entity_type'];
+  entity_id?: string;
+  previous_state?: any;
+  new_state?: any;
+  metadata?: any;
+  risk_level?: 'low' | 'medium' | 'high';
+  is_reversible?: boolean;
+}): Promise<ActionLog> {
+  const { data, error } = await supabase
+    .from('action_logs')
+    .insert({
+      ...log,
+      risk_level: log.risk_level || 'low',
+      is_reversible: log.is_reversible ?? true,
+      created_at: new Date().toISOString()
+    })
+    .select()
+    .single();
+
+  if (error) throw new Error(`Failed to create action log: ${error.message}`);
+  return data;
+}
+
+export async function getActionLogsByUser(
+  userId: string,
+  options?: {
+    limit?: number;
+    entityType?: ActionLog['entity_type'];
+    actionType?: ActionLog['action_type'];
+  }
+): Promise<ActionLog[]> {
+  let query = supabase
+    .from('action_logs')
+    .select('*')
+    .eq('user_id', userId)
+    .order('created_at', { ascending: false });
+
+  if (options?.entityType) {
+    query = query.eq('entity_type', options.entityType);
+  }
+  if (options?.actionType) {
+    query = query.eq('action_type', options.actionType);
+  }
+  if (options?.limit) {
+    query = query.limit(options.limit);
+  }
+
+  const { data, error } = await query;
+  if (error) throw new Error(`Failed to get action logs: ${error.message}`);
+  return data || [];
+}
+
+export async function markActionReversed(logId: string): Promise<ActionLog> {
+  const { data, error } = await supabase
+    .from('action_logs')
+    .update({ reversed_at: new Date().toISOString() })
+    .eq('id', logId)
+    .select()
+    .single();
+
+  if (error) throw new Error(`Failed to mark action reversed: ${error.message}`);
+  return data;
 }

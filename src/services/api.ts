@@ -223,16 +223,22 @@ export async function deleteConversation(id: string): Promise<void> {
 // Events API
 // ==============================================
 
+// DB 스키마와 일치하는 Event 인터페이스
 export interface Event {
   id: string;
   user_id: string;
   category_id?: string;
+  related_todo_id?: string;
   title: string;
   description?: string;
-  datetime: string;
-  duration: number;
-  type: 'fixed' | 'personal' | 'goal';
+  event_date: string;           // 시작일 (YYYY-MM-DD)
+  end_date?: string;            // 종료일 (기간 일정용, YYYY-MM-DD)
+  start_time?: string;          // HH:MM
+  end_time?: string;            // HH:MM
+  is_all_day: boolean;
   location?: string;
+  is_fixed: boolean;            // true: 고정, false: 유동
+  priority: number;             // 1-5
   is_completed: boolean;
   completed_at?: string;
   created_at?: string;
@@ -286,19 +292,23 @@ export async function completeEvent(
 // Todos API
 // ==============================================
 
+// DB 스키마와 일치하는 Todo 인터페이스
 export interface Todo {
   id: string;
   user_id: string;
-  event_id?: string;
+  goal_id?: string;               // 연결된 Goal
   title: string;
   description?: string;
-  timing: 'before' | 'during' | 'after';
-  deadline?: string;
-  scheduled_at?: string;
-  duration: number;
+  deadline?: string;              // 마감 시각 (ISO datetime)
+  is_hard_deadline: boolean;      // true면 절대 밀릴 수 없음
+  estimated_time?: number;        // 예상 시간 (분)
+  completed_time: number;         // 완료된 시간 (분)
+  is_divisible: boolean;          // 분할 가능 여부
   priority: 'high' | 'medium' | 'low';
   is_completed: boolean;
   completed_at?: string;
+  is_recurring?: boolean;
+  recurrence_pattern?: string;
   created_at?: string;
 }
 
@@ -446,18 +456,28 @@ export async function deleteCategory(id: string): Promise<void> {
 // Goals API
 // ==============================================
 
+export type GoalStatus = 'planning' | 'scheduled' | 'in_progress' | 'completed' | 'failed';
+
+// DB 스키마와 일치하는 Goal 인터페이스
 export interface Goal {
   id: string;
   user_id: string;
   category_id?: string;
   title: string;
   description?: string;
-  target_date?: string;
+  target_date: string;            // 마감일 (필수, YYYY-MM-DD)
   priority: 'high' | 'medium' | 'low';
-  progress: number;
-  is_active: boolean;
+  status: GoalStatus;             // 목표 상태
+  total_estimated_time: number;   // 총 예상 시간 (분)
+  completed_time: number;         // 완료된 시간 (분)
   created_at?: string;
   updated_at?: string;
+}
+
+// 진행률 계산 헬퍼
+export function calculateGoalProgress(goal: Goal): number {
+  if (goal.total_estimated_time === 0) return 0;
+  return Math.round((goal.completed_time / goal.total_estimated_time) * 100);
 }
 
 export async function getGoals(): Promise<{ goals: Goal[] }> {
@@ -465,7 +485,7 @@ export async function getGoals(): Promise<{ goals: Goal[] }> {
 }
 
 export async function createGoal(
-  goal: Omit<Goal, 'id' | 'user_id' | 'created_at' | 'updated_at'>
+  goal: Omit<Goal, 'id' | 'user_id' | 'created_at' | 'updated_at' | 'status' | 'total_estimated_time' | 'completed_time'>
 ): Promise<{ goal: Goal }> {
   return apiRequest<{ goal: Goal }>('/goals', {
     method: 'POST',
@@ -483,13 +503,21 @@ export async function updateGoal(
   });
 }
 
-export async function updateGoalProgress(
+export async function updateGoalStatus(
   id: string,
-  progress: number
+  status: GoalStatus
 ): Promise<{ goal: Goal }> {
-  return apiRequest<{ goal: Goal }>(`/goals/${id}/progress`, {
+  return apiRequest<{ goal: Goal }>(`/goals/${id}/status`, {
     method: 'PATCH',
-    body: JSON.stringify({ progress }),
+    body: JSON.stringify({ status }),
+  });
+}
+
+export async function recalculateGoalProgress(
+  id: string
+): Promise<{ goal: Goal; progress: number }> {
+  return apiRequest<{ goal: Goal; progress: number }>(`/goals/${id}/recalculate`, {
+    method: 'POST',
   });
 }
 

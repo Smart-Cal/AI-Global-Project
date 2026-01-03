@@ -87,6 +87,8 @@ export const EventModal: React.FC<EventModalProps> = ({
         category_id: categoryId || undefined,
         location: location.trim() || undefined,
         is_completed: event?.is_completed || false,
+        is_fixed: event?.is_fixed ?? true,
+        priority: event?.priority ?? 3,
       };
 
       if (isEditing && event?.id) {

@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { useGoalStore } from '../store/goalStore';
+import { useGoalStore, calculateGoalProgress } from '../store/goalStore';
 import { useTodoStore } from '../store/todoStore';
 import { useAuthStore } from '../store/authStore';
 import { useCategoryStore } from '../store/categoryStore';
@@ -9,23 +9,28 @@ interface GoalsViewProps {
   onAddGoal: () => void;
 }
 
+// Goal이 활성 상태인지 확인 (completed, failed가 아닌 경우)
+function isGoalActive(goal: Goal): boolean {
+  return !['completed', 'failed'].includes(goal.status);
+}
+
 export const GoalsView: React.FC<GoalsViewProps> = ({ onAddGoal }) => {
   const { user } = useAuthStore();
-  const { goals, updateProgress, deleteGoal } = useGoalStore();
+  const { goals, recalculateProgress, deleteGoal } = useGoalStore();
   const { todos } = useTodoStore();
   const { getCategoryById } = useCategoryStore();
   const [selectedGoal, setSelectedGoal] = useState<Goal | null>(null);
   const [isEditing, setIsEditing] = useState(false);
 
-  const activeGoals = goals.filter((g) => g.is_active);
-  const completedGoals = goals.filter((g) => !g.is_active || g.progress >= 100);
+  const activeGoals = goals.filter(isGoalActive);
+  const completedGoals = goals.filter((g) => !isGoalActive(g) || calculateGoalProgress(g) >= 100);
 
   const getGoalTodos = (goalId: string) => {
     return todos.filter((t) => t.goal_id === goalId);
   };
 
-  const handleProgressChange = (goalId: string, progress: number) => {
-    updateProgress(goalId, progress);
+  const handleProgressRecalculate = (goalId: string) => {
+    recalculateProgress(goalId);
   };
 
   const handleDeleteGoal = (goalId: string) => {
@@ -110,14 +115,14 @@ export const GoalsView: React.FC<GoalsViewProps> = ({ onAddGoal }) => {
                     <div
                       className="goal-progress-fill"
                       style={{
-                        width: `${goal.progress}%`,
+                        width: `${calculateGoalProgress(goal)}%`,
                         backgroundColor: categoryColor,
                       }}
                     />
                   </div>
 
                   <div className="goal-progress-text">
-                    <span>{goal.progress}% 완료</span>
+                    <span>{calculateGoalProgress(goal)}% 완료</span>
                     <div style={{ display: 'flex', gap: '16px' }}>
                       {goalTodos.length > 0 && (
                         <span>할 일: {completedTodos}/{goalTodos.length}</span>
@@ -220,16 +225,23 @@ export const GoalsView: React.FC<GoalsViewProps> = ({ onAddGoal }) => {
 
               <div className="form-group">
                 <label className="form-label">진행률</label>
-                <input
-                  type="range"
-                  min="0"
-                  max="100"
-                  value={selectedGoal.progress}
-                  onChange={(e) => handleProgressChange(selectedGoal.id!, parseInt(e.target.value))}
-                  style={{ width: '100%' }}
-                />
-                <div style={{ textAlign: 'center', marginTop: '8px' }}>
-                  {selectedGoal.progress}%
+                <div className="goal-progress-bar" style={{ marginTop: '8px' }}>
+                  <div
+                    className="goal-progress-fill"
+                    style={{
+                      width: `${calculateGoalProgress(selectedGoal)}%`,
+                      backgroundColor: 'var(--primary-color)',
+                    }}
+                  />
+                </div>
+                <div style={{ textAlign: 'center', marginTop: '8px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                  <span>{calculateGoalProgress(selectedGoal)}%</span>
+                  <button
+                    className="btn btn-sm btn-secondary"
+                    onClick={() => handleProgressRecalculate(selectedGoal.id!)}
+                  >
+                    진행률 재계산
+                  </button>
                 </div>
               </div>
 
@@ -246,9 +258,9 @@ export const GoalsView: React.FC<GoalsViewProps> = ({ onAddGoal }) => {
                         <div className={`todo-checkbox ${todo.is_completed ? 'checked' : ''}`} />
                         <div className="todo-content">
                           <div className="todo-title">{todo.title}</div>
-                          {todo.due_date && (
+                          {todo.deadline && (
                             <div className="todo-meta">
-                              <span>기한: {todo.due_date}</span>
+                              <span>기한: {todo.deadline.split('T')[0]}</span>
                             </div>
                           )}
                         </div>

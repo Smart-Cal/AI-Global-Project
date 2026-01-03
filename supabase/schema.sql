@@ -160,6 +160,7 @@ CREATE TABLE events (
   title VARCHAR(255) NOT NULL,
   description TEXT,
   event_date DATE NOT NULL,
+  end_date DATE,                                 -- 기간 일정 종료일 (여행/컨퍼런스 등)
   start_time TIME,
   end_time TIME,
   is_all_day BOOLEAN DEFAULT false,
@@ -184,6 +185,7 @@ CREATE TABLE events (
 
 CREATE INDEX idx_events_user_id ON events(user_id);
 CREATE INDEX idx_events_event_date ON events(event_date);
+CREATE INDEX idx_events_date_range ON events(event_date, end_date);
 CREATE INDEX idx_events_user_date ON events(user_id, event_date);
 CREATE INDEX idx_events_category_id ON events(category_id);
 CREATE INDEX idx_events_related_todo_id ON events(related_todo_id);
@@ -375,3 +377,101 @@ DROP TRIGGER IF EXISTS on_auth_user_created ON auth.users;
 CREATE TRIGGER on_auth_user_created
   AFTER INSERT ON auth.users
   FOR EACH ROW EXECUTE FUNCTION handle_new_user();
+
+-- =============================================
+-- 12. External Services 테이블 (외부 서비스 설정)
+-- =============================================
+CREATE TABLE external_services (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  service_type VARCHAR(50) NOT NULL
+    CHECK (service_type IN ('weather', 'shopping', 'location', 'google_calendar', 'notion')),
+  service_name VARCHAR(100) NOT NULL,
+  api_key_encrypted TEXT,                        -- 암호화된 API 키
+  config JSONB DEFAULT '{}',                     -- 서비스별 설정
+  is_enabled BOOLEAN DEFAULT true,
+  last_synced_at TIMESTAMPTZ,
+  created_at TIMESTAMPTZ DEFAULT NOW(),
+  updated_at TIMESTAMPTZ DEFAULT NOW(),
+  UNIQUE(user_id, service_type)
+);
+
+CREATE INDEX idx_external_services_user_id ON external_services(user_id);
+CREATE INDEX idx_external_services_type ON external_services(service_type);
+
+ALTER TABLE external_services ENABLE ROW LEVEL SECURITY;
+
+CREATE POLICY "Users can manage external_services" ON external_services
+  FOR ALL USING (true);
+
+-- =============================================
+-- 13. Tool Executions 테이블 (도구 실행 로그 - 확인 플로우용)
+-- =============================================
+CREATE TABLE tool_executions (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  conversation_id UUID REFERENCES conversations(id) ON DELETE SET NULL,
+  tool_name VARCHAR(100) NOT NULL,
+  tool_category VARCHAR(50) NOT NULL
+    CHECK (tool_category IN ('internal', 'external', 'integration')),
+  risk_level VARCHAR(10) NOT NULL
+    CHECK (risk_level IN ('low', 'medium', 'high')),
+  input_params JSONB NOT NULL,
+  output_result JSONB,
+  preview_data JSONB,                            -- 사용자에게 보여줄 미리보기 데이터
+  status VARCHAR(20) DEFAULT 'pending'
+    CHECK (status IN ('pending', 'confirmed', 'executing', 'completed', 'failed', 'cancelled', 'expired')),
+  requires_confirmation BOOLEAN DEFAULT false,
+  confirmed_at TIMESTAMPTZ,
+  executed_at TIMESTAMPTZ,
+  expires_at TIMESTAMPTZ,                        -- 5분 후 만료
+  error_message TEXT,
+  created_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+CREATE INDEX idx_tool_executions_user_id ON tool_executions(user_id);
+CREATE INDEX idx_tool_executions_status ON tool_executions(status);
+CREATE INDEX idx_tool_executions_conversation ON tool_executions(conversation_id);
+
+ALTER TABLE tool_executions ENABLE ROW LEVEL SECURITY;
+
+CREATE POLICY "Users can manage tool_executions" ON tool_executions
+  FOR ALL USING (true);
+
+-- =============================================
+-- 14. Action Logs 테이블 (액션 로그 - 롤백/감사용)
+-- =============================================
+CREATE TABLE action_logs (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  action_type VARCHAR(50) NOT NULL
+    CHECK (action_type IN ('create', 'update', 'delete', 'external_call', 'sync')),
+  entity_type VARCHAR(50) NOT NULL
+    CHECK (entity_type IN ('event', 'todo', 'goal', 'category', 'external_service')),
+  entity_id UUID,
+  previous_state JSONB,                          -- 롤백을 위한 이전 상태
+  new_state JSONB,
+  metadata JSONB DEFAULT '{}',                   -- 추가 컨텍스트
+  risk_level VARCHAR(10) DEFAULT 'low'
+    CHECK (risk_level IN ('low', 'medium', 'high')),
+  is_reversible BOOLEAN DEFAULT true,
+  reversed_at TIMESTAMPTZ,
+  created_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+CREATE INDEX idx_action_logs_user_id ON action_logs(user_id);
+CREATE INDEX idx_action_logs_entity ON action_logs(entity_type, entity_id);
+CREATE INDEX idx_action_logs_created_at ON action_logs(created_at DESC);
+
+ALTER TABLE action_logs ENABLE ROW LEVEL SECURITY;
+
+CREATE POLICY "Users can manage action_logs" ON action_logs
+  FOR ALL USING (true);
+
+-- =============================================
+-- Triggers for new tables
+-- =============================================
+CREATE TRIGGER update_external_services_updated_at
+  BEFORE UPDATE ON external_services
+  FOR EACH ROW
+  EXECUTE FUNCTION update_updated_at_column();

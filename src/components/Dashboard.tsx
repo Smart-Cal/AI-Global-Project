@@ -1,6 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { useEventStore } from '../store/eventStore';
-import { useGoalStore } from '../store/goalStore';
+import { useGoalStore, calculateGoalProgress } from '../store/goalStore';
 import { useTodoStore } from '../store/todoStore';
 import { useAuthStore } from '../store/authStore';
 import { useCategoryStore } from '../store/categoryStore';
@@ -149,6 +149,8 @@ export const Dashboard: React.FC<DashboardProps> = ({
         description: event.description || undefined,
         is_all_day: !event.start_time,
         is_completed: false,
+        is_fixed: true,
+        priority: 3 as const,
       };
 
       const result = await addEvent(eventData);
@@ -317,12 +319,12 @@ export const Dashboard: React.FC<DashboardProps> = ({
                         <div
                           className="sidebar-goal-fill"
                           style={{
-                            width: `${goal.progress}%`,
+                            width: `${calculateGoalProgress(goal)}%`,
                             backgroundColor: category?.color || DEFAULT_CATEGORY_COLOR
                           }}
                         />
                       </div>
-                      <span>{goal.progress}%</span>
+                      <span>{calculateGoalProgress(goal)}%</span>
                     </div>
                   </div>
                 );

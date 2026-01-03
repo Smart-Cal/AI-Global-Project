@@ -76,6 +76,8 @@ export const AIChatModal: React.FC<AIChatModalProps> = ({ isOpen, onClose }) => 
         is_all_day: !pendingSchedule.start_time,
         category_id: category?.id,
         is_completed: false,
+        is_fixed: true,
+        priority: 3,
         location: pendingSchedule.location,
         description: pendingSchedule.description,
       });

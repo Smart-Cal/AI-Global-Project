@@ -1,5 +1,6 @@
 import { create } from 'zustand';
 import type { Goal } from '../types';
+import { calculateGoalProgress } from '../types';
 import * as api from '../services/api';
 
 interface GoalState {
@@ -8,13 +9,18 @@ interface GoalState {
   isLoading: boolean;
   setCurrentUser: (userId: string | null) => void;
   fetchGoals: () => Promise<void>;
-  addGoal: (goal: Omit<Goal, 'id' | 'created_at' | 'updated_at' | 'user_id'>) => Promise<Goal>;
+  addGoal: (goal: Omit<Goal, 'id' | 'created_at' | 'updated_at' | 'user_id' | 'status' | 'total_estimated_time' | 'completed_time'>) => Promise<Goal>;
   updateGoal: (id: string, updates: Partial<Goal>) => Promise<void>;
   deleteGoal: (id: string) => Promise<void>;
   getActiveGoals: () => Goal[];
   getGoalsByCategoryId: (categoryId: string) => Goal[];
-  updateProgress: (id: string, progress: number) => Promise<void>;
+  recalculateProgress: (id: string) => Promise<void>;
   clearUserData: () => void;
+}
+
+// Goal이 활성 상태인지 확인 (completed, failed가 아닌 경우)
+function isGoalActive(goal: Goal): boolean {
+  return !['completed', 'failed'].includes(goal.status);
 }
 
 export const useGoalStore = create<GoalState>()((set, get) => ({
@@ -67,16 +73,15 @@ export const useGoalStore = create<GoalState>()((set, get) => ({
   },
 
   getActiveGoals: () => {
-    return get().goals.filter((goal) => goal.is_active);
+    return get().goals.filter(isGoalActive);
   },
 
   getGoalsByCategoryId: (categoryId) => {
-    return get().goals.filter((goal) => goal.category_id === categoryId && goal.is_active);
+    return get().goals.filter((goal) => goal.category_id === categoryId && isGoalActive(goal));
   },
 
-  updateProgress: async (id, progress) => {
-    const clampedProgress = Math.min(100, Math.max(0, progress));
-    const response = await api.updateGoalProgress(id, clampedProgress);
+  recalculateProgress: async (id) => {
+    const response = await api.recalculateGoalProgress(id);
     const updated = response.goal;
     set((state) => ({
       goals: state.goals.map((goal) => (goal.id === id ? updated : goal)),
@@ -87,3 +92,6 @@ export const useGoalStore = create<GoalState>()((set, get) => ({
     set({ goals: [], currentUserId: null });
   },
 }));
+
+// 진행률 헬퍼 함수 re-export
+export { calculateGoalProgress };
