@@ -48,7 +48,7 @@ const AssistantView: React.FC = () => {
   const { user } = useAuthStore();
   const { getActiveGoals } = useGoalStore();
   const { loadEvents, events } = useEventStore();
-  const { categories } = useCategoryStore();
+  const { categories, fetchCategories } = useCategoryStore();
   const { showToast } = useToast();
 
   // Conversations state
@@ -89,9 +89,10 @@ const AssistantView: React.FC = () => {
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const activeGoals = getActiveGoals();
 
-  // Load conversations on mount
+  // Load conversations and categories on mount
   useEffect(() => {
     loadConversations();
+    fetchCategories();
   }, []);
 
   const loadConversations = async () => {
@@ -187,6 +188,12 @@ const AssistantView: React.FC = () => {
 
     try {
       const response = await sendChatMessage(messageContent, currentConversationId || undefined, 'auto');
+
+      // 디버깅: API 응답 확인
+      console.log('[AssistantView] API Response:', response);
+      console.log('[AssistantView] pending_goals:', response.pending_goals);
+      console.log('[AssistantView] pending_events:', response.pending_events);
+      console.log('[AssistantView] pending_todos:', response.pending_todos);
 
       // Update conversation ID if new
       if (!currentConversationId) {
