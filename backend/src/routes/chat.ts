@@ -109,10 +109,17 @@ router.post('/', authenticate, async (req: AuthRequest, res: Response) => {
     const agent = createAgentLoop(context);
     const response = await agent.processMessage(message, mode);
 
+    console.log('[Chat API] Agent response:', JSON.stringify(response, null, 2));
+
     // 응답에서 pending 항목들 추출
     const pendingEvents = response.events_to_create || [];
     const pendingTodos = response.todos_to_create || [];
     const pendingGoals = response.goals_to_create || [];
+
+    console.log('[Chat API] Pending goals count:', pendingGoals.length);
+    if (pendingGoals.length > 0) {
+      console.log('[Chat API] Pending goals:', JSON.stringify(pendingGoals, null, 2));
+    }
 
     // AI 응답 메시지 저장 (pending 항목들 포함)
     const pendingData: any = {};
