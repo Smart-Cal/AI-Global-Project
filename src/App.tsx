@@ -142,9 +142,6 @@ const MainLayout: React.FC = () => {
         return (
           <NewDashboard
             onNavigate={handleViewChange}
-            onAddEvent={() => handleAddEvent()}
-            onAddTodo={handleAddTodo}
-            onAddGoal={handleAddGoal}
           />
         );
       case 'assistant':
