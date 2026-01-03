@@ -21,42 +21,48 @@ interface TodoState {
   clearUserData: () => void;
 }
 
-// API Todo를 프론트엔드 Todo로 변환
+// API Todo는 이제 DB 스키마와 동일하므로 직접 사용
 function apiTodoToFrontendTodo(todo: api.Todo): Todo {
   return {
     id: todo.id,
     user_id: todo.user_id,
-    goal_id: todo.event_id, // PALM에서는 event_id 사용
+    goal_id: todo.goal_id,
     title: todo.title,
     description: todo.description,
-    due_date: todo.deadline ? todo.deadline.split('T')[0] : undefined,
-    due_time: todo.deadline ? todo.deadline.split('T')[1]?.slice(0, 5) : undefined,
+    deadline: todo.deadline,
+    is_hard_deadline: todo.is_hard_deadline,
+    estimated_time: todo.estimated_time,
+    completed_time: todo.completed_time,
+    is_divisible: todo.is_divisible,
     priority: todo.priority,
     is_completed: todo.is_completed,
     completed_at: todo.completed_at,
-    is_recurring: false,
+    is_recurring: todo.is_recurring,
+    recurrence_pattern: todo.recurrence_pattern,
     created_at: todo.created_at,
   };
 }
 
 // 프론트엔드 Todo를 API Todo로 변환
 function frontendTodoToApiTodo(todo: Partial<Todo>): Partial<api.Todo> {
-  let deadline: string | undefined;
-  if (todo.due_date) {
-    const time = todo.due_time || '23:59';
-    deadline = `${todo.due_date}T${time}:00`;
-  }
-
   return {
-    user_id: todo.user_id,
-    event_id: todo.goal_id,
+    goal_id: todo.goal_id,
     title: todo.title,
     description: todo.description,
-    deadline,
-    duration: 30,
+    deadline: todo.deadline,
+    is_hard_deadline: todo.is_hard_deadline ?? false,
+    estimated_time: todo.estimated_time ?? 60,
+    is_divisible: todo.is_divisible ?? true,
     priority: todo.priority,
-    timing: 'before',
+    is_recurring: todo.is_recurring,
+    recurrence_pattern: todo.recurrence_pattern,
   };
+}
+
+// deadline에서 날짜 부분만 추출
+function getDeadlineDate(deadline?: string): string | undefined {
+  if (!deadline) return undefined;
+  return deadline.split('T')[0];
 }
 
 export const useTodoStore = create<TodoState>()((set, get) => ({
@@ -96,7 +102,6 @@ export const useTodoStore = create<TodoState>()((set, get) => ({
 
     const apiTodo = frontendTodoToApiTodo({
       ...todoData,
-      user_id: userId,
     });
 
     const response = await api.createTodo(apiTodo);
@@ -108,10 +113,12 @@ export const useTodoStore = create<TodoState>()((set, get) => ({
         if (priorityOrder[a.priority] !== priorityOrder[b.priority]) {
           return priorityOrder[a.priority] - priorityOrder[b.priority];
         }
-        if (a.due_date && b.due_date) {
-          return a.due_date.localeCompare(b.due_date);
+        const aDate = getDeadlineDate(a.deadline);
+        const bDate = getDeadlineDate(b.deadline);
+        if (aDate && bDate) {
+          return aDate.localeCompare(bDate);
         }
-        return a.due_date ? -1 : 1;
+        return aDate ? -1 : 1;
       }),
     }));
     return newTodo;
@@ -165,7 +172,7 @@ export const useTodoStore = create<TodoState>()((set, get) => ({
   getTodayTodos: () => {
     const todayStr = new Date().toISOString().split('T')[0];
     return get().todos.filter(
-      (todo) => todo.due_date === todayStr && !todo.is_completed
+      (todo) => getDeadlineDate(todo.deadline) === todayStr && !todo.is_completed
     );
   },
 
@@ -176,20 +183,23 @@ export const useTodoStore = create<TodoState>()((set, get) => ({
     const nowStr = now.toISOString().split('T')[0];
     const futureStr = futureDate.toISOString().split('T')[0];
 
-    return get().todos.filter(
-      (todo) =>
+    return get().todos.filter((todo) => {
+      const deadlineDate = getDeadlineDate(todo.deadline);
+      return (
         !todo.is_completed &&
-        todo.due_date &&
-        todo.due_date > nowStr &&
-        todo.due_date <= futureStr
-    );
+        deadlineDate &&
+        deadlineDate > nowStr &&
+        deadlineDate <= futureStr
+      );
+    });
   },
 
   getOverdueTodos: () => {
     const todayStr = new Date().toISOString().split('T')[0];
-    return get().todos.filter(
-      (todo) => !todo.is_completed && todo.due_date && todo.due_date < todayStr
-    );
+    return get().todos.filter((todo) => {
+      const deadlineDate = getDeadlineDate(todo.deadline);
+      return !todo.is_completed && deadlineDate && deadlineDate < todayStr;
+    });
   },
 
   getCompletedTodos: () => {

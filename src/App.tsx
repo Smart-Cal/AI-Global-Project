@@ -13,6 +13,7 @@ import AssistantView from './components/views/AssistantView';
 import CalendarView from './components/views/CalendarView';
 import ScheduleView from './components/views/ScheduleView';
 import GoalView from './components/views/GoalView';
+import NewDashboard from './components/views/NewDashboard';
 import AuthPage from './pages/AuthPage';
 import AuthCallback from './pages/AuthCallback';
 import { ToastProvider } from './components/Toast';
@@ -21,8 +22,8 @@ import ChronotypeSettings from './components/ChronotypeSettings';
 import { MenuIcon, PlusIcon, SearchIcon } from './components/Icons';
 import type { CalendarView as CalendarViewType, CalendarEvent, Goal } from './types';
 
-// View types (기존 SidebarView 대체)
-type AppView = 'assistant' | 'calendar' | 'schedule' | 'goal';
+// View types - dashboard 추가
+type AppView = 'dashboard' | 'assistant' | 'calendar' | 'schedule' | 'goal';
 
 const ProtectedRoute: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const { user, isLoading } = useAuthStore();
@@ -44,7 +45,8 @@ const ProtectedRoute: React.FC<{ children: React.ReactNode }> = ({ children }) =
 };
 
 const MainLayout: React.FC = () => {
-  const [currentView, setCurrentView] = useState<AppView>('assistant');
+  // 기본 뷰를 dashboard로 변경
+  const [currentView, setCurrentView] = useState<AppView>('dashboard');
   const [calendarView, setCalendarView] = useState<CalendarViewType>('month');
   const [sidebarOpen, setSidebarOpen] = useState(false);
 
@@ -119,6 +121,8 @@ const MainLayout: React.FC = () => {
 
   const getContentTitle = () => {
     switch (currentView) {
+      case 'dashboard':
+        return '대시보드';
       case 'assistant':
         return '비서';
       case 'calendar':
@@ -134,6 +138,15 @@ const MainLayout: React.FC = () => {
 
   const renderContent = () => {
     switch (currentView) {
+      case 'dashboard':
+        return (
+          <NewDashboard
+            onNavigate={handleViewChange}
+            onAddEvent={() => handleAddEvent()}
+            onAddTodo={handleAddTodo}
+            onAddGoal={handleAddGoal}
+          />
+        );
       case 'assistant':
         return <AssistantView />;
       case 'calendar':
@@ -167,21 +180,23 @@ const MainLayout: React.FC = () => {
 
   // 사이드바용 뷰 매핑 (기존 SidebarView와 호환)
   const sidebarViewMap: Record<string, AppView> = {
-    'dashboard': 'assistant',
+    'dashboard': 'dashboard',
+    'assistant': 'assistant',
     'calendar': 'calendar',
     'goals': 'goal',
     'todos': 'schedule',
   };
 
   const handleSidebarViewChange = (view: string) => {
-    const mappedView = sidebarViewMap[view] || 'assistant';
+    const mappedView = sidebarViewMap[view] || 'dashboard';
     setCurrentView(mappedView);
   };
 
   // 현재 뷰를 사이드바 뷰로 변환
   const getSidebarView = () => {
     switch (currentView) {
-      case 'assistant': return 'dashboard';
+      case 'dashboard': return 'dashboard';
+      case 'assistant': return 'assistant';
       case 'calendar': return 'calendar';
       case 'goal': return 'goals';
       case 'schedule': return 'todos';

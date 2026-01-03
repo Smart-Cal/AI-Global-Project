@@ -6,7 +6,7 @@ import { useAuthStore } from '../store/authStore';
 import { useCategoryStore } from '../store/categoryStore';
 import { sendChatMessage, ChatResponse } from '../services/api';
 import type { AgentMessage, SuggestedEvent } from '../types';
-import { AGENT_CONFIGS, DEFAULT_CATEGORY_COLOR } from '../types';
+import { AGENT_CONFIGS, DEFAULT_CATEGORY_COLOR, CATEGORY_COLORS } from '../types';
 
 interface ChatPanelProps {
   onClose: () => void;
@@ -32,11 +32,16 @@ export const ChatPanel: React.FC<ChatPanelProps> = ({ onClose }) => {
   const [sliderIndexes, setSliderIndexes] = useState<SliderState>({});
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
+  // 새 카테고리 추가 관련 상태
+  const [showNewCategory, setShowNewCategory] = useState(false);
+  const [newCategoryName, setNewCategoryName] = useState('');
+  const [newCategoryColor, setNewCategoryColor] = useState(CATEGORY_COLORS[0]);
+
   const { user } = useAuthStore();
   const { events, addEvent, loadEvents } = useEventStore();
   const { goals } = useGoalStore();
   const { todos } = useTodoStore();
-  const { categories, getCategoryByName, getDefaultCategory } = useCategoryStore();
+  const { categories, getCategoryByName, getDefaultCategory, addCategory } = useCategoryStore();
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -114,6 +119,27 @@ export const ChatPanel: React.FC<ChatPanelProps> = ({ onClose }) => {
     }
   };
 
+  // 새 카테고리 추가 핸들러
+  const handleAddCategory = async () => {
+    if (!newCategoryName.trim()) return;
+    try {
+      const newCat = await addCategory(newCategoryName.trim(), newCategoryColor);
+      // 수정 중인 이벤트의 카테고리를 새로 추가한 카테고리로 변경
+      if (editingEvent) {
+        setEditingEvent({
+          ...editingEvent,
+          event: { ...editingEvent.event, category_name: newCat.name }
+        });
+      }
+      setShowNewCategory(false);
+      setNewCategoryName('');
+      setNewCategoryColor(CATEGORY_COLORS[0]);
+    } catch (error) {
+      console.error('Failed to add category:', error);
+      alert('카테고리 추가에 실패했습니다.');
+    }
+  };
+
   // 카테고리 이름으로 category_id 찾기
   const findCategoryId = (categoryName?: string): string | undefined => {
     if (!categoryName) {
@@ -151,6 +177,8 @@ export const ChatPanel: React.FC<ChatPanelProps> = ({ onClose }) => {
         description: event.description && event.description.trim() !== '' ? event.description : undefined,
         is_all_day: !event.start_time || event.start_time.trim() === '',
         is_completed: false,
+        is_fixed: true,
+        priority: 3 as const,
       };
 
       console.log('Adding event:', eventData);
@@ -215,6 +243,8 @@ export const ChatPanel: React.FC<ChatPanelProps> = ({ onClose }) => {
         description: evt.description && evt.description.trim() !== '' ? evt.description : undefined,
         is_all_day: !evt.start_time || evt.start_time.trim() === '',
         is_completed: false,
+        is_fixed: true,
+        priority: 3 as const,
       };
 
       console.log('Saving edited event:', eventData);
@@ -326,6 +356,7 @@ export const ChatPanel: React.FC<ChatPanelProps> = ({ onClose }) => {
 
         {/* 현재 일정 카드 */}
         <div
+          key={`${msg.id}-${currentIndex}`}
           className={`schedule-card ${isAdded ? 'added' : ''} ${isRejected ? 'rejected' : ''}`}
         >
           <div className="schedule-card-header">
@@ -597,20 +628,124 @@ export const ChatPanel: React.FC<ChatPanelProps> = ({ onClose }) => {
 
               <div className="form-group">
                 <label className="form-label">카테고리</label>
-                <select
-                  className="form-input"
-                  value={editingEvent.event.category_name || '기본'}
-                  onChange={(e) => setEditingEvent({
-                    ...editingEvent,
-                    event: { ...editingEvent.event, category_name: e.target.value }
-                  })}
-                >
+                <div className="category-select" style={{ display: 'flex', flexWrap: 'wrap', gap: '8px' }}>
                   {categories.map((cat) => (
-                    <option key={cat.id} value={cat.name}>
-                      {cat.name}
-                    </option>
+                    <div
+                      key={cat.id}
+                      className={`category-option ${editingEvent.event.category_name === cat.name ? 'selected' : ''}`}
+                      style={{
+                        padding: '6px 12px',
+                        borderRadius: '16px',
+                        border: `2px solid ${editingEvent.event.category_name === cat.name ? cat.color : '#E5E7EB'}`,
+                        backgroundColor: editingEvent.event.category_name === cat.name ? `${cat.color}20` : 'white',
+                        cursor: 'pointer',
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '6px',
+                        fontSize: '13px',
+                        transition: 'all 0.2s',
+                      }}
+                      onClick={() => setEditingEvent({
+                        ...editingEvent,
+                        event: { ...editingEvent.event, category_name: cat.name }
+                      })}
+                    >
+                      <span
+                        style={{
+                          width: '10px',
+                          height: '10px',
+                          borderRadius: '50%',
+                          backgroundColor: cat.color,
+                        }}
+                      />
+                      <span>{cat.name}</span>
+                    </div>
                   ))}
-                </select>
+                  <div
+                    className="category-option add-new"
+                    style={{
+                      padding: '6px 12px',
+                      borderRadius: '16px',
+                      border: '2px dashed #D1D5DB',
+                      backgroundColor: 'white',
+                      cursor: 'pointer',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '4px',
+                      fontSize: '13px',
+                      color: '#6B7280',
+                    }}
+                    onClick={() => setShowNewCategory(true)}
+                  >
+                    <span>+ 새 카테고리</span>
+                  </div>
+                </div>
+
+                {showNewCategory && (
+                  <div
+                    className="new-category-form"
+                    style={{
+                      marginTop: '12px',
+                      padding: '12px',
+                      backgroundColor: '#F9FAFB',
+                      borderRadius: '8px',
+                      border: '1px solid #E5E7EB',
+                    }}
+                  >
+                    <div className="form-group" style={{ marginBottom: '10px' }}>
+                      <input
+                        type="text"
+                        className="form-input"
+                        placeholder="새 카테고리 이름"
+                        value={newCategoryName}
+                        onChange={(e) => setNewCategoryName(e.target.value)}
+                        style={{ fontSize: '13px' }}
+                      />
+                    </div>
+                    <div style={{ marginBottom: '10px' }}>
+                      <label style={{ fontSize: '12px', color: '#6B7280', marginBottom: '6px', display: 'block' }}>
+                        색상 선택
+                      </label>
+                      <div className="color-picker" style={{ display: 'flex', gap: '6px', flexWrap: 'wrap' }}>
+                        {CATEGORY_COLORS.map((color) => (
+                          <div
+                            key={color}
+                            style={{
+                              width: '24px',
+                              height: '24px',
+                              borderRadius: '50%',
+                              backgroundColor: color,
+                              cursor: 'pointer',
+                              border: newCategoryColor === color ? '3px solid #374151' : '2px solid transparent',
+                              boxSizing: 'border-box',
+                            }}
+                            onClick={() => setNewCategoryColor(color)}
+                          />
+                        ))}
+                      </div>
+                    </div>
+                    <div style={{ display: 'flex', gap: '8px' }}>
+                      <button
+                        className="btn btn-primary"
+                        style={{ padding: '6px 12px', fontSize: '12px' }}
+                        onClick={handleAddCategory}
+                      >
+                        추가
+                      </button>
+                      <button
+                        className="btn btn-secondary"
+                        style={{ padding: '6px 12px', fontSize: '12px' }}
+                        onClick={() => {
+                          setShowNewCategory(false);
+                          setNewCategoryName('');
+                          setNewCategoryColor(CATEGORY_COLORS[0]);
+                        }}
+                      >
+                        취소
+                      </button>
+                    </div>
+                  </div>
+                )}
               </div>
 
               <div className="form-group">

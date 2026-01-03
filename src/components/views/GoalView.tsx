@@ -1,9 +1,14 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { useGoalStore } from '../../store/goalStore';
+import { useGoalStore, calculateGoalProgress } from '../../store/goalStore';
 import { useCategoryStore } from '../../store/categoryStore';
 import { useTodoStore } from '../../store/todoStore';
 import { DEFAULT_CATEGORY_COLOR, type Goal } from '../../types';
 import GoalDecomposition from '../GoalDecomposition';
+
+// Goal이 활성 상태인지 확인
+function isGoalActive(goal: Goal): boolean {
+  return !['completed', 'failed'].includes(goal.status);
+}
 
 interface GoalViewProps {
   onGoalClick: (goal: Goal) => void;
@@ -27,9 +32,9 @@ const GoalView: React.FC<GoalViewProps> = ({ onGoalClick, onAddGoal }) => {
   const getFilteredGoals = () => {
     switch (showFilter) {
       case 'active':
-        return goals.filter(g => g.is_active && g.progress < 100);
+        return goals.filter(g => isGoalActive(g) && calculateGoalProgress(g) < 100);
       case 'completed':
-        return goals.filter(g => g.progress >= 100 || !g.is_active);
+        return goals.filter(g => calculateGoalProgress(g) >= 100 || !isGoalActive(g));
       default:
         return goals;
     }
@@ -62,13 +67,7 @@ const GoalView: React.FC<GoalViewProps> = ({ onGoalClick, onAddGoal }) => {
     return { text: `${diff}일 남음`, isOverdue: false };
   };
 
-  const handleProgressChange = async (goalId: string, newProgress: number) => {
-    // 즉시 selectedGoal 상태 업데이트
-    if (selectedGoal && selectedGoal.id === goalId) {
-      setSelectedGoal({ ...selectedGoal, progress: newProgress });
-    }
-    await updateGoal(goalId, { progress: newProgress });
-  };
+  // 진행률은 Todo 완료에 따라 자동 계산됨 - 수동 변경 제거
 
   const handleFileUpload = () => {
     fileInputRef.current?.click();
@@ -101,13 +100,13 @@ const GoalView: React.FC<GoalViewProps> = ({ onGoalClick, onAddGoal }) => {
           className={`goal-filter-tab ${showFilter === 'active' ? 'active' : ''}`}
           onClick={() => setShowFilter('active')}
         >
-          진행중 ({goals.filter(g => g.is_active && g.progress < 100).length})
+          진행중 ({goals.filter(g => isGoalActive(g) && calculateGoalProgress(g) < 100).length})
         </button>
         <button
           className={`goal-filter-tab ${showFilter === 'completed' ? 'active' : ''}`}
           onClick={() => setShowFilter('completed')}
         >
-          완료 ({goals.filter(g => g.progress >= 100 || !g.is_active).length})
+          완료 ({goals.filter(g => calculateGoalProgress(g) >= 100 || !isGoalActive(g)).length})
         </button>
       </div>
 
@@ -132,7 +131,7 @@ const GoalView: React.FC<GoalViewProps> = ({ onGoalClick, onAddGoal }) => {
               return (
                 <div
                   key={goal.id}
-                  className={`goal-card ${isSelected ? 'selected' : ''} ${goal.progress >= 100 ? 'completed' : ''}`}
+                  className={`goal-card ${isSelected ? 'selected' : ''} ${calculateGoalProgress(goal) >= 100 ? 'completed' : ''}`}
                   onClick={() => setSelectedGoal(goal)}
                 >
                   <div className="goal-card-header">
@@ -161,12 +160,12 @@ const GoalView: React.FC<GoalViewProps> = ({ onGoalClick, onAddGoal }) => {
                       <div
                         className="goal-progress-fill"
                         style={{
-                          width: `${goal.progress}%`,
+                          width: `${calculateGoalProgress(goal)}%`,
                           backgroundColor: category?.color || DEFAULT_CATEGORY_COLOR
                         }}
                       />
                     </div>
-                    <span className="goal-progress-text">{goal.progress}%</span>
+                    <span className="goal-progress-text">{calculateGoalProgress(goal)}%</span>
                   </div>
 
                   {/* 연결된 Todo 표시 */}
@@ -213,19 +212,20 @@ const GoalView: React.FC<GoalViewProps> = ({ onGoalClick, onAddGoal }) => {
               <div className="goal-detail-section">
                 <h4>진행률</h4>
                 <div className="goal-detail-progress">
-                  <input
-                    type="range"
-                    min="0"
-                    max="100"
-                    value={selectedGoal.progress}
-                    onChange={(e) => {
-                      if (selectedGoal.id) {
-                        handleProgressChange(selectedGoal.id, parseInt(e.target.value));
-                      }
-                    }}
-                  />
-                  <span>{selectedGoal.progress}%</span>
+                  <div className="goal-progress-bar" style={{ flex: 1 }}>
+                    <div
+                      className="goal-progress-fill"
+                      style={{
+                        width: `${calculateGoalProgress(selectedGoal)}%`,
+                        backgroundColor: 'var(--primary-color)'
+                      }}
+                    />
+                  </div>
+                  <span>{calculateGoalProgress(selectedGoal)}%</span>
                 </div>
+                <p style={{ fontSize: '12px', color: 'var(--text-muted)', marginTop: '8px' }}>
+                  진행률은 연결된 Todo 완료에 따라 자동 계산됩니다
+                </p>
               </div>
 
               {selectedGoal.target_date && (

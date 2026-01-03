@@ -4,6 +4,18 @@ import { useTodoStore } from '../../store/todoStore';
 import { useCategoryStore } from '../../store/categoryStore';
 import { DEFAULT_CATEGORY_COLOR, type CalendarEvent, type Todo, type Category } from '../../types';
 
+// deadline에서 날짜와 시간 추출
+function getDeadlineDate(deadline?: string): string | undefined {
+  if (!deadline) return undefined;
+  return deadline.split('T')[0];
+}
+
+function getDeadlineTime(deadline?: string): string | undefined {
+  if (!deadline) return undefined;
+  const timePart = deadline.split('T')[1];
+  return timePart ? timePart.slice(0, 5) : undefined;
+}
+
 interface ScheduleTabProps {
   onEventClick: (event: CalendarEvent) => void;
   onAddEvent: (date?: string) => void;
@@ -232,10 +244,10 @@ const ScheduleTab: React.FC<ScheduleTabProps> = ({ onEventClick, onAddEvent, onA
                       </button>
                       <div className="schedule-todo-content">
                         <div className="schedule-todo-title">{todo.title}</div>
-                        {todo.due_date && (
+                        {getDeadlineDate(todo.deadline) && (
                           <div className="schedule-todo-due">
-                            {formatDate(todo.due_date)}
-                            {todo.due_time && ` ${todo.due_time.slice(0, 5)}`}
+                            {formatDate(getDeadlineDate(todo.deadline)!)}
+                            {getDeadlineTime(todo.deadline) && ` ${getDeadlineTime(todo.deadline)}`}
                           </div>
                         )}
                       </div>

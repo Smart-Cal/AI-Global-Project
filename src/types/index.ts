@@ -30,55 +30,107 @@ export const CATEGORY_COLORS = [
   '#9CA3AF', '#6366F1', '#EC4899', '#14B8A6',
 ];
 
-// Goal types - 사용자의 장기 목표
+// Goal Status 타입
+export type GoalStatus = 'planning' | 'scheduled' | 'in_progress' | 'completed' | 'failed';
+
+// Goal types - 사용자의 장기 목표 (DB 스키마와 일치)
 export interface Goal {
   id?: string;
   user_id: string;
+  category_id?: string;
   title: string;
   description?: string;
-  category_id?: string; // 카테고리 연결 (선택)
-  target_date?: string;
+  target_date: string;            // 마감일 (필수, YYYY-MM-DD)
   priority: 'high' | 'medium' | 'low';
-  progress: number; // 0-100
-  is_active: boolean;
+  status: GoalStatus;             // 목표 상태
+  total_estimated_time: number;   // 총 예상 시간 (분)
+  completed_time: number;         // 완료된 시간 (분)
   created_at?: string;
   updated_at?: string;
 }
 
-// Todo types - 할 일 목록
+// 진행률 계산 헬퍼
+export function calculateGoalProgress(goal: Goal): number {
+  const totalTime = goal.total_estimated_time ?? 0;
+  const completedTime = goal.completed_time ?? 0;
+
+  // total_estimated_time이 0이거나 없으면 0% 반환
+  if (totalTime === 0) return 0;
+
+  const progress = Math.round((completedTime / totalTime) * 100);
+  // NaN 방지 및 0-100 범위 제한
+  return isNaN(progress) ? 0 : Math.min(100, Math.max(0, progress));
+}
+
+// Todo types - 할 일 목록 (DB 스키마와 일치)
 export interface Todo {
   id?: string;
   user_id: string;
-  goal_id?: string; // 연결된 목표 (선택)
+  goal_id?: string;               // 연결된 Goal
   title: string;
   description?: string;
-  due_date?: string;
-  due_time?: string;
+  deadline?: string;              // 마감 시각 (ISO datetime)
+  is_hard_deadline: boolean;      // true면 절대 밀릴 수 없음
+  estimated_time?: number;        // 예상 시간 (분)
+  completed_time: number;         // 완료된 시간 (분)
+  is_divisible: boolean;          // 분할 가능 여부
   priority: 'high' | 'medium' | 'low';
   is_completed: boolean;
   completed_at?: string;
-  is_recurring: boolean;
-  recurrence_pattern?: 'daily' | 'weekly' | 'monthly';
+  is_recurring?: boolean;
+  recurrence_pattern?: string;
   created_at?: string;
 }
 
-// Event types
+// Event Priority 타입 (1-5 스케일)
+export type EventPriority = 1 | 2 | 3 | 4 | 5;
+
+// Priority 설명
+// 1: 낮음 (언제든 이동/취소 가능) - 청소, 넷플릭스
+// 2: 보통-낮음 (가능하면 유지) - 개인 운동
+// 3: 보통 (기본값) - 일반 약속
+// 4: 높음 (웬만하면 변경 불가) - 중요 미팅
+// 5: 절대 (절대 변경 불가) - 시험, 면접
+
+// Event types (DB 스키마와 일치)
 export interface CalendarEvent {
   id?: string;
   user_id: string;
-  category_id?: string; // 카테고리 연결 (선택)
+  category_id?: string;         // 카테고리 연결 (선택)
+  related_todo_id?: string;     // 연결된 Todo
   title: string;
   description?: string;
-  event_date: string;
-  start_time?: string;
-  end_time?: string;
+  event_date: string;           // 시작일 (YYYY-MM-DD)
+  end_date?: string;            // 종료일 (기간 일정용, YYYY-MM-DD)
+  start_time?: string;          // 시작 시간 (HH:mm)
+  end_time?: string;            // 종료 시간 (HH:mm)
   is_all_day: boolean;
   location?: string;
-  is_completed: boolean; // 일정 완료 여부
+
+  // 유동성 관련
+  is_fixed: boolean;            // true: 고정 일정, false: 유동 일정
+  priority: EventPriority;      // 1-5 우선순위
+
+  is_completed: boolean;        // 일정 완료 여부
   completed_at?: string;
-  is_ai_suggested?: boolean; // AI가 추천한 일정인지 (UI용, DB에 저장 안함)
-  is_confirmed?: boolean; // 사용자가 확인했는지 (UI용, DB에 저장 안함)
   created_at?: string;
+
+  // UI 전용 (DB에 저장 안함)
+  is_ai_suggested?: boolean;
+  is_confirmed?: boolean;
+}
+
+// 기간 일정인지 확인하는 헬퍼
+export function isMultiDayEvent(event: CalendarEvent): boolean {
+  return !!event.end_date && event.end_date !== event.event_date;
+}
+
+// 일정 기간(일수) 계산 헬퍼
+export function getEventDurationDays(event: CalendarEvent): number {
+  if (!event.end_date) return 1;
+  const start = new Date(event.event_date);
+  const end = new Date(event.end_date);
+  return Math.ceil((end.getTime() - start.getTime()) / (1000 * 60 * 60 * 24)) + 1;
 }
 
 // AI Agent types
@@ -231,5 +283,181 @@ export interface Notification {
 }
 
 // View types for UI
-export type SidebarView = 'dashboard' | 'calendar' | 'goals' | 'todos' | 'chat' | 'settings';
+export type SidebarView = 'dashboard' | 'assistant' | 'calendar' | 'goals' | 'todos' | 'chat' | 'settings';
 export type CalendarView = 'month' | 'week' | 'day';
+
+// =============================================
+// MCP Tool System Types (Phase 2)
+// =============================================
+
+// 위험도 레벨
+export type RiskLevel = 'low' | 'medium' | 'high';
+
+// 도구 카테고리
+export type ToolCategory = 'internal' | 'external' | 'integration';
+
+// 도구 실행 상태
+export type ToolExecutionStatus =
+  | 'pending'     // 확인 대기 중
+  | 'confirmed'   // 확인됨
+  | 'executing'   // 실행 중
+  | 'completed'   // 완료
+  | 'failed'      // 실패
+  | 'cancelled'   // 취소됨
+  | 'expired';    // 만료됨
+
+// 도구 실행 정보
+export interface ToolExecution {
+  id: string;
+  user_id: string;
+  conversation_id?: string;
+  tool_name: string;
+  tool_category: ToolCategory;
+  risk_level: RiskLevel;
+  input_params: Record<string, unknown>;
+  output_result?: Record<string, unknown>;
+  preview_data?: Record<string, unknown>;
+  status: ToolExecutionStatus;
+  requires_confirmation: boolean;
+  confirmed_at?: string;
+  executed_at?: string;
+  expires_at?: string;
+  error_message?: string;
+  created_at: string;
+}
+
+// 확인 타입 (위험도에 따라 다른 UI)
+export type ConfirmationType = 'immediate' | 'inline' | 'modal';
+
+// 대기 중인 확인 요청
+export interface PendingConfirmation {
+  executionId: string;
+  toolName: string;
+  riskLevel: RiskLevel;
+  confirmationType: ConfirmationType;
+  preview: ToolPreviewData;
+  warning?: string;
+  expiresAt: Date;
+}
+
+// 도구 미리보기 데이터
+export interface ToolPreviewData {
+  title: string;
+  description: string;
+  details: Record<string, string | number | boolean>;
+  icon?: string;
+}
+
+// =============================================
+// External Service Types (Phase 3)
+// =============================================
+
+// 외부 서비스 타입
+export type ExternalServiceType =
+  | 'weather'
+  | 'shopping'
+  | 'location'
+  | 'google_calendar'
+  | 'notion';
+
+// 외부 서비스 설정
+export interface ExternalService {
+  id: string;
+  user_id: string;
+  service_type: ExternalServiceType;
+  service_name: string;
+  config: Record<string, unknown>;
+  is_enabled: boolean;
+  last_synced_at?: string;
+  created_at: string;
+  updated_at: string;
+}
+
+// 날씨 데이터
+export interface WeatherData {
+  location: string;
+  temperature: number;
+  condition: string;
+  humidity: number;
+  windSpeed: number;
+  icon: string;
+  forecast?: DailyForecast[];
+  recommendation?: string;
+}
+
+export interface DailyForecast {
+  date: string;
+  tempHigh: number;
+  tempLow: number;
+  condition: string;
+  rainProbability: number;
+  icon: string;
+}
+
+// 장소 검색 결과
+export interface PlaceSearchResult {
+  id: string;
+  name: string;
+  category: string;
+  address: string;
+  coordinates: {
+    lat: number;
+    lng: number;
+  };
+  rating?: number;
+  priceRange?: string;
+  phone?: string;
+  url?: string;
+  distance?: number;
+}
+
+// 경로 정보
+export interface DirectionsResult {
+  duration: number;      // 분 단위
+  distance: number;      // km 단위
+  departureTime?: string;
+  arrivalTime?: string;
+  transportMode: 'transit' | 'driving' | 'walking';
+  steps?: DirectionStep[];
+}
+
+export interface DirectionStep {
+  instruction: string;
+  distance: number;
+  duration: number;
+}
+
+// 상품 검색 결과
+export interface ProductSearchResult {
+  id: string;
+  title: string;
+  price: number;
+  originalPrice?: number;
+  mall: string;
+  image: string;
+  url: string;
+  category: string;
+  rating?: number;
+}
+
+// =============================================
+// Action Log Types (감사/롤백용)
+// =============================================
+
+export type ActionType = 'create' | 'update' | 'delete' | 'external_call' | 'sync';
+export type EntityType = 'event' | 'todo' | 'goal' | 'category' | 'external_service';
+
+export interface ActionLog {
+  id: string;
+  user_id: string;
+  action_type: ActionType;
+  entity_type: EntityType;
+  entity_id?: string;
+  previous_state?: Record<string, unknown>;
+  new_state?: Record<string, unknown>;
+  metadata?: Record<string, unknown>;
+  risk_level: RiskLevel;
+  is_reversible: boolean;
+  reversed_at?: string;
+  created_at: string;
+}

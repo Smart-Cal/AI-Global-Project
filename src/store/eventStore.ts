@@ -25,65 +25,44 @@ interface EventState {
 
 const today = new Date();
 
-// API Event를 CalendarEvent로 변환
+// API Event를 CalendarEvent로 변환 (이제 스키마가 동일하므로 단순 매핑)
 function apiEventToCalendarEvent(event: api.Event): CalendarEvent {
-  // datetime 문자열에서 직접 날짜와 시간 추출 (타임존 문제 방지)
-  // datetime 형식: "2024-12-31T09:00:00" 또는 "2024-12-31T09:00"
-  const eventDate = event.datetime.split('T')[0];
-  const timePart = event.datetime.split('T')[1] || '09:00:00';
-  const startTime = timePart.slice(0, 5);
-
-  // duration을 기반으로 end_time 계산
-  const [hours, minutes] = startTime.split(':').map(Number);
-  const totalMinutes = hours * 60 + minutes + event.duration;
-  const endHours = Math.floor(totalMinutes / 60) % 24;
-  const endMinutes = totalMinutes % 60;
-  const endTime = `${endHours.toString().padStart(2, '0')}:${endMinutes.toString().padStart(2, '0')}`;
-
   return {
     id: event.id,
     user_id: event.user_id,
     category_id: event.category_id,
+    related_todo_id: event.related_todo_id,
     title: event.title,
     description: event.description,
-    event_date: eventDate,
-    start_time: startTime,
-    end_time: endTime,
-    is_all_day: false,
+    event_date: event.event_date,
+    end_date: event.end_date,
+    start_time: event.start_time,
+    end_time: event.end_time,
+    is_all_day: event.is_all_day,
     location: event.location,
+    is_fixed: event.is_fixed ?? true,
+    priority: (event.priority ?? 3) as 1 | 2 | 3 | 4 | 5,
     is_completed: event.is_completed,
     completed_at: event.completed_at,
     created_at: event.created_at,
   };
 }
 
-// CalendarEvent를 API Event로 변환
+// CalendarEvent를 API Event로 변환 (이제 스키마가 동일하므로 단순 매핑)
 function calendarEventToApiEvent(event: Partial<CalendarEvent>): Partial<api.Event> {
-  let datetime: string | undefined;
-  let duration = 60;
-
-  if (event.event_date) {
-    const time = event.start_time || '09:00';
-    datetime = `${event.event_date}T${time}:00`;
-
-    // duration 계산
-    if (event.start_time && event.end_time) {
-      const start = new Date(`2000-01-01T${event.start_time}`);
-      const end = new Date(`2000-01-01T${event.end_time}`);
-      duration = Math.round((end.getTime() - start.getTime()) / 60000);
-      if (duration <= 0) duration = 60;
-    }
-  }
-
   return {
-    user_id: event.user_id,
     category_id: event.category_id,
+    related_todo_id: event.related_todo_id,
     title: event.title,
     description: event.description,
-    datetime,
-    duration,
-    type: 'personal',
+    event_date: event.event_date,
+    end_date: event.end_date,
+    start_time: event.start_time,
+    end_time: event.end_time,
+    is_all_day: event.is_all_day ?? false,
     location: event.location,
+    is_fixed: event.is_fixed ?? true,
+    priority: event.priority ?? 3,
     is_completed: event.is_completed,
   };
 }
@@ -193,7 +172,15 @@ export const useEventStore = create<EventState>((set, get) => ({
     }
   },
 
-  getEventsByDate: (date) => get().events.filter((e) => e.event_date === date),
+  // 기간 일정 지원: 해당 날짜가 event_date ~ end_date 범위 내에 있으면 표시
+  getEventsByDate: (date) => get().events.filter((e) => {
+    if (!e.end_date) {
+      // 단일 일정
+      return e.event_date === date;
+    }
+    // 기간 일정: date가 event_date와 end_date 사이에 있는지 확인
+    return date >= e.event_date && date <= e.end_date;
+  }),
 
   getCompletedEvents: () => get().events.filter((e) => e.is_completed),
 

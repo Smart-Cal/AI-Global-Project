@@ -1,0 +1,498 @@
+/**
+ * Tool Confirmation Components
+ *
+ * MCP-style 도구 실행 확인 UI
+ * - InlineConfirmation: medium 위험도용 인라인 확인
+ * - ModalConfirmation: high 위험도용 모달 확인
+ */
+
+import React, { useState } from 'react';
+import { CheckCircleIcon, XCircleIcon, ClockIcon } from './Icons';
+
+// 위험도 레벨
+type RiskLevel = 'low' | 'medium' | 'high';
+
+// 도구 실행 정보
+interface ToolExecutionInfo {
+  id: string;
+  toolName: string;
+  toolDisplayName: string;
+  riskLevel: RiskLevel;
+  preview?: {
+    title?: string;
+    description?: string;
+    details?: Record<string, string>;
+  };
+  expiresAt?: Date;
+}
+
+// 위험도별 스타일
+const riskStyles: Record<RiskLevel, { bg: string; border: string; text: string; icon: string }> = {
+  low: { bg: '#F0FDF4', border: '#86EFAC', text: '#15803D', icon: '✓' },
+  medium: { bg: '#FEF3C7', border: '#FCD34D', text: '#B45309', icon: '⚡' },
+  high: { bg: '#FEE2E2', border: '#FCA5A5', text: '#DC2626', icon: '⚠️' },
+};
+
+// 위험도 라벨
+const riskLabels: Record<RiskLevel, string> = {
+  low: '낮음',
+  medium: '보통',
+  high: '높음',
+};
+
+interface InlineConfirmationProps {
+  execution: ToolExecutionInfo;
+  onConfirm: (id: string) => void;
+  onCancel: (id: string) => void;
+  isLoading?: boolean;
+}
+
+/**
+ * InlineConfirmation - 채팅 메시지 내 인라인 확인 UI
+ * medium 위험도 도구에 사용
+ */
+export const InlineConfirmation: React.FC<InlineConfirmationProps> = ({
+  execution,
+  onConfirm,
+  onCancel,
+  isLoading = false,
+}) => {
+  const style = riskStyles[execution.riskLevel];
+  const [isExpanded, setIsExpanded] = useState(false);
+
+  return (
+    <div
+      className="inline-confirmation"
+      style={{
+        background: style.bg,
+        border: `1px solid ${style.border}`,
+        borderRadius: '12px',
+        padding: '12px 16px',
+        marginTop: '8px',
+      }}
+    >
+      <div style={{ display: 'flex', alignItems: 'flex-start', gap: '12px' }}>
+        <div
+          style={{
+            width: '32px',
+            height: '32px',
+            borderRadius: '8px',
+            background: style.border,
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            fontSize: '16px',
+            flexShrink: 0,
+          }}
+        >
+          {style.icon}
+        </div>
+
+        <div style={{ flex: 1, minWidth: 0 }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '4px' }}>
+            <span style={{ fontWeight: 600, color: style.text }}>{execution.toolDisplayName}</span>
+            <span
+              style={{
+                fontSize: '11px',
+                padding: '2px 6px',
+                borderRadius: '4px',
+                background: style.border,
+                color: style.text,
+              }}
+            >
+              {riskLabels[execution.riskLevel]}
+            </span>
+          </div>
+
+          {execution.preview && (
+            <div style={{ marginBottom: '8px' }}>
+              {execution.preview.title && (
+                <div style={{ fontWeight: 500, marginBottom: '4px' }}>{execution.preview.title}</div>
+              )}
+              {execution.preview.description && (
+                <div style={{ fontSize: '13px', color: '#6B7280' }}>{execution.preview.description}</div>
+              )}
+              {execution.preview.details && Object.keys(execution.preview.details).length > 0 && (
+                <>
+                  <button
+                    onClick={() => setIsExpanded(!isExpanded)}
+                    style={{
+                      background: 'none',
+                      border: 'none',
+                      color: style.text,
+                      cursor: 'pointer',
+                      fontSize: '12px',
+                      padding: '4px 0',
+                      textDecoration: 'underline',
+                    }}
+                  >
+                    {isExpanded ? '상세 정보 숨기기' : '상세 정보 보기'}
+                  </button>
+                  {isExpanded && (
+                    <div
+                      style={{
+                        marginTop: '8px',
+                        padding: '8px',
+                        background: 'rgba(255,255,255,0.5)',
+                        borderRadius: '6px',
+                        fontSize: '13px',
+                      }}
+                    >
+                      {Object.entries(execution.preview.details).map(([key, value]) => (
+                        <div key={key} style={{ display: 'flex', gap: '8px', marginBottom: '4px' }}>
+                          <span style={{ color: '#6B7280', minWidth: '60px' }}>{key}:</span>
+                          <span style={{ fontWeight: 500 }}>{value}</span>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </>
+              )}
+            </div>
+          )}
+
+          {execution.expiresAt && (
+            <div style={{ display: 'flex', alignItems: 'center', gap: '4px', fontSize: '12px', color: '#9CA3AF', marginBottom: '8px' }}>
+              <ClockIcon size={12} />
+              <span>만료: {formatTimeRemaining(execution.expiresAt)}</span>
+            </div>
+          )}
+
+          <div style={{ display: 'flex', gap: '8px' }}>
+            <button
+              onClick={() => onConfirm(execution.id)}
+              disabled={isLoading}
+              style={{
+                padding: '6px 16px',
+                borderRadius: '6px',
+                border: 'none',
+                background: '#10B981',
+                color: 'white',
+                cursor: isLoading ? 'not-allowed' : 'pointer',
+                fontSize: '13px',
+                fontWeight: 500,
+                display: 'flex',
+                alignItems: 'center',
+                gap: '4px',
+                opacity: isLoading ? 0.7 : 1,
+              }}
+            >
+              <CheckCircleIcon size={14} />
+              실행
+            </button>
+            <button
+              onClick={() => onCancel(execution.id)}
+              disabled={isLoading}
+              style={{
+                padding: '6px 16px',
+                borderRadius: '6px',
+                border: '1px solid #D1D5DB',
+                background: 'white',
+                color: '#6B7280',
+                cursor: isLoading ? 'not-allowed' : 'pointer',
+                fontSize: '13px',
+                fontWeight: 500,
+                display: 'flex',
+                alignItems: 'center',
+                gap: '4px',
+                opacity: isLoading ? 0.7 : 1,
+              }}
+            >
+              <XCircleIcon size={14} />
+              취소
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+interface ModalConfirmationProps {
+  execution: ToolExecutionInfo;
+  isOpen: boolean;
+  onConfirm: (id: string) => void;
+  onCancel: (id: string) => void;
+  isLoading?: boolean;
+}
+
+/**
+ * ModalConfirmation - high 위험도 도구용 모달 확인 UI
+ * 삭제, 외부 서비스 연동 등에 사용
+ */
+export const ModalConfirmation: React.FC<ModalConfirmationProps> = ({
+  execution,
+  isOpen,
+  onConfirm,
+  onCancel,
+  isLoading = false,
+}) => {
+  if (!isOpen) return null;
+
+  const style = riskStyles[execution.riskLevel];
+
+  return (
+    <div
+      className="modal-overlay"
+      onClick={() => !isLoading && onCancel(execution.id)}
+      style={{
+        position: 'fixed',
+        inset: 0,
+        background: 'rgba(0,0,0,0.5)',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        zIndex: 1000,
+      }}
+    >
+      <div
+        className="modal-content"
+        onClick={(e) => e.stopPropagation()}
+        style={{
+          background: 'white',
+          borderRadius: '16px',
+          maxWidth: '400px',
+          width: '90%',
+          overflow: 'hidden',
+          boxShadow: '0 20px 25px -5px rgba(0, 0, 0, 0.1)',
+        }}
+      >
+        {/* Header */}
+        <div
+          style={{
+            background: style.bg,
+            padding: '20px',
+            borderBottom: `1px solid ${style.border}`,
+          }}
+        >
+          <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+            <div
+              style={{
+                width: '48px',
+                height: '48px',
+                borderRadius: '12px',
+                background: style.border,
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                fontSize: '24px',
+              }}
+            >
+              {style.icon}
+            </div>
+            <div>
+              <div style={{ fontWeight: 600, fontSize: '16px', color: style.text }}>
+                {execution.toolDisplayName}
+              </div>
+              <div
+                style={{
+                  fontSize: '12px',
+                  color: style.text,
+                  marginTop: '2px',
+                }}
+              >
+                위험도: {riskLabels[execution.riskLevel]}
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Body */}
+        <div style={{ padding: '20px' }}>
+          <div style={{ marginBottom: '16px', color: '#374151' }}>
+            이 작업을 실행하시겠습니까? {execution.riskLevel === 'high' && '이 작업은 되돌릴 수 없을 수 있습니다.'}
+          </div>
+
+          {execution.preview && (
+            <div
+              style={{
+                background: '#F9FAFB',
+                borderRadius: '8px',
+                padding: '12px',
+                marginBottom: '16px',
+              }}
+            >
+              {execution.preview.title && (
+                <div style={{ fontWeight: 500, marginBottom: '8px' }}>{execution.preview.title}</div>
+              )}
+              {execution.preview.description && (
+                <div style={{ fontSize: '14px', color: '#6B7280', marginBottom: '8px' }}>
+                  {execution.preview.description}
+                </div>
+              )}
+              {execution.preview.details && Object.keys(execution.preview.details).length > 0 && (
+                <div style={{ fontSize: '13px' }}>
+                  {Object.entries(execution.preview.details).map(([key, value]) => (
+                    <div key={key} style={{ display: 'flex', gap: '8px', marginBottom: '4px' }}>
+                      <span style={{ color: '#9CA3AF', minWidth: '80px' }}>{key}:</span>
+                      <span style={{ fontWeight: 500 }}>{value}</span>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
+
+          {execution.expiresAt && (
+            <div
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: '4px',
+                fontSize: '12px',
+                color: '#9CA3AF',
+                marginBottom: '16px',
+              }}
+            >
+              <ClockIcon size={12} />
+              <span>만료: {formatTimeRemaining(execution.expiresAt)}</span>
+            </div>
+          )}
+        </div>
+
+        {/* Footer */}
+        <div
+          style={{
+            display: 'flex',
+            gap: '12px',
+            padding: '16px 20px',
+            background: '#F9FAFB',
+            borderTop: '1px solid #E5E7EB',
+          }}
+        >
+          <button
+            onClick={() => onCancel(execution.id)}
+            disabled={isLoading}
+            style={{
+              flex: 1,
+              padding: '12px',
+              borderRadius: '8px',
+              border: '1px solid #D1D5DB',
+              background: 'white',
+              color: '#374151',
+              cursor: isLoading ? 'not-allowed' : 'pointer',
+              fontSize: '14px',
+              fontWeight: 500,
+              opacity: isLoading ? 0.7 : 1,
+            }}
+          >
+            취소
+          </button>
+          <button
+            onClick={() => onConfirm(execution.id)}
+            disabled={isLoading}
+            style={{
+              flex: 1,
+              padding: '12px',
+              borderRadius: '8px',
+              border: 'none',
+              background: execution.riskLevel === 'high' ? '#DC2626' : '#10B981',
+              color: 'white',
+              cursor: isLoading ? 'not-allowed' : 'pointer',
+              fontSize: '14px',
+              fontWeight: 500,
+              opacity: isLoading ? 0.7 : 1,
+            }}
+          >
+            {isLoading ? '처리 중...' : execution.riskLevel === 'high' ? '확인 후 실행' : '실행'}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+/**
+ * 남은 시간 포맷
+ */
+function formatTimeRemaining(expiresAt: Date): string {
+  const now = new Date();
+  const diff = expiresAt.getTime() - now.getTime();
+
+  if (diff <= 0) return '만료됨';
+
+  const minutes = Math.floor(diff / 60000);
+  const seconds = Math.floor((diff % 60000) / 1000);
+
+  if (minutes > 0) {
+    return `${minutes}분 ${seconds}초 후`;
+  }
+  return `${seconds}초 후`;
+}
+
+/**
+ * 도구 실행 목록 컴포넌트
+ */
+interface PendingExecutionsListProps {
+  executions: ToolExecutionInfo[];
+  onConfirm: (id: string) => void;
+  onCancel: (id: string) => void;
+  loadingId?: string;
+}
+
+export const PendingExecutionsList: React.FC<PendingExecutionsListProps> = ({
+  executions,
+  onConfirm,
+  onCancel,
+  loadingId,
+}) => {
+  const [modalExecution, setModalExecution] = useState<ToolExecutionInfo | null>(null);
+
+  if (executions.length === 0) return null;
+
+  const handleConfirm = (id: string) => {
+    const execution = executions.find((e) => e.id === id);
+    if (execution?.riskLevel === 'high') {
+      setModalExecution(execution);
+    } else {
+      onConfirm(id);
+    }
+  };
+
+  const handleModalConfirm = (id: string) => {
+    onConfirm(id);
+    setModalExecution(null);
+  };
+
+  const handleModalCancel = (id: string) => {
+    onCancel(id);
+    setModalExecution(null);
+  };
+
+  return (
+    <div style={{ marginTop: '16px' }}>
+      <div
+        style={{
+          fontSize: '12px',
+          fontWeight: 600,
+          color: '#6B7280',
+          marginBottom: '8px',
+          textTransform: 'uppercase',
+        }}
+      >
+        대기 중인 작업 ({executions.length})
+      </div>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+        {executions.map((execution) => (
+          <InlineConfirmation
+            key={execution.id}
+            execution={execution}
+            onConfirm={handleConfirm}
+            onCancel={onCancel}
+            isLoading={loadingId === execution.id}
+          />
+        ))}
+      </div>
+
+      {modalExecution && (
+        <ModalConfirmation
+          execution={modalExecution}
+          isOpen={true}
+          onConfirm={handleModalConfirm}
+          onCancel={handleModalCancel}
+          isLoading={loadingId === modalExecution.id}
+        />
+      )}
+    </div>
+  );
+};

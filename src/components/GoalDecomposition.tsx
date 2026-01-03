@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { useGoalStore } from '../store/goalStore';
+import { useGoalStore, calculateGoalProgress } from '../store/goalStore';
 import { useTodoStore } from '../store/todoStore';
 import { useCategoryStore } from '../store/categoryStore';
 import type { Goal, Todo } from '../types';
@@ -150,6 +150,10 @@ const GoalDecomposition: React.FC<GoalDecompositionProps> = ({ goal, onClose }) 
           description: `${goal.title} 목표의 세부 작업`,
           priority: goal.priority,
           is_recurring: false,
+          is_hard_deadline: false,
+          is_divisible: true,
+          completed_time: 0,
+          estimated_time: todo.duration,
         });
       }
       showToast(`${selectedTodos.length}개의 작업이 생성되었습니다`, 'success');
@@ -204,7 +208,7 @@ const GoalDecomposition: React.FC<GoalDecompositionProps> = ({ goal, onClose }) 
                 </span>
               )}
               <span className="goal-progress-badge">
-                진행률: {goal.progress}%
+                진행률: {calculateGoalProgress(goal)}%
               </span>
             </div>
           </div>

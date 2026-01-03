@@ -9,6 +9,18 @@ interface TodosViewProps {
   onAddTodo: () => void;
 }
 
+// deadline에서 날짜와 시간 추출
+function getDeadlineDate(deadline?: string): string | undefined {
+  if (!deadline) return undefined;
+  return deadline.split('T')[0];
+}
+
+function getDeadlineTime(deadline?: string): string | undefined {
+  if (!deadline) return undefined;
+  const timePart = deadline.split('T')[1];
+  return timePart ? timePart.slice(0, 5) : undefined;
+}
+
 export const TodosView: React.FC<TodosViewProps> = ({ onAddTodo }) => {
   const { user } = useAuthStore();
   const {
@@ -54,6 +66,9 @@ export const TodosView: React.FC<TodosViewProps> = ({ onAddTodo }) => {
       title: newTodoTitle.trim(),
       priority: 'medium',
       is_recurring: false,
+      is_hard_deadline: false,
+      is_divisible: true,
+      completed_time: 0,
     });
     setNewTodoTitle('');
   };
@@ -156,7 +171,9 @@ export const TodosView: React.FC<TodosViewProps> = ({ onAddTodo }) => {
           {filteredTodos.map((todo) => {
             const goal = todo.goal_id ? goals.find((g) => g.id === todo.goal_id) : null;
             const goalCategory = goal?.category_id ? getCategoryById(goal.category_id) : null;
-            const isOverdue = todo.due_date && todo.due_date < new Date().toISOString().split('T')[0] && !todo.is_completed;
+            const deadlineDate = getDeadlineDate(todo.deadline);
+            const deadlineTime = getDeadlineTime(todo.deadline);
+            const isOverdue = deadlineDate && deadlineDate < new Date().toISOString().split('T')[0] && !todo.is_completed;
 
             return (
               <div
@@ -171,11 +188,11 @@ export const TodosView: React.FC<TodosViewProps> = ({ onAddTodo }) => {
                   <div className="todo-title">{todo.title}</div>
                   <div className="todo-meta">
                     <span className={`todo-priority ${todo.priority}`} />
-                    {todo.due_date && (
+                    {deadlineDate && (
                       <span style={{ color: isOverdue ? '#E03E3E' : 'inherit' }}>
                         {isOverdue ? '기한 초과: ' : ''}
-                        {todo.due_date}
-                        {todo.due_time && ` ${todo.due_time}`}
+                        {deadlineDate}
+                        {deadlineTime && ` ${deadlineTime}`}
                       </span>
                     )}
                     {goal && (

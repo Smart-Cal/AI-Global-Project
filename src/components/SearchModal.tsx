@@ -1,9 +1,15 @@
 import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { useEventStore } from '../store/eventStore';
 import { useTodoStore } from '../store/todoStore';
-import { useGoalStore } from '../store/goalStore';
+import { useGoalStore, calculateGoalProgress } from '../store/goalStore';
 import { useCategoryStore } from '../store/categoryStore';
 import type { CalendarEvent, Todo, Goal } from '../types';
+
+// deadline에서 날짜 추출
+function getDeadlineDate(deadline?: string): string | undefined {
+  if (!deadline) return undefined;
+  return deadline.split('T')[0];
+}
 
 interface SearchModalProps {
   isOpen: boolean;
@@ -104,12 +110,13 @@ const SearchModal: React.FC<SearchModalProps> = ({
         const matchDescription = todo.description?.toLowerCase().includes(lowerQuery);
 
         if (matchTitle || matchDescription) {
+          const deadlineDate = getDeadlineDate(todo.deadline);
           results.push({
             type: 'todo',
             id: todo.id,
             title: todo.title,
-            subtitle: todo.due_date ? `마감: ${formatDate(todo.due_date)}` : '마감일 없음',
-            date: todo.due_date,
+            subtitle: deadlineDate ? `마감: ${formatDate(deadlineDate)}` : '마감일 없음',
+            date: deadlineDate,
             item: todo,
           });
         }
@@ -129,7 +136,7 @@ const SearchModal: React.FC<SearchModalProps> = ({
             type: 'goal',
             id: goal.id,
             title: goal.title,
-            subtitle: `진행률 ${goal.progress}%`,
+            subtitle: `진행률 ${calculateGoalProgress(goal)}%`,
             item: goal,
           });
         }

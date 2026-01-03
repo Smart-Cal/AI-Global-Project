@@ -4,13 +4,37 @@ import { useGoalStore } from '../store/goalStore';
 import { useAuthStore } from '../store/authStore';
 import { useCategoryStore } from '../store/categoryStore';
 import { useToast } from './Toast';
-import type { Todo } from '../types';
+import type { Todo, Goal } from '../types';
 
 interface TodoModalProps {
   isOpen: boolean;
   onClose: () => void;
   editingTodo?: Todo | null;
   preselectedGoalId?: string;
+}
+
+// Goal이 활성 상태인지 확인
+function isGoalActive(goal: Goal): boolean {
+  return !['completed', 'failed'].includes(goal.status);
+}
+
+// deadline에서 날짜와 시간 추출
+function getDeadlineDate(deadline?: string): string {
+  if (!deadline) return '';
+  return deadline.split('T')[0];
+}
+
+function getDeadlineTime(deadline?: string): string {
+  if (!deadline) return '';
+  const timePart = deadline.split('T')[1];
+  return timePart ? timePart.slice(0, 5) : '';
+}
+
+// 날짜와 시간을 deadline 형식으로 합치기
+function combineDeadline(date?: string, time?: string): string | undefined {
+  if (!date) return undefined;
+  const timeStr = time || '23:59';
+  return `${date}T${timeStr}:00`;
 }
 
 export const TodoModal: React.FC<TodoModalProps> = ({
@@ -27,17 +51,18 @@ export const TodoModal: React.FC<TodoModalProps> = ({
 
   const [title, setTitle] = useState(editingTodo?.title || '');
   const [description, setDescription] = useState(editingTodo?.description || '');
-  const [dueDate, setDueDate] = useState(editingTodo?.due_date || '');
-  const [dueTime, setDueTime] = useState(editingTodo?.due_time || '');
+  const [dueDate, setDueDate] = useState(getDeadlineDate(editingTodo?.deadline));
+  const [dueTime, setDueTime] = useState(getDeadlineTime(editingTodo?.deadline));
   const [priority, setPriority] = useState<'high' | 'medium' | 'low'>(editingTodo?.priority || 'medium');
   const [goalId, setGoalId] = useState(editingTodo?.goal_id || preselectedGoalId || '');
   const [isRecurring, setIsRecurring] = useState(editingTodo?.is_recurring || false);
   const [recurrencePattern, setRecurrencePattern] = useState<'daily' | 'weekly' | 'monthly'>(
-    editingTodo?.recurrence_pattern || 'daily'
+    (editingTodo?.recurrence_pattern as 'daily' | 'weekly' | 'monthly') || 'daily'
   );
+  const [estimatedTime, setEstimatedTime] = useState(editingTodo?.estimated_time || 60);
   const [isLoading, setIsLoading] = useState(false);
 
-  const activeGoals = goals.filter((g) => g.is_active);
+  const activeGoals = goals.filter(isGoalActive);
 
   if (!isOpen) return null;
 
@@ -50,8 +75,11 @@ export const TodoModal: React.FC<TodoModalProps> = ({
         user_id: user.id,
         title: title.trim(),
         description: description.trim() || undefined,
-        due_date: dueDate || undefined,
-        due_time: dueTime || undefined,
+        deadline: combineDeadline(dueDate, dueTime),
+        is_hard_deadline: false,
+        estimated_time: estimatedTime,
+        completed_time: editingTodo?.completed_time || 0,
+        is_divisible: true,
         priority,
         goal_id: goalId || undefined,
         is_recurring: isRecurring,
@@ -123,6 +151,17 @@ export const TodoModal: React.FC<TodoModalProps> = ({
                 onChange={(e) => setDueTime(e.target.value)}
               />
             </div>
+          </div>
+
+          <div className="form-group">
+            <label className="form-label">예상 소요 시간 (분)</label>
+            <input
+              type="number"
+              className="form-input"
+              min="1"
+              value={estimatedTime}
+              onChange={(e) => setEstimatedTime(parseInt(e.target.value) || 60)}
+            />
           </div>
 
           <div className="form-group">

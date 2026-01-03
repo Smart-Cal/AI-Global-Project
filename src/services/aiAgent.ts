@@ -8,6 +8,18 @@ import type {
   SuggestedEvent,
   Category,
 } from '../types';
+import { calculateGoalProgress } from '../types';
+
+// Goal이 활성 상태인지 확인
+function isGoalActive(goal: Goal): boolean {
+  return !['completed', 'failed'].includes(goal.status);
+}
+
+// deadline에서 날짜 추출
+function getDeadlineDate(deadline?: string): string | undefined {
+  if (!deadline) return undefined;
+  return deadline.split('T')[0];
+}
 
 const OPENAI_API_KEY = import.meta.env.VITE_OPENAI_API_KEY || '';
 
@@ -52,13 +64,13 @@ const summarizeEvents = (events: CalendarEvent[], categories: Category[], days: 
 
 // 목표 요약 (목표일과 진행률 강조)
 const summarizeGoals = (goals: Goal[], categories: Category[]): string => {
-  const activeGoals = goals.filter(g => g.is_active);
+  const activeGoals = goals.filter(isGoalActive);
   if (!activeGoals.length) return '설정된 목표가 없습니다.';
 
   const today = new Date().toISOString().split('T')[0];
 
   return activeGoals.map(g => {
-    const progress = `진행률: ${g.progress}%`;
+    const progress = `진행률: ${calculateGoalProgress(g)}%`;
     const category = categories.find(c => c.id === g.category_id);
     const categoryName = category ? `[${category.name}]` : '';
 
@@ -86,7 +98,8 @@ const summarizeTodos = (todos: Todo[]): string => {
   if (!pending.length) return '할 일이 없습니다.';
 
   return pending.slice(0, 10).map(t => {
-    const due = t.due_date ? ` (기한: ${t.due_date})` : '';
+    const deadlineDate = getDeadlineDate(t.deadline);
+    const due = deadlineDate ? ` (기한: ${deadlineDate})` : '';
     const priority = t.priority === 'high' ? '[긴급]' : t.priority === 'medium' ? '[보통]' : '[낮음]';
     return `${priority} ${t.title}${due}`;
   }).join('\n');
@@ -431,7 +444,7 @@ export const generateAutoRecommendations = async (
   todos: Todo[],
   categories: Category[]
 ): Promise<AgentMessage | null> => {
-  const activeGoals = goals.filter(g => g.is_active);
+  const activeGoals = goals.filter(isGoalActive);
   if (activeGoals.length === 0) return null;
 
   const goalSummary = activeGoals.map(g => {
