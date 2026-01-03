@@ -6861,3 +6861,66 @@ textarea.form-input {
     grid-template-columns: 1fr;
   }
 }
+
+/* 새 카테고리 추가 인라인 입력 */
+.new-category-input-container {
+  display: flex;
+  gap: 4px;
+  align-items: center;
+}
+
+.new-category-input {
+  flex: 1;
+  padding: 8px 10px;
+  border: 1px solid var(--primary);
+  border-radius: var(--border-radius);
+  font-size: 13px;
+  outline: none;
+}
+
+.new-category-input:focus {
+  border-color: var(--primary-dark);
+  box-shadow: 0 0 0 2px rgba(99, 102, 241, 0.1);
+}
+
+.new-category-confirm-btn,
+.new-category-cancel-btn {
+  width: 32px;
+  height: 32px;
+  border: none;
+  border-radius: var(--border-radius);
+  cursor: pointer;
+  font-size: 14px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.15s;
+}
+
+.new-category-confirm-btn {
+  background: var(--success);
+  color: white;
+}
+
+.new-category-confirm-btn:hover:not(:disabled) {
+  background: #059669;
+}
+
+.new-category-confirm-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.new-category-cancel-btn {
+  background: var(--bg-sidebar);
+  color: var(--text-secondary);
+}
+
+.new-category-cancel-btn:hover:not(:disabled) {
+  background: var(--border-medium);
+}
+
+.new-category-cancel-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}

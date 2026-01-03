@@ -48,7 +48,7 @@ const AssistantView: React.FC = () => {
   const { user } = useAuthStore();
   const { getActiveGoals } = useGoalStore();
   const { loadEvents, events } = useEventStore();
-  const { categories, fetchCategories } = useCategoryStore();
+  const { categories, fetchCategories, addCategory } = useCategoryStore();
   const { showToast } = useToast();
 
   // Conversations state
@@ -85,6 +85,14 @@ const AssistantView: React.FC = () => {
     rejectedCount: number;
     items?: any[];
   } | null>(null);
+
+  // 새 카테고리 추가 상태
+  const [showNewCategoryInput, setShowNewCategoryInput] = useState<{
+    type: 'event' | 'todo' | 'goal';
+    index: number;
+  } | null>(null);
+  const [newCategoryName, setNewCategoryName] = useState('');
+  const [isCreatingCategory, setIsCreatingCategory] = useState(false);
 
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const activeGoals = getActiveGoals();
@@ -631,6 +639,110 @@ const AssistantView: React.FC = () => {
     return conflictingEvents;
   };
 
+  // 새 카테고리 생성 핸들러
+  const handleCreateCategory = async (type: 'event' | 'todo' | 'goal', index: number) => {
+    if (!newCategoryName.trim()) {
+      showToast('카테고리 이름을 입력해주세요', 'error');
+      return;
+    }
+
+    setIsCreatingCategory(true);
+    try {
+      const newCategory = await addCategory(newCategoryName.trim(), '#6366f1');
+
+      // 생성된 카테고리를 해당 항목에 설정
+      if (type === 'event') {
+        handleEditEvent(index, 'category', newCategory.name);
+      } else if (type === 'todo') {
+        handleEditTodo(index, 'category', newCategory.name);
+      } else if (type === 'goal') {
+        handleEditGoal(index, 'category', newCategory.name);
+      }
+
+      showToast(`"${newCategory.name}" 카테고리가 생성되었습니다`, 'success');
+      setShowNewCategoryInput(null);
+      setNewCategoryName('');
+    } catch (error) {
+      console.error('Failed to create category:', error);
+      showToast('카테고리 생성에 실패했습니다', 'error');
+    } finally {
+      setIsCreatingCategory(false);
+    }
+  };
+
+  // 카테고리 선택 컴포넌트 렌더링
+  const renderCategorySelect = (
+    type: 'event' | 'todo' | 'goal',
+    index: number,
+    currentValue: string | undefined,
+    onChange: (value: string) => void,
+    disabled: boolean
+  ) => {
+    const isAddingNew = showNewCategoryInput?.type === type && showNewCategoryInput?.index === index;
+
+    if (isAddingNew) {
+      return (
+        <div className="new-category-input-container">
+          <input
+            type="text"
+            value={newCategoryName}
+            onChange={(e) => setNewCategoryName(e.target.value)}
+            placeholder="새 카테고리 이름"
+            className="new-category-input"
+            autoFocus
+            onKeyDown={(e) => {
+              if (e.key === 'Enter') {
+                handleCreateCategory(type, index);
+              } else if (e.key === 'Escape') {
+                setShowNewCategoryInput(null);
+                setNewCategoryName('');
+              }
+            }}
+            disabled={isCreatingCategory}
+          />
+          <button
+            className="new-category-confirm-btn"
+            onClick={() => handleCreateCategory(type, index)}
+            disabled={isCreatingCategory || !newCategoryName.trim()}
+          >
+            {isCreatingCategory ? '...' : '✓'}
+          </button>
+          <button
+            className="new-category-cancel-btn"
+            onClick={() => {
+              setShowNewCategoryInput(null);
+              setNewCategoryName('');
+            }}
+            disabled={isCreatingCategory}
+          >
+            ✗
+          </button>
+        </div>
+      );
+    }
+
+    return (
+      <select
+        value={currentValue || ''}
+        onChange={(e) => {
+          if (e.target.value === '__new__') {
+            setShowNewCategoryInput({ type, index });
+            setNewCategoryName('');
+          } else {
+            onChange(e.target.value);
+          }
+        }}
+        disabled={disabled}
+      >
+        <option value="">선택</option>
+        {categories.map(cat => (
+          <option key={cat.id} value={cat.name}>{cat.name}</option>
+        ))}
+        <option value="__new__">+ 새 카테고리 추가</option>
+      </select>
+    );
+  };
+
   // 일정 카드 렌더링 (인라인)
   const renderEventCard = (event: PendingEvent, index: number, isActive: boolean) => {
     const eventWithEdits = getEventWithEdits(index, event);
@@ -752,16 +864,13 @@ const AssistantView: React.FC = () => {
 
             <div className="event-card-row half">
               <label>카테고리</label>
-              <select
-                value={eventWithEdits.category || ''}
-                onChange={(e) => handleEditEvent(index, 'category', e.target.value)}
-                disabled={decision === 'rejected'}
-              >
-                <option value="">선택</option>
-                {categories.map(cat => (
-                  <option key={cat.id} value={cat.name}>{cat.name}</option>
-                ))}
-              </select>
+              {renderCategorySelect(
+                'event',
+                index,
+                eventWithEdits.category,
+                (value) => handleEditEvent(index, 'category', value),
+                decision === 'rejected'
+              )}
             </div>
           </div>
 
@@ -897,16 +1006,13 @@ const AssistantView: React.FC = () => {
 
           <div className="item-card-row">
             <label>카테고리</label>
-            <select
-              value={todoWithEdits.category || ''}
-              onChange={(e) => handleEditTodo(index, 'category', e.target.value)}
-              disabled={decision === 'rejected'}
-            >
-              <option value="">선택</option>
-              {categories.map(cat => (
-                <option key={cat.id} value={cat.name}>{cat.name}</option>
-              ))}
-            </select>
+            {renderCategorySelect(
+              'todo',
+              index,
+              todoWithEdits.category,
+              (value) => handleEditTodo(index, 'category', value),
+              decision === 'rejected'
+            )}
           </div>
 
           <div className="item-card-row">
@@ -1010,16 +1116,13 @@ const AssistantView: React.FC = () => {
 
           <div className="item-card-row">
             <label>카테고리</label>
-            <select
-              value={goalWithEdits.category || ''}
-              onChange={(e) => handleEditGoal(index, 'category', e.target.value)}
-              disabled={decision === 'rejected'}
-            >
-              <option value="">선택</option>
-              {categories.map(cat => (
-                <option key={cat.id} value={cat.name}>{cat.name}</option>
-              ))}
-            </select>
+            {renderCategorySelect(
+              'goal',
+              index,
+              goalWithEdits.category,
+              (value) => handleEditGoal(index, 'category', value),
+              decision === 'rejected'
+            )}
           </div>
 
           <div className="item-card-row">
