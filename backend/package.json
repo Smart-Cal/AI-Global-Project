@@ -4,6 +4,9 @@
   "type": "module",
   "description": "PALM - Personal AI Life Manager Backend",
   "main": "dist/index.js",
+  "engines": {
+    "node": ">=18.0.0"
+  },
   "scripts": {
     "dev": "tsx watch src/index.ts",
     "build": "tsc",
