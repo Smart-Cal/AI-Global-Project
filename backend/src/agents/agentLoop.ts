@@ -74,10 +74,11 @@ export class AgentLoop {
         categories: this.context.categories.map(c => c.name)
       });
 
-      console.log('[AgentLoop] Router result:', routerResult);
+      console.log('[AgentLoop] Router result:', JSON.stringify(routerResult, null, 2));
 
       // 2단계: Specialized Agent - 의도에 맞는 처리
       console.log(`[AgentLoop] Step 2: ${routerResult.intent} Agent`);
+      console.log('[AgentLoop] Extracted info:', JSON.stringify(routerResult.extractedInfo, null, 2));
       const agentContext = {
         userId: this.context.user_id,
         today,
@@ -90,14 +91,17 @@ export class AgentLoop {
       switch (routerResult.intent) {
         case 'event':
           result = await processEvent(routerResult, agentContext);
+          console.log('[AgentLoop] Event Agent result:', JSON.stringify(result, null, 2));
           break;
 
         case 'goal':
           result = await processGoal(routerResult, agentContext);
+          console.log('[AgentLoop] Goal Agent result:', JSON.stringify(result, null, 2));
           break;
 
         case 'todo':
           result = await processTodo(routerResult, agentContext);
+          console.log('[AgentLoop] Todo Agent result:', JSON.stringify(result, null, 2));
           break;
 
         case 'briefing':
