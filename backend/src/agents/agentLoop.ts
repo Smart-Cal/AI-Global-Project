@@ -106,7 +106,6 @@ export class AgentLoop {
         messages: currentMessages,
         tools: allToolDefinitions,
         tool_choice: 'auto',
-        response_format: { type: 'json_object' },
         temperature: 0.3
       });
 
@@ -175,7 +174,21 @@ export class AgentLoop {
    */
   private parseAgentResponse(content: string): AgentResponse {
     try {
-      const parsed = JSON.parse(content);
+      // JSON 블록 추출 시도 (```json ... ``` 형태)
+      let jsonContent = content;
+      const jsonMatch = content.match(/```json\s*([\s\S]*?)\s*```/);
+      if (jsonMatch) {
+        jsonContent = jsonMatch[1];
+      } else {
+        // { 로 시작하는 JSON 찾기
+        const jsonStart = content.indexOf('{');
+        const jsonEnd = content.lastIndexOf('}');
+        if (jsonStart !== -1 && jsonEnd !== -1 && jsonEnd > jsonStart) {
+          jsonContent = content.substring(jsonStart, jsonEnd + 1);
+        }
+      }
+
+      const parsed = JSON.parse(jsonContent);
 
       // 명확화가 필요한 경우
       if (parsed.needs_clarification && parsed.clarification_question) {
@@ -264,9 +277,13 @@ export class AgentLoop {
 
     } catch (error) {
       console.error('Failed to parse agent response:', content, error);
-      // JSON 파싱 실패 시 텍스트 그대로 반환
+      // JSON 파싱 실패 시 텍스트 그대로 반환 (마크다운 등 제거)
+      const cleanContent = content
+        .replace(/```json\s*/g, '')
+        .replace(/```\s*/g, '')
+        .trim();
       return {
-        message: content || '무엇을 도와드릴까요?'
+        message: cleanContent || '무엇을 도와드릴까요?'
       };
     }
   }
