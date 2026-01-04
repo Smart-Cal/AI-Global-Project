@@ -114,6 +114,88 @@ export async function getCurrentWeather(city: string): Promise<WeatherData | nul
 }
 
 /**
+ * 좌표로 현재 날씨 조회
+ * @param lat 위도
+ * @param lon 경도
+ */
+export async function getWeatherByCoords(lat: number, lon: number): Promise<{ weather: WeatherData; city: string } | null> {
+  const apiKey = process.env.OPENWEATHER_API_KEY;
+
+  if (!apiKey) {
+    console.warn('OPENWEATHER_API_KEY not set, using mock data');
+    return { weather: getMockWeather('Unknown'), city: 'Unknown' };
+  }
+
+  try {
+    const url = `https://api.openweathermap.org/data/2.5/weather?lat=${lat}&lon=${lon}&appid=${apiKey}&units=metric&lang=kr`;
+    const response = await fetch(url);
+
+    if (!response.ok) {
+      console.error(`Weather API error: ${response.status}`);
+      return null;
+    }
+
+    const data = await response.json() as {
+      weather: Array<{ icon: string; main: string; description: string }>;
+      main: { temp: number; feels_like: number; humidity: number };
+      wind: { speed: number };
+      name: string;
+    };
+    const conditionCode = data.weather[0].icon;
+    const condition = WEATHER_CONDITIONS[conditionCode] || data.weather[0].main;
+
+    return {
+      weather: {
+        temperature: Math.round(data.main.temp),
+        feels_like: Math.round(data.main.feels_like),
+        condition,
+        condition_code: conditionCode,
+        icon: `https://openweathermap.org/img/wn/${conditionCode}@2x.png`,
+        humidity: data.main.humidity,
+        wind_speed: data.wind.speed,
+        description: data.weather[0].description,
+        recommendation: getClothingRecommendation(data.main.temp, condition)
+      },
+      city: data.name
+    };
+  } catch (error) {
+    console.error('Weather API fetch error:', error);
+    return null;
+  }
+}
+
+/**
+ * 좌표로 도시명 조회 (역지오코딩)
+ * @param lat 위도
+ * @param lon 경도
+ */
+export async function getCityFromCoords(lat: number, lon: number): Promise<string | null> {
+  const apiKey = process.env.OPENWEATHER_API_KEY;
+
+  if (!apiKey) {
+    return null;
+  }
+
+  try {
+    const url = `https://api.openweathermap.org/geo/1.0/reverse?lat=${lat}&lon=${lon}&limit=1&appid=${apiKey}`;
+    const response = await fetch(url);
+
+    if (!response.ok) {
+      return null;
+    }
+
+    const data = await response.json() as Array<{ name: string; local_names?: { ko?: string } }>;
+    if (data.length === 0) return null;
+
+    // 한글 이름 우선, 없으면 영문 이름
+    return data[0].local_names?.ko || data[0].name;
+  } catch (error) {
+    console.error('Reverse geocoding error:', error);
+    return null;
+  }
+}
+
+/**
  * 5일 날씨 예보 조회
  * @param city 도시명
  */

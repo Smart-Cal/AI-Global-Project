@@ -641,12 +641,14 @@ export interface WeeklyBriefing {
   message: string;
 }
 
-export async function getMorningBriefing(): Promise<MorningBriefing> {
-  return apiRequest<MorningBriefing>('/briefing/morning');
+export async function getMorningBriefing(coords?: { lat: number; lon: number }): Promise<MorningBriefing> {
+  const params = coords ? `?lat=${coords.lat}&lon=${coords.lon}` : '';
+  return apiRequest<MorningBriefing>(`/briefing/morning${params}`);
 }
 
-export async function getEveningBriefing(): Promise<EveningBriefing> {
-  return apiRequest<EveningBriefing>('/briefing/evening');
+export async function getEveningBriefing(coords?: { lat: number; lon: number }): Promise<EveningBriefing> {
+  const params = coords ? `?lat=${coords.lat}&lon=${coords.lon}` : '';
+  return apiRequest<EveningBriefing>(`/briefing/evening${params}`);
 }
 
 export async function getWeeklyBriefing(): Promise<WeeklyBriefing> {
@@ -656,4 +658,12 @@ export async function getWeeklyBriefing(): Promise<WeeklyBriefing> {
 export async function getCurrentWeather(city?: string): Promise<WeatherInfo & { city: string; activity_recommendations: string[] }> {
   const params = city ? `?city=${encodeURIComponent(city)}` : '';
   return apiRequest(`/briefing/weather${params}`);
+}
+
+export async function getWeatherByCoords(lat: number, lon: number): Promise<WeatherInfo & { city: string; activity_recommendations: string[] }> {
+  return apiRequest(`/briefing/weather/coords?lat=${lat}&lon=${lon}`);
+}
+
+export async function reverseGeocode(lat: number, lon: number): Promise<{ city: string; lat: number; lon: number }> {
+  return apiRequest(`/briefing/geocode/reverse?lat=${lat}&lon=${lon}`);
 }

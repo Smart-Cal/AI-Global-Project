@@ -9,6 +9,8 @@ import {
 import {
   getCurrentWeather,
   getWeatherForecast,
+  getWeatherByCoords,
+  getCityFromCoords,
   getActivityRecommendation,
   WeatherData
 } from '../services/weather.js';
@@ -28,6 +30,7 @@ const openai = new OpenAI({
 /**
  * GET /api/briefing/morning
  * 아침 브리핑: 오늘 일정, 날씨, 미완료 할일, AI 메시지
+ * Query params: lat, lon (optional) - 좌표 기반 날씨 조회
  */
 router.get('/morning', authenticate, async (req: AuthRequest, res: Response) => {
   try {
@@ -40,13 +43,29 @@ router.get('/morning', authenticate, async (req: AuthRequest, res: Response) => 
     }
 
     const today = new Date().toISOString().split('T')[0];
-    const city = user.location || 'Seoul';
+
+    // 좌표가 있으면 좌표 기반, 없으면 도시명 기반
+    const lat = parseFloat(req.query.lat as string);
+    const lon = parseFloat(req.query.lon as string);
+    const hasCoords = !isNaN(lat) && !isNaN(lon);
+
+    let weather: WeatherData | null = null;
+    let city = user.location || 'Seoul';
+
+    if (hasCoords) {
+      const coordsResult = await getWeatherByCoords(lat, lon);
+      if (coordsResult) {
+        weather = coordsResult.weather;
+        city = coordsResult.city;
+      }
+    } else {
+      weather = await getCurrentWeather(city);
+    }
 
     // 병렬로 데이터 조회
-    const [events, todos, weather] = await Promise.all([
+    const [events, todos] = await Promise.all([
       getEventsByUser(userId, today, today),
-      getTodosByUser(userId),
-      getCurrentWeather(city)
+      getTodosByUser(userId)
     ]);
 
     // 오늘 일정만 필터링
@@ -92,6 +111,7 @@ router.get('/morning', authenticate, async (req: AuthRequest, res: Response) => 
 /**
  * GET /api/briefing/evening
  * 저녁 브리핑: 오늘 완료된 일정/할일, 달성률, 내일 첫 일정
+ * Query params: lat, lon (optional) - 좌표 기반 날씨 조회
  */
 router.get('/evening', authenticate, async (req: AuthRequest, res: Response) => {
   try {
@@ -109,14 +129,29 @@ router.get('/evening', authenticate, async (req: AuthRequest, res: Response) => 
     tomorrow.setDate(tomorrow.getDate() + 1);
     const tomorrowStr = tomorrow.toISOString().split('T')[0];
 
-    const city = user.location || 'Seoul';
+    // 좌표가 있으면 좌표 기반, 없으면 도시명 기반
+    const lat = parseFloat(req.query.lat as string);
+    const lon = parseFloat(req.query.lon as string);
+    const hasCoords = !isNaN(lat) && !isNaN(lon);
 
-    // 데이터 조회 (내일 날씨 포함)
-    const [todayEvents, tomorrowEvents, todos, tomorrowWeather] = await Promise.all([
+    let tomorrowWeather: WeatherData | null = null;
+    let city = user.location || 'Seoul';
+
+    if (hasCoords) {
+      const coordsResult = await getWeatherByCoords(lat, lon);
+      if (coordsResult) {
+        tomorrowWeather = coordsResult.weather;
+        city = coordsResult.city;
+      }
+    } else {
+      tomorrowWeather = await getCurrentWeather(city);
+    }
+
+    // 데이터 조회
+    const [todayEvents, tomorrowEvents, todos] = await Promise.all([
       getEventsByUser(userId, todayStr, todayStr),
       getEventsByUser(userId, tomorrowStr, tomorrowStr),
-      getTodosByUser(userId),
-      getCurrentWeather(city) // 내일 날씨 (현재 날씨로 대체, 실제로는 forecast 사용 권장)
+      getTodosByUser(userId)
     ]);
 
     // 오늘 완료된 일정
@@ -229,6 +264,68 @@ router.get('/weather/forecast', authenticate, async (req: AuthRequest, res: Resp
   } catch (error) {
     console.error('Get weather forecast error:', error);
     res.status(500).json({ error: 'Failed to get weather forecast' });
+  }
+});
+
+/**
+ * GET /api/briefing/weather/coords
+ * 좌표 기반 날씨 조회
+ */
+router.get('/weather/coords', authenticate, async (req: AuthRequest, res: Response) => {
+  try {
+    const lat = parseFloat(req.query.lat as string);
+    const lon = parseFloat(req.query.lon as string);
+
+    if (isNaN(lat) || isNaN(lon)) {
+      res.status(400).json({ error: 'Invalid coordinates. lat and lon are required.' });
+      return;
+    }
+
+    const result = await getWeatherByCoords(lat, lon);
+
+    if (!result) {
+      res.status(503).json({ error: 'Weather service unavailable' });
+      return;
+    }
+
+    const activities = getActivityRecommendation(result.weather);
+
+    res.json({
+      ...result.weather,
+      city: result.city,
+      activity_recommendations: activities
+    });
+  } catch (error) {
+    console.error('Get weather by coords error:', error);
+    res.status(500).json({ error: 'Failed to get weather' });
+  }
+});
+
+/**
+ * GET /api/briefing/geocode/reverse
+ * 좌표로 도시명 조회 (역지오코딩)
+ */
+router.get('/geocode/reverse', authenticate, async (req: AuthRequest, res: Response) => {
+  try {
+    const lat = parseFloat(req.query.lat as string);
+    const lon = parseFloat(req.query.lon as string);
+
+    if (isNaN(lat) || isNaN(lon)) {
+      res.status(400).json({ error: 'Invalid coordinates. lat and lon are required.' });
+      return;
+    }
+
+    const city = await getCityFromCoords(lat, lon);
+
+    if (!city) {
+      res.status(404).json({ error: 'City not found for given coordinates' });
+      return;
+    }
+
+    res.json({ city, lat, lon });
+  } catch (error) {
+    console.error('Reverse geocode error:', error);
+    res.status(500).json({ error: 'Failed to reverse geocode' });
   }
 });
 

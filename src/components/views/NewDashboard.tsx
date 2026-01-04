@@ -119,6 +119,7 @@ export const NewDashboard: React.FC<NewDashboardProps> = ({ onNavigate }) => {
   const [briefing, setBriefing] = useState<BriefingData | null>(null);
   const [briefingLoading, setBriefingLoading] = useState(false);
   const [briefingDismissed, setBriefingDismissed] = useState(false);
+  const [userCoords, setUserCoords] = useState<{ lat: number; lon: number } | null>(null);
 
   const today = new Date().toISOString().split('T')[0];
   const now = new Date();
@@ -142,6 +143,25 @@ export const NewDashboard: React.FC<NewDashboardProps> = ({ onNavigate }) => {
     if (currentHour < 18) return '좋은 오후예요';
     return '좋은 저녁이에요';
   };
+
+  // 사용자 위치 가져오기
+  useEffect(() => {
+    if ('geolocation' in navigator) {
+      navigator.geolocation.getCurrentPosition(
+        (position) => {
+          setUserCoords({
+            lat: position.coords.latitude,
+            lon: position.coords.longitude,
+          });
+        },
+        (error) => {
+          console.log('Geolocation not available or denied:', error.message);
+          // 위치 권한 거부해도 기본 도시로 진행
+        },
+        { timeout: 5000, maximumAge: 300000 } // 5초 타임아웃, 5분 캐시
+      );
+    }
+  }, []);
 
   // 데이터 로드
   useEffect(() => {
@@ -178,9 +198,12 @@ export const NewDashboard: React.FC<NewDashboardProps> = ({ onNavigate }) => {
 
       setBriefingLoading(true);
       try {
+        // 좌표가 있으면 전달, 없으면 undefined (서버에서 기본 도시 사용)
+        const coords = userCoords || undefined;
+
         if (briefingType === 'morning') {
           // 아침: 오늘 일정 + 날씨
-          const data = await api.getMorningBriefing();
+          const data = await api.getMorningBriefing(coords);
           setBriefing({
             type: 'morning',
             message: data.message,
@@ -190,7 +213,7 @@ export const NewDashboard: React.FC<NewDashboardProps> = ({ onNavigate }) => {
           });
         } else if (briefingType === 'afternoon') {
           // 오후: 아침 브리핑 데이터 사용하되 메시지만 다르게
-          const data = await api.getMorningBriefing();
+          const data = await api.getMorningBriefing(coords);
           setBriefing({
             type: 'afternoon',
             message: data.message,
@@ -200,7 +223,7 @@ export const NewDashboard: React.FC<NewDashboardProps> = ({ onNavigate }) => {
           });
         } else {
           // 저녁: 오늘 정리 + 내일 미리보기 + 내일 날씨
-          const data = await api.getEveningBriefing();
+          const data = await api.getEveningBriefing(coords);
           setBriefing({
             type: 'evening',
             message: data.message,
@@ -222,7 +245,7 @@ export const NewDashboard: React.FC<NewDashboardProps> = ({ onNavigate }) => {
     if (!isLoading) {
       loadBriefing();
     }
-  }, [isLoading, currentHour, today]);
+  }, [isLoading, currentHour, today, userCoords]);
 
   // 브리핑 닫기
   const dismissBriefing = () => {
