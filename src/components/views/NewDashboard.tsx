@@ -22,7 +22,7 @@ interface NewDashboardProps {
 }
 
 // 브리핑 타입 정의
-type BriefingType = 'morning' | 'evening' | null;
+type BriefingType = 'morning' | 'afternoon' | 'evening' | null;
 
 interface BriefingData {
   type: BriefingType;
@@ -97,14 +97,14 @@ function getWeatherIcon(condition: string): React.ReactNode {
   return <SunIcon size={24} style={{ color: '#FBBF24' }} />;
 }
 
-// 브리핑 타입 결정 함수
+// 브리핑 타입 결정 함수 (첫 접속 기반)
 function determineBriefingType(hour: number): BriefingType {
-  // 테스트: 항상 저녁 브리핑 표시
+  // 5시~12시: 아침 브리핑 (오늘 일정 + 날씨)
+  if (hour >= 5 && hour < 12) return 'morning';
+  // 12시~18시: 오후 브리핑 (남은 일정 + 진행상황)
+  if (hour >= 12 && hour < 18) return 'afternoon';
+  // 18시~5시: 저녁 브리핑 (오늘 정리 + 내일 미리보기)
   return 'evening';
-  // 5시~12시: 아침 브리핑
-  // if (hour >= 5 && hour < 12) return 'morning';
-  // 12시~5시(다음날): 저녁 브리핑 (항상 표시)
-  // return 'evening';
 }
 
 export const NewDashboard: React.FC<NewDashboardProps> = ({ onNavigate }) => {
@@ -178,6 +178,7 @@ export const NewDashboard: React.FC<NewDashboardProps> = ({ onNavigate }) => {
       setBriefingLoading(true);
       try {
         if (briefingType === 'morning') {
+          // 아침: 오늘 일정 + 날씨
           const data = await api.getMorningBriefing();
           setBriefing({
             type: 'morning',
@@ -186,7 +187,18 @@ export const NewDashboard: React.FC<NewDashboardProps> = ({ onNavigate }) => {
             todayEvents: data.today_events,
             incompleteTodos: data.incomplete_todos,
           });
+        } else if (briefingType === 'afternoon') {
+          // 오후: 아침 브리핑 데이터 사용하되 메시지만 다르게
+          const data = await api.getMorningBriefing();
+          setBriefing({
+            type: 'afternoon',
+            message: data.message,
+            weather: data.weather,
+            todayEvents: data.today_events,
+            incompleteTodos: data.incomplete_todos,
+          });
         } else {
+          // 저녁: 오늘 정리 + 내일 미리보기
           const data = await api.getEveningBriefing();
           setBriefing({
             type: 'evening',
@@ -294,6 +306,8 @@ export const NewDashboard: React.FC<NewDashboardProps> = ({ onNavigate }) => {
             marginBottom: '16px',
             background: briefing.type === 'morning'
               ? 'linear-gradient(135deg, #FEF3C7 0%, #FDE68A 100%)'
+              : briefing.type === 'afternoon'
+              ? 'linear-gradient(135deg, #DBEAFE 0%, #BFDBFE 100%)'
               : 'linear-gradient(135deg, #E0E7FF 0%, #C7D2FE 100%)',
             border: 'none',
             position: 'relative',
@@ -330,7 +344,7 @@ export const NewDashboard: React.FC<NewDashboardProps> = ({ onNavigate }) => {
                   width: '48px',
                   height: '48px',
                   borderRadius: '50%',
-                  background: briefing.type === 'morning' ? '#FBBF24' : '#818CF8',
+                  background: briefing.type === 'morning' ? '#FBBF24' : briefing.type === 'afternoon' ? '#3B82F6' : '#818CF8',
                   display: 'flex',
                   alignItems: 'center',
                   justifyContent: 'center',
@@ -338,16 +352,18 @@ export const NewDashboard: React.FC<NewDashboardProps> = ({ onNavigate }) => {
               >
                 {briefing.type === 'morning' ? (
                   <SunIcon size={28} style={{ color: 'white' }} />
+                ) : briefing.type === 'afternoon' ? (
+                  <CloudIcon size={28} style={{ color: 'white' }} />
                 ) : (
                   <MoonIcon size={28} style={{ color: 'white' }} />
                 )}
               </div>
               <div>
                 <h3 style={{ margin: 0, fontSize: '18px', fontWeight: 600, color: '#1F2937' }}>
-                  {briefing.type === 'morning' ? '아침 브리핑' : '저녁 브리핑'}
+                  {briefing.type === 'morning' ? '아침 브리핑' : briefing.type === 'afternoon' ? '오후 브리핑' : '저녁 브리핑'}
                 </h3>
                 <p style={{ margin: 0, fontSize: '13px', color: '#6B7280' }}>
-                  {briefing.type === 'morning' ? '오늘 하루를 준비해요' : '오늘 하루를 정리해요'}
+                  {briefing.type === 'morning' ? '오늘 하루를 준비해요' : briefing.type === 'afternoon' ? '남은 일정을 확인해요' : '오늘 하루를 정리해요'}
                 </p>
               </div>
             </div>
@@ -366,8 +382,8 @@ export const NewDashboard: React.FC<NewDashboardProps> = ({ onNavigate }) => {
               </p>
             </div>
 
-            {/* 아침 브리핑: 날씨 정보 */}
-            {briefing.type === 'morning' && briefing.weather && (
+            {/* 아침/오후 브리핑: 날씨 정보 */}
+            {(briefing.type === 'morning' || briefing.type === 'afternoon') && briefing.weather && (
               <div
                 style={{
                   display: 'flex',
