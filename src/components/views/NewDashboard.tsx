@@ -120,6 +120,7 @@ export const NewDashboard: React.FC<NewDashboardProps> = ({ onNavigate }) => {
   const [briefingLoading, setBriefingLoading] = useState(false);
   const [briefingDismissed, setBriefingDismissed] = useState(false);
   const [userCoords, setUserCoords] = useState<{ lat: number; lon: number } | null>(null);
+  const [locationReady, setLocationReady] = useState(false); // 위치 확인 완료 여부
 
   const today = new Date().toISOString().split('T')[0];
   const now = new Date();
@@ -149,17 +150,23 @@ export const NewDashboard: React.FC<NewDashboardProps> = ({ onNavigate }) => {
     if ('geolocation' in navigator) {
       navigator.geolocation.getCurrentPosition(
         (position) => {
+          console.log('Location obtained:', position.coords.latitude, position.coords.longitude);
           setUserCoords({
             lat: position.coords.latitude,
             lon: position.coords.longitude,
           });
+          setLocationReady(true);
         },
         (error) => {
-          console.log('Geolocation not available or denied:', error.message);
+          console.log('Geolocation error:', error.code, error.message);
           // 위치 권한 거부해도 기본 도시로 진행
+          setLocationReady(true);
         },
-        { timeout: 5000, maximumAge: 300000 } // 5초 타임아웃, 5분 캐시
+        { timeout: 10000, maximumAge: 300000 } // 10초 타임아웃, 5분 캐시
       );
+    } else {
+      console.log('Geolocation not supported');
+      setLocationReady(true);
     }
   }, []);
 
@@ -242,10 +249,11 @@ export const NewDashboard: React.FC<NewDashboardProps> = ({ onNavigate }) => {
       }
     };
 
-    if (!isLoading) {
+    // 데이터 로딩 완료 && 위치 확인 완료 후 브리핑 로드
+    if (!isLoading && locationReady) {
       loadBriefing();
     }
-  }, [isLoading, currentHour, today, userCoords]);
+  }, [isLoading, locationReady, currentHour, today, userCoords]);
 
   // 브리핑 닫기
   const dismissBriefing = () => {
