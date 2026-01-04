@@ -99,12 +99,12 @@ function getWeatherIcon(condition: string): React.ReactNode {
 
 // 브리핑 타입 결정 함수
 function determineBriefingType(hour: number): BriefingType {
-  // 5시~14시: 아침 브리핑
-  if (hour >= 5 && hour < 14) return 'morning';
-  // 14시~23시: 저녁 브리핑
-  if (hour >= 14 && hour < 23) return 'evening';
-  // 23시~5시: 브리핑 없음
-  return null;
+  // 테스트: 항상 아침 브리핑 표시
+  return 'morning';
+  // 5시~12시: 아침 브리핑
+  // if (hour >= 5 && hour < 12) return 'morning';
+  // 12시~5시(다음날): 저녁 브리핑 (항상 표시)
+  // return 'evening';
 }
 
 export const NewDashboard: React.FC<NewDashboardProps> = ({ onNavigate }) => {
