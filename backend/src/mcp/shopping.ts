@@ -2,15 +2,14 @@
  * Shopping MCP Client
  *
  * 쇼핑 관련 기능을 제공합니다.
- * - 상품 검색
+ * - 상품 검색 (SerpAPI Google Shopping + Naver Shopping)
  * - 가격 비교
  * - 상품 상세 정보
  * - 목표 연계 추천 (예: 운동 목표 → 운동용품)
  *
- * 참고: 실제 쇼핑 API 연동 시 다음 옵션 고려
- * 1. Naver Shopping API (한국)
- * 2. Coupang Partners API
- * 3. Amazon Product Advertising API
+ * 지원 API:
+ * 1. SerpAPI (Google Shopping) - 글로벌 상품 검색
+ * 2. Naver Shopping API (한국) - 한국 상품 검색
  */
 
 import axios from 'axios';
@@ -74,16 +73,26 @@ export interface GoalBasedRecommendation {
 export class ShoppingMCP {
   private naverClientId: string;
   private naverClientSecret: string;
+  private serpApiKey: string;
 
   constructor(config?: {
     naverClientId?: string;
     naverClientSecret?: string;
+    serpApiKey?: string;
   }) {
     this.naverClientId = config?.naverClientId || process.env.NAVER_CLIENT_ID || '';
     this.naverClientSecret = config?.naverClientSecret || process.env.NAVER_CLIENT_SECRET || '';
+    this.serpApiKey = config?.serpApiKey || process.env.SERPAPI_API_KEY || '';
 
-    if (!this.naverClientId) {
-      console.warn('[ShoppingMCP] Naver API credentials not set. Shopping features will use mock data.');
+    if (!this.serpApiKey && !this.naverClientId) {
+      console.warn('[ShoppingMCP] No shopping API credentials set. Shopping features will use mock data.');
+    } else {
+      if (this.serpApiKey) {
+        console.log('[ShoppingMCP] SerpAPI (Google Shopping) enabled');
+      }
+      if (this.naverClientId) {
+        console.log('[ShoppingMCP] Naver Shopping API enabled');
+      }
     }
   }
 
@@ -92,7 +101,7 @@ export class ShoppingMCP {
   // ====================================================
 
   /**
-   * 상품 검색 (네이버 쇼핑 API)
+   * 상품 검색 (SerpAPI Google Shopping 우선, 실패 시 Naver)
    */
   async searchProducts(options: {
     query: string;
@@ -100,34 +109,123 @@ export class ShoppingMCP {
     sort?: 'sim' | 'date' | 'asc' | 'dsc';  // 정렬 (정확도/날짜/가격낮은순/가격높은순)
     minPrice?: number;
     maxPrice?: number;
+    source?: 'serpapi' | 'naver' | 'auto';  // 검색 소스 선택
   }): Promise<ProductSearchResult[]> {
-    // API 키가 없으면 Mock 데이터 반환
-    if (!this.naverClientId) {
-      return this.getMockSearchResults(options.query);
-    }
+    const source = options.source || 'auto';
 
-    try {
-      const response = await axios.get('https://openapi.naver.com/v1/search/shop.json', {
-        headers: {
-          'X-Naver-Client-Id': this.naverClientId,
-          'X-Naver-Client-Secret': this.naverClientSecret
-        },
-        params: {
-          query: options.query,
-          display: options.display || 10,
-          sort: options.sort || 'sim',
-          filter: options.minPrice || options.maxPrice
-            ? `price:${options.minPrice || 0}~${options.maxPrice || 99999999}`
-            : undefined
+    // SerpAPI 우선 시도
+    if ((source === 'serpapi' || source === 'auto') && this.serpApiKey) {
+      try {
+        const results = await this.searchWithSerpAPI(options);
+        if (results.length > 0) {
+          return results;
         }
-      });
-
-      return response.data.items.map(this.mapNaverProduct);
-    } catch (error) {
-      console.error('[ShoppingMCP] searchProducts error:', error);
-      return this.getMockSearchResults(options.query);
+      } catch (error) {
+        console.error('[ShoppingMCP] SerpAPI error, falling back to Naver:', error);
+      }
     }
+
+    // Naver API 시도
+    if ((source === 'naver' || source === 'auto') && this.naverClientId) {
+      try {
+        const response = await axios.get('https://openapi.naver.com/v1/search/shop.json', {
+          headers: {
+            'X-Naver-Client-Id': this.naverClientId,
+            'X-Naver-Client-Secret': this.naverClientSecret
+          },
+          params: {
+            query: options.query,
+            display: options.display || 10,
+            sort: options.sort || 'sim',
+            filter: options.minPrice || options.maxPrice
+              ? `price:${options.minPrice || 0}~${options.maxPrice || 99999999}`
+              : undefined
+          }
+        });
+
+        return response.data.items.map(this.mapNaverProduct);
+      } catch (error) {
+        console.error('[ShoppingMCP] Naver API error:', error);
+      }
+    }
+
+    // 모든 API 실패 시 Mock 데이터
+    return this.getMockSearchResults(options.query);
   }
+
+  /**
+   * SerpAPI Google Shopping 검색
+   */
+  private async searchWithSerpAPI(options: {
+    query: string;
+    display?: number;
+    minPrice?: number;
+    maxPrice?: number;
+  }): Promise<ProductSearchResult[]> {
+    const params: Record<string, string | number> = {
+      api_key: this.serpApiKey,
+      engine: 'google_shopping',
+      q: options.query,
+      num: options.display || 10,
+      hl: 'ko',  // 한국어
+      gl: 'kr', // 한국
+    };
+
+    if (options.minPrice) {
+      params.tbs = `mr:1,price:1,ppr_min:${options.minPrice}`;
+    }
+    if (options.maxPrice) {
+      params.tbs = params.tbs
+        ? `${params.tbs},ppr_max:${options.maxPrice}`
+        : `mr:1,price:1,ppr_max:${options.maxPrice}`;
+    }
+
+    const response = await axios.get('https://serpapi.com/search', { params });
+
+    if (!response.data.shopping_results) {
+      console.log('[ShoppingMCP] No shopping results from SerpAPI');
+      return [];
+    }
+
+    return response.data.shopping_results.map(this.mapSerpAPIProduct);
+  }
+
+  /**
+   * SerpAPI 결과 매핑
+   */
+  private mapSerpAPIProduct = (item: any): ProductSearchResult => {
+    // 가격 파싱 (예: "₩29,900" → 29900)
+    let price = 0;
+    let originalPrice: number | undefined;
+
+    if (item.price) {
+      const priceStr = item.price.replace(/[^0-9]/g, '');
+      price = parseInt(priceStr, 10) || 0;
+    } else if (item.extracted_price) {
+      price = item.extracted_price;
+    }
+
+    if (item.old_price) {
+      const oldPriceStr = item.old_price.replace(/[^0-9]/g, '');
+      originalPrice = parseInt(oldPriceStr, 10) || undefined;
+    }
+
+    return {
+      id: item.product_id || `serp-${Math.random().toString(36).substr(2, 9)}`,
+      title: item.title || 'Unknown Product',
+      price: price,
+      originalPrice: originalPrice,
+      discountRate: originalPrice && price ? Math.round((1 - price / originalPrice) * 100) : undefined,
+      image: item.thumbnail || 'https://via.placeholder.com/200',
+      link: item.link || item.product_link || '#',
+      mall: item.source || item.seller || 'Unknown',
+      category: item.category || '쇼핑',
+      rating: item.rating || undefined,
+      reviewCount: item.reviews || undefined,
+      isRocket: false,
+      isFreeShipping: item.delivery?.toLowerCase().includes('free') || false
+    };
+  };
 
   /**
    * 조건 기반 검색 (필터링 강화)

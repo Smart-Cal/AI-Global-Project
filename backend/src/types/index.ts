@@ -483,7 +483,7 @@ export interface AgentResponse {
   mcp_data?: MCPResponseData;
 }
 
-// MCP 응답 데이터 (장소 추천, 쇼핑 검색 등)
+// MCP 응답 데이터 (장소 추천, 쇼핑 검색, 뉴스 등)
 export interface MCPResponseData {
   // 장소 추천 결과
   places?: MCPPlaceResult[];
@@ -493,6 +493,8 @@ export interface MCPResponseData {
   products?: MCPProductResult[];
   // 선물 추천 결과
   gifts?: MCPProductResult[];
+  // 뉴스 검색 결과
+  news?: MCPNewsResult[];
   // 그룹 일정 매칭 결과
   group_schedule?: MCPGroupScheduleResult;
   // 가능한 시간 슬롯 (그룹 약속용)
@@ -526,13 +528,31 @@ export interface MCPProductResult {
   title: string;
   price: number;
   originalPrice?: number;
-  currency: string;
+  currency?: string;
   rating?: number;
   reviewCount?: number;
   seller?: string;
+  mall?: string;
+  image?: string;
   imageUrl?: string;
+  link?: string;
   productUrl?: string;
   isPrime?: boolean;
+  discountRate?: number;
+  isFreeShipping?: boolean;
+}
+
+export interface MCPNewsResult {
+  id: string;
+  title: string;
+  description?: string;
+  content?: string;
+  url: string;
+  imageUrl?: string;
+  source: string;
+  author?: string;
+  publishedAt: string;
+  category?: string;
 }
 
 export interface MCPGroupScheduleResult {

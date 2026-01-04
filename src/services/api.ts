@@ -145,13 +145,31 @@ export interface MCPProductResult {
   title: string;
   price: number;
   originalPrice?: number;
-  currency: string;
+  currency?: string;
   rating?: number;
   reviewCount?: number;
   seller?: string;
+  mall?: string;
+  image?: string;
   imageUrl?: string;
+  link?: string;
   productUrl?: string;
   isPrime?: boolean;
+  discountRate?: number;
+  isFreeShipping?: boolean;
+}
+
+export interface MCPNewsResult {
+  id: string;
+  title: string;
+  description?: string;
+  content?: string;
+  url: string;
+  imageUrl?: string;
+  source: string;
+  author?: string;
+  publishedAt: string;
+  category?: string;
 }
 
 export interface MCPGroupScheduleResult {
@@ -177,6 +195,7 @@ export interface MCPResponseData {
   restaurants?: MCPPlaceResult[];
   products?: MCPProductResult[];
   gifts?: MCPProductResult[];
+  news?: MCPNewsResult[];
   group_schedule?: MCPGroupScheduleResult;
   availableSlots?: {
     date: string;

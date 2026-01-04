@@ -22,7 +22,9 @@
       "Bash(git rebase:*)",
       "Bash(GIT_EDITOR=true git rebase:*)",
       "Bash(git fetch:*)",
-      "Bash(npm run dev:*)"
+      "Bash(npm run dev:*)",
+      "Bash(npm run build:backend:*)",
+      "Bash(npm run build:frontend:*)"
     ]
   }
 }
