@@ -594,3 +594,64 @@ export async function recalculateGoalProgress(
 export async function deleteGoal(id: string): Promise<void> {
   await apiRequest(`/goals/${id}`, { method: 'DELETE' });
 }
+
+// ==============================================
+// Briefing API
+// ==============================================
+
+export interface WeatherInfo {
+  temperature: number;
+  condition: string;
+  icon: string;
+  recommendation: string;
+}
+
+export interface MorningBriefing {
+  weather?: WeatherInfo;
+  today_events: Event[];
+  incomplete_todos: Todo[];
+  message: string;
+}
+
+export interface EveningBriefing {
+  completed_events: Event[];
+  completed_todos: Todo[];
+  completion_rate: number;
+  tomorrow_first_event?: Event;
+  message: string;
+}
+
+export interface WeeklyBriefing {
+  week_range: { start: string; end: string };
+  statistics: {
+    total_events: number;
+    completed_events: number;
+    completed_todos: number;
+    completed_goals: number;
+    active_goals: number;
+    completion_rate: number;
+  };
+  next_week: {
+    range: { start: string; end: string };
+    event_count: number;
+    events: Event[];
+  };
+  message: string;
+}
+
+export async function getMorningBriefing(): Promise<MorningBriefing> {
+  return apiRequest<MorningBriefing>('/briefing/morning');
+}
+
+export async function getEveningBriefing(): Promise<EveningBriefing> {
+  return apiRequest<EveningBriefing>('/briefing/evening');
+}
+
+export async function getWeeklyBriefing(): Promise<WeeklyBriefing> {
+  return apiRequest<WeeklyBriefing>('/briefing/weekly');
+}
+
+export async function getCurrentWeather(city?: string): Promise<WeatherInfo & { city: string; activity_recommendations: string[] }> {
+  const params = city ? `?city=${encodeURIComponent(city)}` : '';
+  return apiRequest(`/briefing/weather${params}`);
+}

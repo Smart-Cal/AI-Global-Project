@@ -10,10 +10,30 @@ import {
   CheckIcon,
   ChevronRightIcon,
   SparkleIcon,
+  SunIcon,
+  MoonIcon,
+  CloudIcon,
+  ThermometerIcon,
 } from '../Icons';
+import * as api from '../../services/api';
 
 interface NewDashboardProps {
   onNavigate: (view: 'assistant' | 'calendar' | 'schedule' | 'goal') => void;
+}
+
+// 브리핑 타입 정의
+type BriefingType = 'morning' | 'evening' | null;
+
+interface BriefingData {
+  type: BriefingType;
+  message: string;
+  weather?: api.WeatherInfo;
+  todayEvents?: api.Event[];
+  incompleteTodos?: api.Todo[];
+  completedEvents?: api.Event[];
+  completedTodos?: api.Todo[];
+  completionRate?: number;
+  tomorrowFirstEvent?: api.Event;
 }
 
 // 시간 포맷팅 헬퍼
@@ -65,6 +85,28 @@ function getProgressColor(progress: number): string {
   return '#9CA3AF';
 }
 
+// 날씨 아이콘 선택 헬퍼
+function getWeatherIcon(condition: string): React.ReactNode {
+  const lowerCondition = condition.toLowerCase();
+  if (lowerCondition.includes('rain') || lowerCondition.includes('비')) {
+    return <CloudIcon size={24} style={{ color: '#60A5FA' }} />;
+  }
+  if (lowerCondition.includes('cloud') || lowerCondition.includes('구름') || lowerCondition.includes('흐림')) {
+    return <CloudIcon size={24} style={{ color: '#9CA3AF' }} />;
+  }
+  return <SunIcon size={24} style={{ color: '#FBBF24' }} />;
+}
+
+// 브리핑 타입 결정 함수
+function determineBriefingType(hour: number): BriefingType {
+  // 5시~14시: 아침 브리핑
+  if (hour >= 5 && hour < 14) return 'morning';
+  // 14시~23시: 저녁 브리핑
+  if (hour >= 14 && hour < 23) return 'evening';
+  // 23시~5시: 브리핑 없음
+  return null;
+}
+
 export const NewDashboard: React.FC<NewDashboardProps> = ({ onNavigate }) => {
   const { user } = useAuthStore();
   const { events, getEventsByDate, loadEvents } = useEventStore();
@@ -73,6 +115,9 @@ export const NewDashboard: React.FC<NewDashboardProps> = ({ onNavigate }) => {
   const { categories } = useCategoryStore();
 
   const [isLoading, setIsLoading] = useState(true);
+  const [briefing, setBriefing] = useState<BriefingData | null>(null);
+  const [briefingLoading, setBriefingLoading] = useState(false);
+  const [briefingDismissed, setBriefingDismissed] = useState(false);
 
   const today = new Date().toISOString().split('T')[0];
   const now = new Date();
@@ -113,6 +158,66 @@ export const NewDashboard: React.FC<NewDashboardProps> = ({ onNavigate }) => {
     };
     loadData();
   }, []);
+
+  // 브리핑 로드
+  useEffect(() => {
+    const loadBriefing = async () => {
+      const briefingType = determineBriefingType(currentHour);
+      if (!briefingType) {
+        setBriefing(null);
+        return;
+      }
+
+      // 세션 스토리지에서 이미 본 브리핑인지 확인
+      const dismissedKey = `briefing_dismissed_${briefingType}_${today}`;
+      if (sessionStorage.getItem(dismissedKey)) {
+        setBriefingDismissed(true);
+        return;
+      }
+
+      setBriefingLoading(true);
+      try {
+        if (briefingType === 'morning') {
+          const data = await api.getMorningBriefing();
+          setBriefing({
+            type: 'morning',
+            message: data.message,
+            weather: data.weather,
+            todayEvents: data.today_events,
+            incompleteTodos: data.incomplete_todos,
+          });
+        } else {
+          const data = await api.getEveningBriefing();
+          setBriefing({
+            type: 'evening',
+            message: data.message,
+            completedEvents: data.completed_events,
+            completedTodos: data.completed_todos,
+            completionRate: data.completion_rate,
+            tomorrowFirstEvent: data.tomorrow_first_event,
+          });
+        }
+      } catch (error) {
+        console.error('Failed to load briefing:', error);
+        setBriefing(null);
+      } finally {
+        setBriefingLoading(false);
+      }
+    };
+
+    if (!isLoading) {
+      loadBriefing();
+    }
+  }, [isLoading, currentHour, today]);
+
+  // 브리핑 닫기
+  const dismissBriefing = () => {
+    if (briefing?.type) {
+      const dismissedKey = `briefing_dismissed_${briefing.type}_${today}`;
+      sessionStorage.setItem(dismissedKey, 'true');
+    }
+    setBriefingDismissed(true);
+  };
 
   // 오늘 일정
   const todayEvents = getEventsByDate(today).sort((a, b) => {
@@ -180,6 +285,212 @@ export const NewDashboard: React.FC<NewDashboardProps> = ({ onNavigate }) => {
           })}
         </p>
       </div>
+
+      {/* 브리핑 카드 */}
+      {briefing && !briefingDismissed && (
+        <div
+          className="card"
+          style={{
+            marginBottom: '16px',
+            background: briefing.type === 'morning'
+              ? 'linear-gradient(135deg, #FEF3C7 0%, #FDE68A 100%)'
+              : 'linear-gradient(135deg, #E0E7FF 0%, #C7D2FE 100%)',
+            border: 'none',
+            position: 'relative',
+          }}
+        >
+          {/* 닫기 버튼 */}
+          <button
+            onClick={dismissBriefing}
+            style={{
+              position: 'absolute',
+              top: '12px',
+              right: '12px',
+              background: 'rgba(0,0,0,0.1)',
+              border: 'none',
+              borderRadius: '50%',
+              width: '24px',
+              height: '24px',
+              cursor: 'pointer',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              fontSize: '14px',
+              color: '#6B7280',
+            }}
+          >
+            ×
+          </button>
+
+          <div style={{ padding: '20px' }}>
+            {/* 헤더 */}
+            <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '16px' }}>
+              <div
+                style={{
+                  width: '48px',
+                  height: '48px',
+                  borderRadius: '50%',
+                  background: briefing.type === 'morning' ? '#FBBF24' : '#818CF8',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                }}
+              >
+                {briefing.type === 'morning' ? (
+                  <SunIcon size={28} style={{ color: 'white' }} />
+                ) : (
+                  <MoonIcon size={28} style={{ color: 'white' }} />
+                )}
+              </div>
+              <div>
+                <h3 style={{ margin: 0, fontSize: '18px', fontWeight: 600, color: '#1F2937' }}>
+                  {briefing.type === 'morning' ? '아침 브리핑' : '저녁 브리핑'}
+                </h3>
+                <p style={{ margin: 0, fontSize: '13px', color: '#6B7280' }}>
+                  {briefing.type === 'morning' ? '오늘 하루를 준비해요' : '오늘 하루를 정리해요'}
+                </p>
+              </div>
+            </div>
+
+            {/* AI 메시지 */}
+            <div
+              style={{
+                background: 'rgba(255,255,255,0.7)',
+                borderRadius: '12px',
+                padding: '16px',
+                marginBottom: '16px',
+              }}
+            >
+              <p style={{ margin: 0, fontSize: '15px', lineHeight: 1.6, color: '#374151' }}>
+                {briefing.message}
+              </p>
+            </div>
+
+            {/* 아침 브리핑: 날씨 정보 */}
+            {briefing.type === 'morning' && briefing.weather && (
+              <div
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '16px',
+                  background: 'rgba(255,255,255,0.5)',
+                  borderRadius: '8px',
+                  padding: '12px 16px',
+                }}
+              >
+                {getWeatherIcon(briefing.weather.condition)}
+                <div style={{ flex: 1 }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                    <span style={{ fontSize: '24px', fontWeight: 600, color: '#1F2937' }}>
+                      {briefing.weather.temperature}°C
+                    </span>
+                    <span style={{ fontSize: '14px', color: '#6B7280' }}>
+                      {briefing.weather.condition}
+                    </span>
+                  </div>
+                  {briefing.weather.recommendation && (
+                    <p style={{ margin: '4px 0 0', fontSize: '13px', color: '#6B7280' }}>
+                      {briefing.weather.recommendation}
+                    </p>
+                  )}
+                </div>
+              </div>
+            )}
+
+            {/* 저녁 브리핑: 달성률 */}
+            {briefing.type === 'evening' && briefing.completionRate !== undefined && (
+              <div
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '16px',
+                  background: 'rgba(255,255,255,0.5)',
+                  borderRadius: '8px',
+                  padding: '12px 16px',
+                }}
+              >
+                <div
+                  style={{
+                    width: '48px',
+                    height: '48px',
+                    borderRadius: '50%',
+                    background: `conic-gradient(${getProgressColor(briefing.completionRate)} ${briefing.completionRate * 3.6}deg, #E5E7EB 0deg)`,
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    position: 'relative',
+                  }}
+                >
+                  <div
+                    style={{
+                      width: '40px',
+                      height: '40px',
+                      borderRadius: '50%',
+                      background: 'white',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      fontSize: '12px',
+                      fontWeight: 600,
+                    }}
+                  >
+                    {briefing.completionRate}%
+                  </div>
+                </div>
+                <div>
+                  <div style={{ fontSize: '14px', fontWeight: 500, color: '#1F2937' }}>
+                    오늘 달성률
+                  </div>
+                  <div style={{ fontSize: '13px', color: '#6B7280' }}>
+                    일정 {briefing.completedEvents?.length || 0}개, 할일 {briefing.completedTodos?.length || 0}개 완료
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* 저녁 브리핑: 내일 첫 일정 */}
+            {briefing.type === 'evening' && briefing.tomorrowFirstEvent && (
+              <div
+                style={{
+                  marginTop: '12px',
+                  background: 'rgba(255,255,255,0.5)',
+                  borderRadius: '8px',
+                  padding: '12px 16px',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '12px',
+                }}
+              >
+                <CalendarIcon size={20} style={{ color: '#6366F1' }} />
+                <div>
+                  <div style={{ fontSize: '12px', color: '#6B7280' }}>내일 첫 일정</div>
+                  <div style={{ fontSize: '14px', fontWeight: 500, color: '#1F2937' }}>
+                    {briefing.tomorrowFirstEvent.start_time && formatTime(briefing.tomorrowFirstEvent.start_time)} {briefing.tomorrowFirstEvent.title}
+                  </div>
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* 브리핑 로딩 */}
+      {briefingLoading && (
+        <div
+          className="card"
+          style={{
+            marginBottom: '16px',
+            padding: '24px',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            gap: '12px',
+          }}
+        >
+          <div className="spinner" style={{ width: '20px', height: '20px' }} />
+          <span style={{ color: '#6B7280' }}>브리핑을 준비하고 있어요...</span>
+        </div>
+      )}
 
       {/* 메인 그리드 - 2x2 */}
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '16px' }}>
