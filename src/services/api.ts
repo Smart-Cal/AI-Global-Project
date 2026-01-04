@@ -618,6 +618,7 @@ export interface EveningBriefing {
   completed_todos: Todo[];
   completion_rate: number;
   tomorrow_first_event?: Event;
+  tomorrow_weather?: WeatherInfo;
   message: string;
 }
 

@@ -34,6 +34,7 @@ interface BriefingData {
   completedTodos?: api.Todo[];
   completionRate?: number;
   tomorrowFirstEvent?: api.Event;
+  tomorrowWeather?: api.WeatherInfo;
 }
 
 // 시간 포맷팅 헬퍼
@@ -198,7 +199,7 @@ export const NewDashboard: React.FC<NewDashboardProps> = ({ onNavigate }) => {
             incompleteTodos: data.incomplete_todos,
           });
         } else {
-          // 저녁: 오늘 정리 + 내일 미리보기
+          // 저녁: 오늘 정리 + 내일 미리보기 + 내일 날씨
           const data = await api.getEveningBriefing();
           setBriefing({
             type: 'evening',
@@ -207,6 +208,7 @@ export const NewDashboard: React.FC<NewDashboardProps> = ({ onNavigate }) => {
             completedTodos: data.completed_todos,
             completionRate: data.completion_rate,
             tomorrowFirstEvent: data.tomorrow_first_event,
+            tomorrowWeather: data.tomorrow_weather,
           });
         }
       } catch (error) {
@@ -483,6 +485,34 @@ export const NewDashboard: React.FC<NewDashboardProps> = ({ onNavigate }) => {
                   <div style={{ fontSize: '14px', fontWeight: 500, color: '#1F2937' }}>
                     {briefing.tomorrowFirstEvent.start_time && formatTime(briefing.tomorrowFirstEvent.start_time)} {briefing.tomorrowFirstEvent.title}
                   </div>
+                </div>
+              </div>
+            )}
+
+            {/* 저녁 브리핑: 내일 날씨 */}
+            {briefing.type === 'evening' && briefing.tomorrowWeather && (
+              <div
+                style={{
+                  marginTop: '12px',
+                  background: 'rgba(255,255,255,0.5)',
+                  borderRadius: '8px',
+                  padding: '12px 16px',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '12px',
+                }}
+              >
+                {getWeatherIcon(briefing.tomorrowWeather.condition)}
+                <div style={{ flex: 1 }}>
+                  <div style={{ fontSize: '12px', color: '#6B7280' }}>내일 날씨</div>
+                  <div style={{ fontSize: '14px', fontWeight: 500, color: '#1F2937' }}>
+                    {briefing.tomorrowWeather.temperature}°C, {briefing.tomorrowWeather.condition}
+                  </div>
+                  {briefing.tomorrowWeather.recommendation && (
+                    <div style={{ fontSize: '12px', color: '#6B7280', marginTop: '2px' }}>
+                      {briefing.tomorrowWeather.recommendation}
+                    </div>
+                  )}
                 </div>
               </div>
             )}

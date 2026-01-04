@@ -358,6 +358,12 @@ export interface EveningBriefing {
   completed_todos: Todo[];
   completion_rate: number;        // 오늘 달성률 (%)
   tomorrow_first_event?: Event;
+  tomorrow_weather?: {
+    temperature: number;
+    condition: string;
+    icon: string;
+    recommendation: string;
+  };
   message: string;                // AI 생성 브리핑 메시지
 }
 

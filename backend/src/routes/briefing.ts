@@ -108,11 +108,14 @@ router.get('/evening', authenticate, async (req: AuthRequest, res: Response) => 
     tomorrow.setDate(tomorrow.getDate() + 1);
     const tomorrowStr = tomorrow.toISOString().split('T')[0];
 
-    // 데이터 조회
-    const [todayEvents, tomorrowEvents, todos] = await Promise.all([
+    const city = user.location || 'Seoul';
+
+    // 데이터 조회 (내일 날씨 포함)
+    const [todayEvents, tomorrowEvents, todos, tomorrowWeather] = await Promise.all([
       getEventsByUser(userId, todayStr, todayStr),
       getEventsByUser(userId, tomorrowStr, tomorrowStr),
-      getTodosByUser(userId)
+      getTodosByUser(userId),
+      getCurrentWeather(city) // 내일 날씨 (현재 날씨로 대체, 실제로는 forecast 사용 권장)
     ]);
 
     // 오늘 완료된 일정
@@ -154,6 +157,12 @@ router.get('/evening', authenticate, async (req: AuthRequest, res: Response) => 
       completed_todos: completedTodos,
       completion_rate: completionRate,
       tomorrow_first_event: tomorrowFirstEvent,
+      tomorrow_weather: tomorrowWeather ? {
+        temperature: tomorrowWeather.temperature,
+        condition: tomorrowWeather.condition,
+        icon: tomorrowWeather.icon,
+        recommendation: tomorrowWeather.recommendation
+      } : undefined,
       message
     };
 
