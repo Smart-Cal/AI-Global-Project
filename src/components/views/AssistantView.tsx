@@ -33,18 +33,18 @@ interface LocalMessage {
   pending_events?: PendingEvent[];
   pending_todos?: PendingTodo[];
   pending_goals?: PendingGoal[];
-  mcp_data?: MCPResponseData;  // MCP 데이터 ("행동하는 AI" 기능)
+  mcp_data?: MCPResponseData;  // MCP data ("Acting AI" feature)
   created_at: string;
 }
 
-// 각 항목의 선택 상태
+// Selection state for each item
 type ItemDecision = 'pending' | 'confirmed' | 'rejected';
 
 interface DecisionState {
   [index: number]: ItemDecision;
 }
 
-// 호환성을 위한 alias
+// Alias for compatibility
 type EventDecision = ItemDecision;
 type EventDecisionState = DecisionState;
 
@@ -67,12 +67,12 @@ const AssistantView: React.FC = () => {
   const [showGoalSelector, setShowGoalSelector] = useState(false);
   const [showConversationList, setShowConversationList] = useState(true);
 
-  // Event confirmation state - 메시지 ID별로 관리
+  // Event confirmation state - managed by message ID
   const [activeMessageId, setActiveMessageId] = useState<string | null>(null);
   const [activeItemType, setActiveItemType] = useState<'event' | 'todo' | 'goal' | null>(null);
   const [eventDecisions, setEventDecisions] = useState<EventDecisionState>({});
   const [editingEvents, setEditingEvents] = useState<{ [index: number]: PendingEvent }>({});
-  // useRef로 editingEvents의 최신 값을 항상 참조
+  // useRef to always reference the latest value of editingEvents
   const editingEventsRef = useRef<{ [index: number]: PendingEvent }>({});
 
   // TODO confirmation state
@@ -92,7 +92,7 @@ const AssistantView: React.FC = () => {
     items?: any[];
   } | null>(null);
 
-  // 새 카테고리 추가 상태
+  // New category addition state
   const [showNewCategoryInput, setShowNewCategoryInput] = useState<{
     type: 'event' | 'todo' | 'goal';
     index: number;
@@ -102,18 +102,18 @@ const AssistantView: React.FC = () => {
   const [isCreatingCategory, setIsCreatingCategory] = useState(false);
   const [showColorPalette, setShowColorPalette] = useState(false);
 
-  // 색상 팔레트
+  // Color palette
   const colorPalette = [
-    '#ef4444', // 빨강
-    '#f97316', // 주황
-    '#f59e0b', // 노랑
-    '#22c55e', // 초록
-    '#14b8a6', // 청록
-    '#3b82f6', // 파랑
-    '#6366f1', // 남색
-    '#8b5cf6', // 보라
-    '#ec4899', // 분홍
-    '#6b7280', // 회색
+    '#ef4444', // Red
+    '#f97316', // Orange
+    '#f59e0b', // Yellow
+    '#22c55e', // Green
+    '#14b8a6', // Teal
+    '#3b82f6', // Blue
+    '#6366f1', // Indigo
+    '#8b5cf6', // Purple
+    '#ec4899', // Pink
+    '#6b7280', // Gray
   ];
 
   const messagesEndRef = useRef<HTMLDivElement>(null);
@@ -125,7 +125,7 @@ const AssistantView: React.FC = () => {
     fetchCategories();
   }, []);
 
-  // 디버깅: 카테고리 상태 확인
+  // Debugging: Check category state
   useEffect(() => {
     console.log('[AssistantView] Categories updated:', categories);
   }, [categories]);
@@ -163,7 +163,7 @@ const AssistantView: React.FC = () => {
     setActiveItemType(null);
     setEventDecisions({});
     setEditingEvents({});
-    editingEventsRef.current = {}; // ref도 초기화
+    editingEventsRef.current = {}; // also reset ref
     setTodoDecisions({});
     setEditingTodos({});
     setGoalDecisions({});
@@ -179,7 +179,7 @@ const AssistantView: React.FC = () => {
 
   const handleDeleteConversation = async (id: string, e: React.MouseEvent) => {
     e.stopPropagation();
-    if (!confirm('이 대화를 삭제하시겠습니까?')) return;
+    if (!confirm('Are you sure you want to delete this conversation?')) return;
 
     try {
       await deleteConversation(id);
@@ -206,7 +206,7 @@ const AssistantView: React.FC = () => {
 
     let messageContent = input.trim();
     if (selectedGoal) {
-      messageContent = `[목표: ${selectedGoal.title}] ${messageContent}`;
+      messageContent = `[Goal: ${selectedGoal.title}] ${messageContent}`;
     }
 
     // Add user message locally
@@ -225,7 +225,7 @@ const AssistantView: React.FC = () => {
     try {
       const response = await sendChatMessage(messageContent, currentConversationId || undefined, 'auto');
 
-      // 디버깅: API 응답 확인
+      // Debugging: Check API response
       console.log('[AssistantView] API Response:', response);
       console.log('[AssistantView] pending_goals:', response.pending_goals);
       console.log('[AssistantView] pending_events:', response.pending_events);
@@ -240,11 +240,11 @@ const AssistantView: React.FC = () => {
       // Determine content message based on what's pending
       let contentMessage = response.message;
       if (response.pending_events && response.pending_events.length > 0) {
-        contentMessage = '아래와 같은 일정은 어떠세요?';
+        contentMessage = 'How about these events?';
       } else if (response.pending_todos && response.pending_todos.length > 0) {
-        contentMessage = '아래와 같은 할 일은 어떠세요?';
+        contentMessage = 'How about these todos?';
       } else if (response.pending_goals && response.pending_goals.length > 0) {
-        contentMessage = '아래와 같은 목표는 어떠세요?';
+        contentMessage = 'How about these goals?';
       }
 
       // Add assistant message
@@ -255,7 +255,7 @@ const AssistantView: React.FC = () => {
         pending_events: response.pending_events,
         pending_todos: response.pending_todos,
         pending_goals: response.pending_goals,
-        mcp_data: response.mcp_data,  // MCP 데이터 추가
+        mcp_data: response.mcp_data,  // Add MCP data
         created_at: new Date().toISOString(),
       };
 
@@ -280,7 +280,7 @@ const AssistantView: React.FC = () => {
         {
           id: crypto.randomUUID(),
           role: 'assistant',
-          content: '죄송합니다. 오류가 발생했습니다. 다시 시도해주세요.',
+          content: 'Sorry, an error occurred. Please try again.',
           created_at: new Date().toISOString(),
         },
       ]);
@@ -305,7 +305,7 @@ const AssistantView: React.FC = () => {
     console.log('[handleEditEvent] Called with:', { index, field, value, activeMessageId });
     const currentEvents = messages.find(m => m.id === activeMessageId)?.pending_events || [];
     console.log('[handleEditEvent] currentEvents:', currentEvents);
-    // editingEventsRef에서 최신 값을 가져옴
+    // Get latest value from editingEventsRef
     const currentEvent = editingEventsRef.current[index] || currentEvents[index];
     console.log('[handleEditEvent] currentEvent:', currentEvent);
     if (!currentEvent) {
@@ -315,14 +315,14 @@ const AssistantView: React.FC = () => {
     const updatedEvent = { ...currentEvent, [field]: value };
     console.log('[handleEditEvent] updatedEvent:', updatedEvent);
 
-    // ref를 먼저 업데이트 (동기적)
+    // Update ref first (synchronous)
     editingEventsRef.current = {
       ...editingEventsRef.current,
       [index]: updatedEvent
     };
     console.log('[handleEditEvent] Updated editingEventsRef:', editingEventsRef.current);
 
-    // 상태도 업데이트 (UI 리렌더링용)
+    // Also update state (for UI re-rendering)
     setEditingEvents(prev => {
       const newState = {
         ...prev,
@@ -333,23 +333,23 @@ const AssistantView: React.FC = () => {
     });
   };
 
-  // datetime에서 날짜 부분만 추출 (YYYY-MM-DD)
+  // Extract date part from datetime (YYYY-MM-DD)
   const getDateFromDatetime = (datetime: string): string => {
     return datetime.split('T')[0];
   };
 
-  // datetime에서 시간 부분만 추출 (HH:mm)
+  // Extract time part from datetime (HH:mm)
   const getTimeFromDatetime = (datetime: string): string => {
     const timePart = datetime.split('T')[1];
     return timePart ? timePart.slice(0, 5) : '';
   };
 
-  // 날짜와 시간을 합쳐서 datetime 생성
+  // Combine date and time to create datetime
   const combineDatetime = (date: string, time: string): string => {
     return `${date}T${time}:00`;
   };
 
-  // duration을 시간과 분으로 분리
+  // Separate duration into hours and minutes
   const getDurationHours = (duration: number): number => {
     return Math.floor(duration / 60);
   };
@@ -358,26 +358,26 @@ const AssistantView: React.FC = () => {
     return duration % 60;
   };
 
-  // 시간과 분을 합쳐서 duration(분) 생성
+  // Combine hours and minutes to create duration (in minutes)
   const combineDuration = (hours: number, minutes: number): number => {
     return hours * 60 + minutes;
   };
 
   const getEventWithEdits = (index: number, originalEvent: PendingEvent): PendingEvent => {
-    // editingEventsRef에서 최신 값을 가져옴 (클로저 문제 방지)
+    // Get latest value from editingEventsRef (prevents closure issues)
     const edited = editingEventsRef.current[index];
     console.log('[getEventWithEdits] index:', index, 'edited:', edited, 'original:', originalEvent);
     return edited || originalEvent;
   };
 
-  // 모든 일정이 처리되었는지 확인
+  // Check if all events have been processed
   const allEventsProcessed = (pendingEvents: PendingEvent[]) => {
     return pendingEvents.every((_, index) =>
       eventDecisions[index] === 'confirmed' || eventDecisions[index] === 'rejected'
     );
   };
 
-  // 최종 확정 처리 - Events
+  // Final confirmation handler - Events
   const handleFinalConfirmEvents = async (pendingEvents: PendingEvent[]) => {
     setIsSaving(true);
 
@@ -403,25 +403,25 @@ const AssistantView: React.FC = () => {
         loadEvents();
       }
 
-      // 결과 메시지 생성
+      // Generate result message
       let resultContent = '';
       if (confirmedEvents.length > 0) {
-        resultContent = `${confirmedEvents.length}개의 일정이 추가되었습니다.`;
+        resultContent = `${confirmedEvents.length} event${confirmedEvents.length > 1 ? 's' : ''} added`;
         if (rejectedCount > 0) {
-          resultContent += ` (${rejectedCount}개 거절)`;
+          resultContent += ` (${rejectedCount} rejected)`;
         }
       } else {
-        resultContent = '일정이 추가되지 않았습니다.';
+        resultContent = 'No events added';
         if (rejectedCount > 0) {
-          resultContent += ` (${rejectedCount}개 거절)`;
+          resultContent += ` (${rejectedCount} rejected)`;
         }
       }
 
-      // 결과 메시지를 대화 기록에 저장
+      // Save result message to conversation history
       if (currentConversationId) {
         const savedResult = await saveResultMessage(currentConversationId, resultContent);
 
-        // 결과 메시지를 로컬 메시지 목록에 추가
+        // Add result message to local message list
         const resultMessage: LocalMessage = {
           id: savedResult.message_id,
           role: 'assistant',
@@ -431,7 +431,7 @@ const AssistantView: React.FC = () => {
         setMessages(prev => [...prev, resultMessage]);
       }
 
-      // 결과 표시 (UI용)
+      // Display results (for UI)
       setCompletedResults({
         messageId: activeMessageId!,
         type: 'event',
@@ -440,22 +440,22 @@ const AssistantView: React.FC = () => {
         items: confirmedEvents,
       });
 
-      // 상태 초기화
+      // Reset state
       resetConfirmationState();
 
-      // 토스트 알림
+      // Toast notification
       if (confirmedEvents.length > 0) {
-        showToast(`${confirmedEvents.length}개의 일정이 추가되었습니다`, 'success');
+        showToast(`${confirmedEvents.length} event${confirmedEvents.length > 1 ? 's' : ''} added`, 'success');
       }
     } catch (error) {
       console.error('Failed to save events:', error);
-      showToast('일정 저장에 실패했습니다', 'error');
+      showToast('Failed to save events', 'error');
     } finally {
       setIsSaving(false);
     }
   };
 
-  // 최종 확정 처리 - TODOs
+  // Final confirmation handler - TODOs
   const handleFinalConfirmTodos = async (pendingTodos: PendingTodo[]) => {
     setIsSaving(true);
 
@@ -474,21 +474,21 @@ const AssistantView: React.FC = () => {
         await confirmTodos(confirmedTodos);
       }
 
-      // 결과 메시지 생성
+      // Generate result message
       let resultContent = '';
       if (confirmedTodos.length > 0) {
-        resultContent = `${confirmedTodos.length}개의 할 일이 추가되었습니다.`;
+        resultContent = `${confirmedTodos.length} todo${confirmedTodos.length > 1 ? 's' : ''} added`;
         if (rejectedCount > 0) {
-          resultContent += ` (${rejectedCount}개 거절)`;
+          resultContent += ` (${rejectedCount} rejected)`;
         }
       } else {
-        resultContent = '할 일이 추가되지 않았습니다.';
+        resultContent = 'No todos added';
         if (rejectedCount > 0) {
-          resultContent += ` (${rejectedCount}개 거절)`;
+          resultContent += ` (${rejectedCount} rejected)`;
         }
       }
 
-      // 결과 메시지를 대화 기록에 저장
+      // Save result message to conversation history
       if (currentConversationId) {
         const savedResult = await saveResultMessage(currentConversationId, resultContent);
         const resultMessage: LocalMessage = {
@@ -510,19 +510,19 @@ const AssistantView: React.FC = () => {
 
       resetConfirmationState();
 
-      // 토스트 알림
+      // Toast notification
       if (confirmedTodos.length > 0) {
-        showToast(`${confirmedTodos.length}개의 할 일이 추가되었습니다`, 'success');
+        showToast(`${confirmedTodos.length} todo${confirmedTodos.length > 1 ? 's' : ''} added`, 'success');
       }
     } catch (error) {
       console.error('Failed to save todos:', error);
-      showToast('할 일 저장에 실패했습니다', 'error');
+      showToast('Failed to save todos', 'error');
     } finally {
       setIsSaving(false);
     }
   };
 
-  // 최종 확정 처리 - Goals
+  // Final confirmation handler - Goals
   const handleFinalConfirmGoals = async (pendingGoals: PendingGoal[]) => {
     setIsSaving(true);
 
@@ -541,21 +541,21 @@ const AssistantView: React.FC = () => {
         await confirmGoals(confirmedGoals);
       }
 
-      // 결과 메시지 생성
+      // Generate result message
       let resultContent = '';
       if (confirmedGoals.length > 0) {
-        resultContent = `${confirmedGoals.length}개의 목표가 추가되었습니다.`;
+        resultContent = `${confirmedGoals.length} goal${confirmedGoals.length > 1 ? 's' : ''} added`;
         if (rejectedCount > 0) {
-          resultContent += ` (${rejectedCount}개 거절)`;
+          resultContent += ` (${rejectedCount} rejected)`;
         }
       } else {
-        resultContent = '목표가 추가되지 않았습니다.';
+        resultContent = 'No goals added';
         if (rejectedCount > 0) {
-          resultContent += ` (${rejectedCount}개 거절)`;
+          resultContent += ` (${rejectedCount} rejected)`;
         }
       }
 
-      // 결과 메시지를 대화 기록에 저장
+      // Save result message to conversation history
       if (currentConversationId) {
         const savedResult = await saveResultMessage(currentConversationId, resultContent);
         const resultMessage: LocalMessage = {
@@ -577,13 +577,13 @@ const AssistantView: React.FC = () => {
 
       resetConfirmationState();
 
-      // 토스트 알림
+      // Toast notification
       if (confirmedGoals.length > 0) {
-        showToast(`${confirmedGoals.length}개의 목표가 추가되었습니다`, 'success');
+        showToast(`${confirmedGoals.length} goal${confirmedGoals.length > 1 ? 's' : ''} added`, 'success');
       }
     } catch (error) {
       console.error('Failed to save goals:', error);
-      showToast('목표 저장에 실패했습니다', 'error');
+      showToast('Failed to save goals', 'error');
     } finally {
       setIsSaving(false);
     }
@@ -617,14 +617,14 @@ const AssistantView: React.FC = () => {
     }));
   };
 
-  // 모든 TODO가 처리되었는지 확인
+  // Check if all TODOs have been processed
   const allTodosProcessed = (pendingTodos: PendingTodo[]) => {
     return pendingTodos.every((_, index) =>
       todoDecisions[index] === 'confirmed' || todoDecisions[index] === 'rejected'
     );
   };
 
-  // 모든 Goal이 처리되었는지 확인
+  // Check if all Goals have been processed
   const allGoalsProcessed = (pendingGoals: PendingGoal[]) => {
     return pendingGoals.every((_, index) =>
       goalDecisions[index] === 'confirmed' || goalDecisions[index] === 'rejected'
@@ -632,43 +632,43 @@ const AssistantView: React.FC = () => {
   };
 
   const formatEventDateTime = (datetime: string) => {
-    // datetime을 직접 파싱하여 타임존 문제 방지
-    // 형식: "YYYY-MM-DDTHH:mm:ss" 또는 "YYYY-MM-DDTHH:mm"
+    // Parse datetime directly to prevent timezone issues
+    // Format: "YYYY-MM-DDTHH:mm:ss" or "YYYY-MM-DDTHH:mm"
     const [datePart, timePart] = datetime.split('T');
     const [year, month, day] = datePart.split('-').map(Number);
     const [hours, minutes] = (timePart || '00:00').split(':').map(Number);
 
-    // 요일 계산을 위해 로컬 날짜 객체 생성
+    // Create local date object for day of week calculation
     const date = new Date(year, month - 1, day);
-    const weekdays = ['일', '월', '화', '수', '목', '금', '토'];
+    const weekdays = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
     const weekday = weekdays[date.getDay()];
 
-    const ampm = hours < 12 ? '오전' : '오후';
+    const ampm = hours < 12 ? 'AM' : 'PM';
     const displayHours = hours === 0 ? 12 : hours > 12 ? hours - 12 : hours;
     const displayMinutes = (minutes || 0).toString().padStart(2, '0');
 
-    return `${month}월 ${day}일 (${weekday}) ${ampm} ${displayHours}:${displayMinutes}`;
+    return `${month}/${day} (${weekday}) ${ampm} ${displayHours}:${displayMinutes}`;
   };
 
   const formatShortDateTime = (datetime: string) => {
-    // datetime을 직접 파싱하여 타임존 문제 방지
+    // Parse datetime directly to prevent timezone issues
     const [datePart, timePart] = datetime.split('T');
     const [year, month, day] = datePart.split('-').map(Number);
     const [hours, minutes] = (timePart || '00:00').split(':').map(Number);
 
-    // 요일 계산을 위해 로컬 날짜 객체 생성
+    // Create local date object for day of week calculation
     const date = new Date(year, month - 1, day);
-    const weekdays = ['일', '월', '화', '수', '목', '금', '토'];
+    const weekdays = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
     const weekday = weekdays[date.getDay()];
 
-    const ampm = hours < 12 ? '오전' : '오후';
+    const ampm = hours < 12 ? 'AM' : 'PM';
     const displayHours = hours === 0 ? 12 : hours > 12 ? hours - 12 : hours;
     const displayMinutes = (minutes || 0).toString().padStart(2, '0');
 
     return `${month}/${day}(${weekday}) ${ampm}${displayHours}:${displayMinutes}`;
   };
 
-  // 시간 충돌 검사 함수
+  // Time conflict check function
   const checkTimeConflict = (pendingEvent: PendingEvent) => {
     const eventDate = pendingEvent.datetime.split('T')[0];
     const eventStartTime = pendingEvent.datetime.split('T')[1]?.slice(0, 5) || '09:00';
@@ -695,9 +695,9 @@ const AssistantView: React.FC = () => {
     return conflictingEvents;
   };
 
-  // 새 카테고리 생성 핸들러
+  // New category creation handler
   const handleCreateCategory = async (type: 'event' | 'todo' | 'goal', index: number) => {
-    // 이미 생성 중이면 중복 호출 방지
+    // Prevent duplicate calls if already creating
     if (isCreatingCategory) {
       console.log('[handleCreateCategory] Already creating, skipping...');
       return;
@@ -705,17 +705,17 @@ const AssistantView: React.FC = () => {
 
     const categoryName = newCategoryName.trim();
     if (!categoryName) {
-      showToast('카테고리 이름을 입력해주세요', 'error');
+      showToast('Please enter a category name', 'error');
       return;
     }
 
-    // 이미 존재하는 카테고리인지 확인
+    // Check if category already exists
     const existingCategory = categories.find(
       cat => cat.name.toLowerCase() === categoryName.toLowerCase()
     );
     if (existingCategory) {
       console.log('[handleCreateCategory] Category already exists:', existingCategory);
-      // 기존 카테고리를 선택
+      // Select existing category
       if (type === 'event') {
         handleEditEvent(index, 'category', existingCategory.name);
       } else if (type === 'todo') {
@@ -723,7 +723,7 @@ const AssistantView: React.FC = () => {
       } else if (type === 'goal') {
         handleEditGoal(index, 'category', existingCategory.name);
       }
-      showToast(`"${existingCategory.name}" 카테고리를 선택했습니다`, 'info');
+      showToast(`"${existingCategory.name}" category selected`, 'info');
       setShowNewCategoryInput(null);
       setNewCategoryName('');
       setNewCategoryColor('#6366f1');
@@ -739,7 +739,7 @@ const AssistantView: React.FC = () => {
       const newCategory = await addCategory(categoryName, newCategoryColor);
       console.log('[handleCreateCategory] Created category:', newCategory);
 
-      // 생성된 카테고리를 해당 항목에 설정
+      // Set created category to the item
       if (type === 'event') {
         console.log('[handleCreateCategory] Calling handleEditEvent for index:', index);
         handleEditEvent(index, 'category', newCategory.name);
@@ -751,20 +751,20 @@ const AssistantView: React.FC = () => {
         handleEditGoal(index, 'category', newCategory.name);
       }
 
-      showToast(`"${newCategory.name}" 카테고리가 생성되었습니다`, 'success');
+      showToast(`"${newCategory.name}" category created`, 'success');
       setShowNewCategoryInput(null);
       setNewCategoryName('');
       setNewCategoryColor('#6366f1');
       setShowColorPalette(false);
     } catch (error) {
       console.error('Failed to create category:', error);
-      showToast('카테고리 생성에 실패했습니다', 'error');
+      showToast('Failed to create category', 'error');
     } finally {
       setIsCreatingCategory(false);
     }
   };
 
-  // 카테고리 선택 컴포넌트 렌더링
+  // Render category select component
   const renderCategorySelect = (
     type: 'event' | 'todo' | 'goal',
     index: number,
@@ -790,7 +790,7 @@ const AssistantView: React.FC = () => {
             type="text"
             value={newCategoryName}
             onChange={(e) => setNewCategoryName(e.target.value)}
-            placeholder="카테고리명"
+            placeholder="Category name"
             style={{
               flex: '1 1 auto',
               minWidth: '80px',
@@ -835,7 +835,7 @@ const AssistantView: React.FC = () => {
             }}
             onClick={() => setShowColorPalette(!showColorPalette)}
             disabled={isCreatingCategory}
-            title="색상 선택"
+            title="Select color"
           >
             <span style={{
               width: '22px',
@@ -896,7 +896,7 @@ const AssistantView: React.FC = () => {
           >
             ✕
           </button>
-          {/* 색상 팔레트 드롭다운 */}
+          {/* Color palette dropdown */}
           {showColorPalette && (
             <div style={{
               position: 'absolute',
@@ -973,25 +973,25 @@ const AssistantView: React.FC = () => {
             }}
             disabled={disabled}
           >
-            <option value="">선택</option>
+            <option value="">Select</option>
             {categories.map(cat => (
               <option key={cat.id} value={cat.name}>{cat.name}</option>
             ))}
-            <option value="__new__">+ 새 카테고리 추가</option>
+            <option value="__new__">+ Add new category</option>
           </select>
         </div>
       </div>
     );
   };
 
-  // 일정 카드 렌더링 (인라인)
+  // Render event card (inline)
   const renderEventCard = (event: PendingEvent, index: number, isActive: boolean) => {
     const eventWithEdits = getEventWithEdits(index, event);
     const decision = eventDecisions[index];
     const conflicts = checkTimeConflict(eventWithEdits);
 
     if (!isActive) {
-      // 비활성 상태 - 간단한 표시
+      // Inactive state - simple display
       return (
         <div key={index} className={`event-card-inline ${decision || ''}`}>
           <div className="event-card-inline-info">
@@ -1006,14 +1006,14 @@ const AssistantView: React.FC = () => {
           </div>
           {decision && (
             <span className={`event-decision-badge ${decision}`}>
-              {decision === 'confirmed' ? '✓ 추가' : '✗ 거절'}
+              {decision === 'confirmed' ? '✓ Add' : '✗ Reject'}
             </span>
           )}
         </div>
       );
     }
 
-    // 활성 상태 - 편집 가능
+    // Active state - editable
     return (
       <div key={index} className={`event-card-editable ${decision || ''}`}>
         <div className="event-card-header">
@@ -1038,7 +1038,7 @@ const AssistantView: React.FC = () => {
 
         <div className="event-card-body">
           <div className="event-card-row">
-            <label>제목</label>
+            <label>Title</label>
             <input
               type="text"
               value={eventWithEdits.title}
@@ -1049,7 +1049,7 @@ const AssistantView: React.FC = () => {
 
           <div className="event-card-row-group datetime-group">
             <div className="event-card-row">
-              <label>날짜</label>
+              <label>Date</label>
               <DatePicker
                 value={getDateFromDatetime(eventWithEdits.datetime)}
                 onChange={(date) => {
@@ -1059,7 +1059,7 @@ const AssistantView: React.FC = () => {
               />
             </div>
             <div className="event-card-row">
-              <label>시간</label>
+              <label>Time</label>
               <TimePicker
                 value={getTimeFromDatetime(eventWithEdits.datetime)}
                 onChange={(time) => {
@@ -1072,7 +1072,7 @@ const AssistantView: React.FC = () => {
 
           <div className="event-card-row-group">
             <div className="event-card-row duration-row">
-              <label>소요시간</label>
+              <label>Duration</label>
               <div className="duration-inputs">
                 <select
                   value={getDurationHours(typeof eventWithEdits.duration === 'string' ? parseInt(eventWithEdits.duration) : eventWithEdits.duration)}
@@ -1084,7 +1084,7 @@ const AssistantView: React.FC = () => {
                   disabled={decision === 'rejected'}
                 >
                   {[0, 1, 2, 3, 4, 5, 6, 7, 8].map(h => (
-                    <option key={h} value={h}>{h}시간</option>
+                    <option key={h} value={h}>{h} hours</option>
                   ))}
                 </select>
                 <select
@@ -1097,14 +1097,14 @@ const AssistantView: React.FC = () => {
                   disabled={decision === 'rejected'}
                 >
                   {[0, 10, 15, 20, 30, 40, 45, 50].map(m => (
-                    <option key={m} value={m}>{m}분</option>
+                    <option key={m} value={m}>{m} min</option>
                   ))}
                 </select>
               </div>
             </div>
 
             <div className="event-card-row half">
-              <label>카테고리</label>
+              <label>Category</label>
               {renderCategorySelect(
                 'event',
                 index,
@@ -1116,19 +1116,19 @@ const AssistantView: React.FC = () => {
           </div>
 
           <div className="event-card-row">
-            <label>장소</label>
+            <label>Location</label>
             <input
               type="text"
               value={eventWithEdits.location || ''}
               onChange={(e) => handleEditEvent(index, 'location', e.target.value)}
-              placeholder="장소 입력 (선택)"
+              placeholder="Location (optional)"
               disabled={decision === 'rejected'}
             />
           </div>
 
           {conflicts.length > 0 && (
             <div className="event-conflict-warning-inline">
-              ⚠️ 겹치는 일정: {conflicts.map(c => c.title).join(', ')}
+              ⚠️ Conflicting events: {conflicts.map(c => c.title).join(', ')}
             </div>
           )}
         </div>
@@ -1136,7 +1136,7 @@ const AssistantView: React.FC = () => {
     );
   };
 
-  // TODO 카드 렌더링
+  // Render TODO card
   const renderTodoCard = (todo: PendingTodo, index: number, isActive: boolean) => {
     const todoWithEdits = editingTodos[index] || todo;
     const decision = todoDecisions[index];
@@ -1146,19 +1146,19 @@ const AssistantView: React.FC = () => {
         <div key={index} className={`todo-card-inline ${decision || ''}`}>
           <div className="todo-card-inline-info">
             <span className="todo-card-inline-title">{todoWithEdits.title}</span>
-            <span className="todo-card-inline-duration">{todoWithEdits.duration}분</span>
+            <span className="todo-card-inline-duration">{todoWithEdits.duration} min</span>
             {todoWithEdits.category && (
               <span className="todo-card-inline-category">{todoWithEdits.category}</span>
             )}
             {todoWithEdits.priority && (
               <span className={`todo-card-inline-priority ${todoWithEdits.priority}`}>
-                {todoWithEdits.priority === 'high' ? '높음' : todoWithEdits.priority === 'medium' ? '보통' : '낮음'}
+                {todoWithEdits.priority === 'high' ? 'High' : todoWithEdits.priority === 'medium' ? 'Medium' : 'Low'}
               </span>
             )}
           </div>
           {decision && (
             <span className={`item-decision-badge ${decision}`}>
-              {decision === 'confirmed' ? '✓ 추가' : '✗ 거절'}
+              {decision === 'confirmed' ? '✓ Add' : '✗ Reject'}
             </span>
           )}
         </div>
@@ -1189,7 +1189,7 @@ const AssistantView: React.FC = () => {
 
         <div className="item-card-body">
           <div className="item-card-row">
-            <label>제목</label>
+            <label>Title</label>
             <input
               type="text"
               value={todoWithEdits.title}
@@ -1200,7 +1200,7 @@ const AssistantView: React.FC = () => {
 
           <div className="item-card-row-group">
             <div className="item-card-row">
-              <label>소요시간</label>
+              <label>Duration</label>
               <div className="duration-inputs">
                 <select
                   value={getDurationHours(todoWithEdits.duration)}
@@ -1212,7 +1212,7 @@ const AssistantView: React.FC = () => {
                   disabled={decision === 'rejected'}
                 >
                   {[0, 1, 2, 3, 4, 5, 6, 7, 8].map(h => (
-                    <option key={h} value={h}>{h}시간</option>
+                    <option key={h} value={h}>{h} hours</option>
                   ))}
                 </select>
                 <select
@@ -1225,28 +1225,28 @@ const AssistantView: React.FC = () => {
                   disabled={decision === 'rejected'}
                 >
                   {[0, 10, 15, 20, 30, 40, 45, 50].map(m => (
-                    <option key={m} value={m}>{m}분</option>
+                    <option key={m} value={m}>{m} min</option>
                   ))}
                 </select>
               </div>
             </div>
 
             <div className="item-card-row">
-              <label>우선순위</label>
+              <label>Priority</label>
               <select
                 value={todoWithEdits.priority || 'medium'}
                 onChange={(e) => handleEditTodo(index, 'priority', e.target.value)}
                 disabled={decision === 'rejected'}
               >
-                <option value="high">높음</option>
-                <option value="medium">보통</option>
-                <option value="low">낮음</option>
+                <option value="high">High</option>
+                <option value="medium">Medium</option>
+                <option value="low">Low</option>
               </select>
             </div>
           </div>
 
           <div className="item-card-row">
-            <label>카테고리</label>
+            <label>Category</label>
             {renderCategorySelect(
               'todo',
               index,
@@ -1257,12 +1257,12 @@ const AssistantView: React.FC = () => {
           </div>
 
           <div className="item-card-row">
-            <label>설명</label>
+            <label>Description</label>
             <input
               type="text"
               value={todoWithEdits.description || ''}
               onChange={(e) => handleEditTodo(index, 'description', e.target.value)}
-              placeholder="설명 입력 (선택)"
+              placeholder="Description (optional)"
               disabled={decision === 'rejected'}
             />
           </div>
@@ -1271,7 +1271,7 @@ const AssistantView: React.FC = () => {
     );
   };
 
-  // Goal 카드 렌더링
+  // Render Goal card
   const renderGoalCard = (goal: PendingGoal, index: number, isActive: boolean) => {
     const goalWithEdits = editingGoals[index] || goal;
     const decision = goalDecisions[index];
@@ -1286,13 +1286,13 @@ const AssistantView: React.FC = () => {
             )}
             {goalWithEdits.priority && (
               <span className={`goal-card-inline-priority ${goalWithEdits.priority}`}>
-                {goalWithEdits.priority === 'high' ? '높음' : goalWithEdits.priority === 'medium' ? '보통' : '낮음'}
+                {goalWithEdits.priority === 'high' ? 'High' : goalWithEdits.priority === 'medium' ? 'Medium' : 'Low'}
               </span>
             )}
           </div>
           {decision && (
             <span className={`item-decision-badge ${decision}`}>
-              {decision === 'confirmed' ? '✓ 추가' : '✗ 거절'}
+              {decision === 'confirmed' ? '✓ Add' : '✗ Reject'}
             </span>
           )}
         </div>
@@ -1323,7 +1323,7 @@ const AssistantView: React.FC = () => {
 
         <div className="item-card-body">
           <div className="item-card-row">
-            <label>목표</label>
+            <label>Goal</label>
             <input
               type="text"
               value={goalWithEdits.title}
@@ -1334,7 +1334,7 @@ const AssistantView: React.FC = () => {
 
           <div className="item-card-row-group">
             <div className="item-card-row">
-              <label>목표일</label>
+              <label>Target Date</label>
               <DatePicker
                 value={goalWithEdits.target_date || ''}
                 onChange={(date) => handleEditGoal(index, 'target_date', date)}
@@ -1342,21 +1342,21 @@ const AssistantView: React.FC = () => {
             </div>
 
             <div className="item-card-row">
-              <label>우선순위</label>
+              <label>Priority</label>
               <select
                 value={goalWithEdits.priority || 'medium'}
                 onChange={(e) => handleEditGoal(index, 'priority', e.target.value)}
                 disabled={decision === 'rejected'}
               >
-                <option value="high">높음</option>
-                <option value="medium">보통</option>
-                <option value="low">낮음</option>
+                <option value="high">High</option>
+                <option value="medium">Medium</option>
+                <option value="low">Low</option>
               </select>
             </div>
           </div>
 
           <div className="item-card-row">
-            <label>카테고리</label>
+            <label>Category</label>
             {renderCategorySelect(
               'goal',
               index,
@@ -1367,26 +1367,26 @@ const AssistantView: React.FC = () => {
           </div>
 
           <div className="item-card-row">
-            <label>설명</label>
+            <label>Description</label>
             <input
               type="text"
               value={goalWithEdits.description || ''}
               onChange={(e) => handleEditGoal(index, 'description', e.target.value)}
-              placeholder="목표 설명 (선택)"
+              placeholder="Goal description (optional)"
               disabled={decision === 'rejected'}
             />
           </div>
 
-          {/* 세부 작업 표시 */}
+          {/* Display sub-tasks */}
           {goalWithEdits.decomposed_todos && goalWithEdits.decomposed_todos.length > 0 && (
             <div className="goal-decomposed-todos">
-              <label>세부 작업 ({goalWithEdits.decomposed_todos.length}개)</label>
+              <label>Sub-tasks ({goalWithEdits.decomposed_todos.length})</label>
               <div className="decomposed-todo-list">
                 {goalWithEdits.decomposed_todos.map((todo, idx) => (
                   <div key={idx} className="decomposed-todo-item">
                     <span className="decomposed-todo-order">{idx + 1}</span>
                     <span className="decomposed-todo-title">{todo.title}</span>
-                    <span className="decomposed-todo-duration">{todo.duration}분</span>
+                    <span className="decomposed-todo-duration">{todo.duration} min</span>
                   </div>
                 ))}
               </div>
@@ -1397,7 +1397,7 @@ const AssistantView: React.FC = () => {
     );
   };
 
-  // MCP 데이터 렌더링 ("행동하는 AI" 결과)
+  // Render MCP data ("Acting AI" results)
   const renderMCPData = (mcpData: MCPResponseData) => {
     const hasRestaurants = mcpData.restaurants && mcpData.restaurants.length > 0;
     const hasPlaces = mcpData.places && mcpData.places.length > 0;
@@ -1411,11 +1411,11 @@ const AssistantView: React.FC = () => {
 
     return (
       <div className="mcp-data-container">
-        {/* 맛집/장소 추천 */}
+        {/* Restaurant/Place recommendations */}
         {(hasRestaurants || hasPlaces) && (
           <div className="mcp-section places-section">
             <h4 className="mcp-section-title">
-              {hasRestaurants ? '🍽️ 맛집 추천' : '📍 장소 추천'}
+              {hasRestaurants ? '🍽️ Restaurant Recommendations' : '📍 Place Recommendations'}
             </h4>
             <div className="mcp-places-list">
               {(mcpData.restaurants || mcpData.places || []).map((place: MCPPlaceResult, idx: number) => (
@@ -1436,7 +1436,7 @@ const AssistantView: React.FC = () => {
                     )}
                     {place.openNow !== undefined && (
                       <span className={`mcp-place-status ${place.openNow ? 'open' : 'closed'}`}>
-                        {place.openNow ? '영업 중' : '영업 종료'}
+                        {place.openNow ? 'Open' : 'Closed'}
                       </span>
                     )}
                   </div>
@@ -1446,11 +1446,11 @@ const AssistantView: React.FC = () => {
           </div>
         )}
 
-        {/* 상품/선물 추천 */}
+        {/* Product/Gift recommendations */}
         {(hasProducts || hasGifts) && (
           <div className="mcp-section products-section">
             <h4 className="mcp-section-title">
-              {hasGifts ? '🎁 선물 추천' : '🛒 상품 추천'}
+              {hasGifts ? '🎁 Gift Recommendations' : '🛒 Product Recommendations'}
             </h4>
             <div className="mcp-products-list">
               {(mcpData.gifts || mcpData.products || []).map((product: MCPProductResult, idx: number) => (
@@ -1484,7 +1484,7 @@ const AssistantView: React.FC = () => {
                         rel="noopener noreferrer"
                         className="mcp-product-link"
                       >
-                        구매하기 →
+                        Buy now →
                       </a>
                     )}
                   </div>
@@ -1494,10 +1494,10 @@ const AssistantView: React.FC = () => {
           </div>
         )}
 
-        {/* 그룹 가능 시간 */}
+        {/* Group available time slots */}
         {hasAvailableSlots && (
           <div className="mcp-section schedule-section">
-            <h4 className="mcp-section-title">📅 가능한 시간</h4>
+            <h4 className="mcp-section-title">📅 Available Times</h4>
             <div className="mcp-slots-list">
               {mcpData.availableSlots!.slice(0, 5).map((slot, idx) => (
                 <div
@@ -1507,10 +1507,10 @@ const AssistantView: React.FC = () => {
                   <div className="mcp-slot-date">{slot.date}</div>
                   <div className="mcp-slot-time">{slot.startTime} - {slot.endTime}</div>
                   {slot.allAvailable ? (
-                    <span className="mcp-slot-status available">✓ 모두 가능</span>
+                    <span className="mcp-slot-status available">✓ All available</span>
                   ) : (
                     <span className="mcp-slot-status partial">
-                      ⚠️ {slot.unavailableMembers?.length || 0}명 불가
+                      ⚠️ {slot.unavailableMembers?.length || 0} unavailable
                     </span>
                   )}
                 </div>
@@ -1519,10 +1519,10 @@ const AssistantView: React.FC = () => {
           </div>
         )}
 
-        {/* 실행된 액션 표시 */}
+        {/* Completed actions display */}
         {mcpData.actions_taken && mcpData.actions_taken.length > 0 && (
           <div className="mcp-section actions-section">
-            <h4 className="mcp-section-title">✅ 실행 완료</h4>
+            <h4 className="mcp-section-title">✅ Actions Completed</h4>
             <div className="mcp-actions-list">
               {mcpData.actions_taken.map((action, idx) => (
                 <div
@@ -1540,12 +1540,12 @@ const AssistantView: React.FC = () => {
     );
   };
 
-  // 결과 메시지 렌더링
+  // Render completed results message
   const renderCompletedResults = () => {
     if (!completedResults) return null;
 
     const { type, confirmedCount, rejectedCount, items } = completedResults;
-    const typeLabels = { event: '일정', todo: '할 일', goal: '목표' };
+    const typeLabels = { event: 'event', todo: 'todo', goal: 'goal' };
     const typeLabel = typeLabels[type];
 
     return (
@@ -1553,7 +1553,7 @@ const AssistantView: React.FC = () => {
         <div className="message-bubble result-message">
           {confirmedCount > 0 ? (
             <>
-              <div className="result-title">{confirmedCount}개의 {typeLabel}이 추가되었습니다!</div>
+              <div className="result-title">{confirmedCount} {typeLabel}{confirmedCount > 1 ? 's' : ''} added!</div>
               {type === 'event' && items && (
                 <div className="result-list">
                   {items.map((event: PendingEvent, idx: number) => (
@@ -1571,7 +1571,7 @@ const AssistantView: React.FC = () => {
                   {items.map((todo: PendingTodo, idx: number) => (
                     <div key={idx} className="result-item">
                       <span className="result-item-title">{todo.title}</span>
-                      <span className="result-item-duration">{todo.duration}분</span>
+                      <span className="result-item-duration">{todo.duration} min</span>
                     </div>
                   ))}
                 </div>
@@ -1583,7 +1583,7 @@ const AssistantView: React.FC = () => {
                       <span className="result-item-title">{goal.title}</span>
                       {goal.target_date && <span className="result-item-date">~{goal.target_date}</span>}
                       {goal.decomposed_todos && goal.decomposed_todos.length > 0 && (
-                        <span className="result-item-todos">{goal.decomposed_todos.length}개 작업</span>
+                        <span className="result-item-todos">{goal.decomposed_todos.length} tasks</span>
                       )}
                     </div>
                   ))}
@@ -1591,10 +1591,10 @@ const AssistantView: React.FC = () => {
               )}
             </>
           ) : (
-            <div className="result-title">{typeLabel}이 추가되지 않았습니다.</div>
+            <div className="result-title">No {typeLabel}s added.</div>
           )}
           {rejectedCount > 0 && (
-            <div className="result-rejected">{rejectedCount}개의 {typeLabel}은 거절되었습니다.</div>
+            <div className="result-rejected">{rejectedCount} {typeLabel}{rejectedCount > 1 ? 's' : ''} rejected.</div>
           )}
         </div>
       </div>
@@ -1606,9 +1606,9 @@ const AssistantView: React.FC = () => {
       {/* Conversation Sidebar */}
       <div className={`conversation-sidebar ${showConversationList ? 'open' : 'closed'}`}>
         <div className="sidebar-header">
-          <h3>대화 목록</h3>
+          <h3>Conversations</h3>
           <button className="new-chat-btn" onClick={handleNewConversation}>
-            + 새 대화
+            + New Chat
           </button>
         </div>
         <div className="conversation-list">
@@ -1618,9 +1618,9 @@ const AssistantView: React.FC = () => {
               className={`conversation-item ${currentConversationId === conv.id ? 'active' : ''}`}
               onClick={() => loadConversation(conv.id)}
             >
-              <div className="conversation-title">{conv.title || '새 대화'}</div>
+              <div className="conversation-title">{conv.title || 'New Conversation'}</div>
               <div className="conversation-date">
-                {new Date(conv.updated_at).toLocaleDateString('ko-KR')}
+                {new Date(conv.updated_at).toLocaleDateString('en-US')}
               </div>
               <button
                 className="delete-conversation-btn"
@@ -1631,7 +1631,7 @@ const AssistantView: React.FC = () => {
             </div>
           ))}
           {conversations.length === 0 && (
-            <div className="no-conversations">대화 기록이 없습니다</div>
+            <div className="no-conversations">No conversations yet</div>
           )}
         </div>
       </div>
@@ -1650,11 +1650,11 @@ const AssistantView: React.FC = () => {
         <div className="chat-messages">
           {messages.length === 0 ? (
             <div className="chat-welcome">
-              <p>일정을 추가하거나 관리하고 싶은 내용을 말씀해주세요.</p>
+              <p>Tell me what you'd like to add or manage.</p>
               <div className="chat-welcome-examples">
-                <div className="chat-welcome-example">"이번 주 운동 계획 세워줘"</div>
-                <div className="chat-welcome-example">"내일 오후 3시 팀 미팅"</div>
-                <div className="chat-welcome-example">"다음 주 공부 일정 추천해줘"</div>
+                <div className="chat-welcome-example">"Plan my workout for this week"</div>
+                <div className="chat-welcome-example">"Team meeting tomorrow at 3 PM"</div>
+                <div className="chat-welcome-example">"Suggest study schedule for next week"</div>
               </div>
             </div>
           ) : (
@@ -1666,10 +1666,10 @@ const AssistantView: React.FC = () => {
                   </div>
                 </div>
 
-                {/* MCP 데이터 표시 ("행동하는 AI" 결과) */}
+                {/* MCP data display ("Acting AI" results) */}
                 {msg.mcp_data && renderMCPData(msg.mcp_data)}
 
-                {/* 일정 확인 UI - 메시지 바로 아래에 표시 */}
+                {/* Event confirmation UI - displayed right below message */}
                 {msg.pending_events && msg.pending_events.length > 0 && msg.id === activeMessageId && activeItemType === 'event' && (
                   <div className="item-confirmation-inline">
                     <div className="item-cards-container">
@@ -1685,20 +1685,20 @@ const AssistantView: React.FC = () => {
                           onClick={() => handleFinalConfirmEvents(msg.pending_events!)}
                           disabled={isSaving}
                         >
-                          {isSaving ? '저장 중...' : '확정하기'}
+                          {isSaving ? 'Saving...' : 'Confirm'}
                         </button>
                       </div>
                     )}
 
                     {!allEventsProcessed(msg.pending_events) && (
                       <div className="item-pending-hint">
-                        각 일정에서 ✓(추가) 또는 ✗(거절)를 선택해주세요
+                        Please select ✓(Add) or ✗(Reject) for each event
                       </div>
                     )}
                   </div>
                 )}
 
-                {/* TODO 확인 UI */}
+                {/* TODO confirmation UI */}
                 {msg.pending_todos && msg.pending_todos.length > 0 && msg.id === activeMessageId && activeItemType === 'todo' && (
                   <div className="item-confirmation-inline">
                     <div className="item-cards-container">
@@ -1714,20 +1714,20 @@ const AssistantView: React.FC = () => {
                           onClick={() => handleFinalConfirmTodos(msg.pending_todos!)}
                           disabled={isSaving}
                         >
-                          {isSaving ? '저장 중...' : '확정하기'}
+                          {isSaving ? 'Saving...' : 'Confirm'}
                         </button>
                       </div>
                     )}
 
                     {!allTodosProcessed(msg.pending_todos) && (
                       <div className="item-pending-hint">
-                        각 할 일에서 ✓(추가) 또는 ✗(거절)를 선택해주세요
+                        Please select ✓(Add) or ✗(Reject) for each todo
                       </div>
                     )}
                   </div>
                 )}
 
-                {/* Goal 확인 UI */}
+                {/* Goal confirmation UI */}
                 {msg.pending_goals && msg.pending_goals.length > 0 && msg.id === activeMessageId && activeItemType === 'goal' && (
                   <div className="item-confirmation-inline">
                     <div className="item-cards-container">
@@ -1743,20 +1743,20 @@ const AssistantView: React.FC = () => {
                           onClick={() => handleFinalConfirmGoals(msg.pending_goals!)}
                           disabled={isSaving}
                         >
-                          {isSaving ? '저장 중...' : '확정하기'}
+                          {isSaving ? 'Saving...' : 'Confirm'}
                         </button>
                       </div>
                     )}
 
                     {!allGoalsProcessed(msg.pending_goals) && (
                       <div className="item-pending-hint">
-                        각 목표에서 ✓(추가) 또는 ✗(거절)를 선택해주세요
+                        Please select ✓(Add) or ✗(Reject) for each goal
                       </div>
                     )}
                   </div>
                 )}
 
-                {/* 결과 메시지 - 해당 메시지 아래에 표시 */}
+                {/* Result message - displayed below corresponding message */}
                 {completedResults && completedResults.messageId === msg.id && renderCompletedResults()}
               </React.Fragment>
             ))
@@ -1793,14 +1793,14 @@ const AssistantView: React.FC = () => {
             <button
               className="chat-attach-btn"
               onClick={() => setShowGoalSelector(!showGoalSelector)}
-              title="Goal 선택"
+              title="Select Goal"
             >
               +
             </button>
             <input
               type="text"
               className="chat-input"
-              placeholder="무엇이든 물어보세요... (일정, 할 일, 목표, 브리핑 등)"
+              placeholder="Ask me anything... (events, todos, goals, briefing)"
               value={input}
               onChange={(e) => setInput(e.target.value)}
               onKeyDown={handleKeyDown}
@@ -1821,7 +1821,7 @@ const AssistantView: React.FC = () => {
           <div className="modal-overlay" onClick={() => setShowGoalSelector(false)}>
             <div className="modal" onClick={(e) => e.stopPropagation()}>
               <div className="modal-header">
-                <h3 className="modal-title">Goal 선택</h3>
+                <h3 className="modal-title">Select Goal</h3>
                 <button className="modal-close" onClick={() => setShowGoalSelector(false)}>×</button>
               </div>
               <div className="modal-body">
@@ -1832,7 +1832,7 @@ const AssistantView: React.FC = () => {
                     setShowGoalSelector(false);
                   }}
                 >
-                  <span>일반 대화</span>
+                  <span>General Chat</span>
                 </div>
                 {activeGoals.map(goal => (
                   <div

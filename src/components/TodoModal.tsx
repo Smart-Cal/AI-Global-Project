@@ -13,12 +13,12 @@ interface TodoModalProps {
   preselectedGoalId?: string;
 }
 
-// Goal이 활성 상태인지 확인
+// Check if goal is active
 function isGoalActive(goal: Goal): boolean {
   return !['completed', 'failed'].includes(goal.status);
 }
 
-// deadline에서 날짜와 시간 추출
+// Extract date and time from deadline
 function getDeadlineDate(deadline?: string): string {
   if (!deadline) return '';
   return deadline.split('T')[0];
@@ -30,7 +30,7 @@ function getDeadlineTime(deadline?: string): string {
   return timePart ? timePart.slice(0, 5) : '';
 }
 
-// 날짜와 시간을 deadline 형식으로 합치기
+// Combine date and time into deadline format
 function combineDeadline(date?: string, time?: string): string | undefined {
   if (!date) return undefined;
   const timeStr = time || '23:59';
@@ -88,15 +88,15 @@ export const TodoModal: React.FC<TodoModalProps> = ({
 
       if (editingTodo?.id) {
         updateTodo(editingTodo.id, todoData);
-        showToast('할 일이 수정되었습니다', 'success');
+        showToast('Todo updated', 'success');
       } else {
         await addTodo(todoData);
-        showToast('할 일이 추가되었습니다', 'success');
+        showToast('Todo added', 'success');
       }
       onClose();
     } catch (error) {
       console.error('Failed to save todo:', error);
-      showToast('할 일 저장에 실패했습니다', 'error');
+      showToast('Failed to save todo', 'error');
     } finally {
       setIsLoading(false);
     }
@@ -106,27 +106,27 @@ export const TodoModal: React.FC<TodoModalProps> = ({
     <div className="modal-overlay" onClick={onClose}>
       <div className="modal" onClick={(e) => e.stopPropagation()}>
         <div className="modal-header">
-          <div className="modal-title">{editingTodo ? '할 일 수정' : '새 할 일'}</div>
+          <div className="modal-title">{editingTodo ? 'Edit Todo' : 'New Todo'}</div>
           <button className="modal-close" onClick={onClose}>×</button>
         </div>
 
         <div className="modal-body">
           <div className="form-group">
-            <label className="form-label">할 일 *</label>
+            <label className="form-label">Todo *</label>
             <input
               type="text"
               className="form-input"
-              placeholder="무엇을 해야 하나요?"
+              placeholder="What do you need to do?"
               value={title}
               onChange={(e) => setTitle(e.target.value)}
             />
           </div>
 
           <div className="form-group">
-            <label className="form-label">상세 설명</label>
+            <label className="form-label">Description</label>
             <textarea
               className="form-input"
-              placeholder="추가 메모나 설명을 입력하세요"
+              placeholder="Add notes or details"
               value={description}
               onChange={(e) => setDescription(e.target.value)}
             />
@@ -134,7 +134,7 @@ export const TodoModal: React.FC<TodoModalProps> = ({
 
           <div className="form-row">
             <div className="form-group">
-              <label className="form-label">기한 날짜</label>
+              <label className="form-label">Due Date</label>
               <input
                 type="date"
                 className="form-input"
@@ -143,7 +143,7 @@ export const TodoModal: React.FC<TodoModalProps> = ({
               />
             </div>
             <div className="form-group">
-              <label className="form-label">기한 시간</label>
+              <label className="form-label">Due Time</label>
               <input
                 type="time"
                 className="form-input"
@@ -154,7 +154,7 @@ export const TodoModal: React.FC<TodoModalProps> = ({
           </div>
 
           <div className="form-group">
-            <label className="form-label">예상 소요 시간 (분)</label>
+            <label className="form-label">Estimated Time (minutes)</label>
             <input
               type="number"
               className="form-input"
@@ -165,38 +165,38 @@ export const TodoModal: React.FC<TodoModalProps> = ({
           </div>
 
           <div className="form-group">
-            <label className="form-label">우선순위</label>
+            <label className="form-label">Priority</label>
             <div className="priority-select">
               <div
                 className={`priority-option ${priority === 'high' ? 'selected high' : ''}`}
                 onClick={() => setPriority('high')}
               >
-                🔴 높음
+                🔴 High
               </div>
               <div
                 className={`priority-option ${priority === 'medium' ? 'selected medium' : ''}`}
                 onClick={() => setPriority('medium')}
               >
-                🟡 보통
+                🟡 Medium
               </div>
               <div
                 className={`priority-option ${priority === 'low' ? 'selected low' : ''}`}
                 onClick={() => setPriority('low')}
               >
-                🟢 낮음
+                🟢 Low
               </div>
             </div>
           </div>
 
           {activeGoals.length > 0 && (
             <div className="form-group">
-              <label className="form-label">연결된 목표</label>
+              <label className="form-label">Linked Goal</label>
               <select
                 className="form-input"
                 value={goalId}
                 onChange={(e) => setGoalId(e.target.value)}
               >
-                <option value="">목표 선택 (선택사항)</option>
+                <option value="">Select goal (optional)</option>
                 {activeGoals.map((goal) => {
                   const category = goal.category_id ? getCategoryById(goal.category_id) : null;
                   return (
@@ -223,7 +223,7 @@ export const TodoModal: React.FC<TodoModalProps> = ({
                 className={`todo-checkbox ${isRecurring ? 'checked' : ''}`}
                 onClick={() => setIsRecurring(!isRecurring)}
               />
-              <span>반복 할 일로 설정</span>
+              <span>Set as recurring</span>
             </label>
 
             {isRecurring && (
@@ -232,19 +232,19 @@ export const TodoModal: React.FC<TodoModalProps> = ({
                   className={`priority-option ${recurrencePattern === 'daily' ? 'selected medium' : ''}`}
                   onClick={() => setRecurrencePattern('daily')}
                 >
-                  매일
+                  Daily
                 </div>
                 <div
                   className={`priority-option ${recurrencePattern === 'weekly' ? 'selected medium' : ''}`}
                   onClick={() => setRecurrencePattern('weekly')}
                 >
-                  매주
+                  Weekly
                 </div>
                 <div
                   className={`priority-option ${recurrencePattern === 'monthly' ? 'selected medium' : ''}`}
                   onClick={() => setRecurrencePattern('monthly')}
                 >
-                  매월
+                  Monthly
                 </div>
               </div>
             )}
@@ -253,14 +253,14 @@ export const TodoModal: React.FC<TodoModalProps> = ({
 
         <div className="modal-footer">
           <button className="btn btn-secondary" onClick={onClose}>
-            취소
+            Cancel
           </button>
           <button
             className={`btn btn-primary ${isLoading ? 'loading' : ''}`}
             onClick={handleSubmit}
             disabled={!title.trim() || isLoading}
           >
-            {editingTodo ? '수정' : '추가'}
+            {editingTodo ? 'Save' : 'Add'}
           </button>
         </div>
       </div>
