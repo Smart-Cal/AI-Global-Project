@@ -22,15 +22,7 @@
       "Bash(git rebase:*)",
       "Bash(GIT_EDITOR=true git rebase:*)",
       "Bash(git fetch:*)",
-      "Bash(ls -la \"C:\\Users\\kikikiju\\Desktop\\global internship\\project\\ai-calendar-app\\backend\\src\"\" 2>/dev/null || ls -la \"C:UserskikikijuDesktopglobal internshipprojectai-calendar-app \")",
-      "Bash(gh pr create:*)",
-      "Bash(git branch:*)",
-      "Bash(dir \"C:\\Users\\kikikiju\\Desktop\\global internship\\project\\ai-calendar-app\\backend\\src\")",
-      "Bash(cat:*)",
-      "Bash(git commit -m \"$(cat <<''EOF''\nrefactor: 대시보드 간소화\n\n- 2x2 그리드 레이아웃으로 단순화 (오늘 일정/할일/목표/AI비서)\n- 숫자 카운트 카드 및 추가 버튼 제거\n- 이번주 일정 미리보기 추가\n- 불필요한 props 제거\n\n🤖 Generated with [Claude Code](https://claude.com/claude-code)\n\nCo-Authored-By: Claude Opus 4.5 <noreply@anthropic.com>\nEOF\n)\")",
-      "Bash(git commit -m \"$(cat <<''EOF''\nfeat: UI 개선 및 디버깅 로그 추가\n\n- AssistantView: 카테고리 로딩 및 UI 개선\n- ScheduleView: 일정/TODO 목록 뷰 개선\n- TodosView: TODO 목록 컴포넌트 기능 확장\n- categoryStore: 카테고리 상태 관리 개선\n- chat.ts: 이벤트 확인 API 디버깅 로그 추가\n- app.css: 스타일 업데이트\n\n🤖 Generated with [Claude Code](https://claude.com/claude-code)\n\nCo-Authored-By: Claude Opus 4.5 <noreply@anthropic.com>\nEOF\n)\")",
-      "Bash(npm install:*)",
-      "Bash(npx tsc:*)"
+      "Bash(npm run dev:*)"
     ]
   }
 }
