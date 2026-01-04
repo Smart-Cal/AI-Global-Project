@@ -1722,80 +1722,125 @@ body {
 /* Schedule Slider */
 .schedule-slider {
   margin-top: 12px;
+  position: relative;
+  overflow: hidden;
 }
 
 .schedule-slider-nav {
   display: flex;
   align-items: center;
-  justify-content: center;
-  gap: 16px;
-  margin-bottom: 8px;
+  justify-content: space-between;
+  padding: 0 4px;
+  margin-bottom: 10px;
 }
 
 .slider-nav-btn {
-  width: 32px;
-  height: 32px;
+  width: 36px;
+  height: 36px;
   border-radius: 50%;
-  border: 1px solid var(--border-medium);
-  background: var(--bg-main);
+  border: none;
+  background: var(--primary);
+  color: white;
   cursor: pointer;
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 14px;
-  transition: all 0.15s;
+  font-size: 16px;
+  font-weight: 600;
+  transition: all 0.2s ease;
+  box-shadow: 0 2px 8px rgba(99, 102, 241, 0.3);
 }
 
 .slider-nav-btn:hover:not(:disabled) {
-  background: var(--bg-hover);
-  border-color: var(--primary);
+  background: var(--primary-dark);
+  transform: scale(1.05);
+  box-shadow: 0 4px 12px rgba(99, 102, 241, 0.4);
 }
 
 .slider-nav-btn:disabled {
-  opacity: 0.4;
+  opacity: 0.3;
   cursor: not-allowed;
+  box-shadow: none;
 }
 
 .slider-indicator {
-  font-size: 13px;
-  font-weight: 500;
-  color: var(--text-secondary);
-  min-width: 60px;
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--text-primary);
+  min-width: 80px;
   text-align: center;
+  background: var(--bg-hover);
+  padding: 6px 16px;
+  border-radius: 20px;
+}
+
+/* Card container with slide animation */
+.schedule-card-container {
+  position: relative;
+  overflow: hidden;
+}
+
+.schedule-slider .schedule-card {
+  animation: slideIn 0.3s ease-out;
+}
+
+@keyframes slideIn {
+  from {
+    opacity: 0;
+    transform: translateX(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
 }
 
 .schedule-dots {
   display: flex;
   justify-content: center;
-  gap: 6px;
-  margin-top: 10px;
+  gap: 8px;
+  margin-top: 12px;
+  padding: 8px 0;
 }
 
 .schedule-dot {
-  width: 8px;
-  height: 8px;
+  width: 10px;
+  height: 10px;
   border-radius: 50%;
   background: var(--border-medium);
   cursor: pointer;
-  transition: all 0.15s;
+  transition: all 0.2s ease;
+  border: 2px solid transparent;
 }
 
 .schedule-dot:hover {
   background: var(--text-muted);
+  transform: scale(1.1);
 }
 
 .schedule-dot.active {
   background: var(--primary);
-  transform: scale(1.2);
+  transform: scale(1.3);
+  border-color: var(--primary-light);
 }
 
 .schedule-dot.added {
   background: var(--success);
+  border-color: rgba(16, 185, 129, 0.3);
+}
+
+.schedule-dot.added.active {
+  border-color: var(--success);
 }
 
 .schedule-dot.rejected {
   background: var(--error);
   opacity: 0.5;
+}
+
+.schedule-dot.rejected.active {
+  opacity: 0.8;
+  border-color: var(--error);
 }
 
 .chat-input-area {
@@ -6814,5 +6859,1266 @@ textarea.form-input {
   .times-row,
   .work-settings-grid {
     grid-template-columns: 1fr;
+  }
+}
+
+/* 새 카테고리 추가 인라인 입력 */
+.new-category-input-container {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.new-category-input-row {
+  display: flex;
+  gap: 4px;
+  align-items: center;
+}
+
+.new-category-color-preview {
+  width: 24px;
+  height: 24px;
+  min-width: 24px;
+  min-height: 24px;
+  border-radius: 4px;
+  flex-shrink: 0;
+  border: 2px solid white;
+  box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.2);
+  display: block;
+}
+
+.new-category-input {
+  flex: 1;
+  padding: 8px 10px;
+  border: 1px solid var(--primary);
+  border-radius: var(--border-radius);
+  font-size: 13px;
+  outline: none;
+  min-width: 100px;
+}
+
+.new-category-input:focus {
+  border-color: var(--primary-dark);
+  box-shadow: 0 0 0 2px rgba(99, 102, 241, 0.1);
+}
+
+.new-category-confirm-btn,
+.new-category-cancel-btn {
+  width: 28px;
+  height: 28px;
+  border: none;
+  border-radius: var(--border-radius);
+  cursor: pointer;
+  font-size: 13px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.15s;
+  flex-shrink: 0;
+}
+
+.new-category-confirm-btn {
+  background: var(--success);
+  color: white;
+}
+
+.new-category-confirm-btn:hover:not(:disabled) {
+  background: #059669;
+}
+
+.new-category-confirm-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.new-category-cancel-btn {
+  background: var(--bg-sidebar);
+  color: var(--text-secondary);
+}
+
+.new-category-cancel-btn:hover:not(:disabled) {
+  background: var(--border-medium);
+}
+
+.new-category-cancel-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+/* 색상 팔레트 */
+.new-category-color-palette {
+  display: flex !important;
+  gap: 6px;
+  flex-wrap: wrap;
+  padding: 6px 0;
+  margin-top: 4px;
+}
+
+.color-palette-item {
+  width: 22px;
+  height: 22px;
+  border-radius: 4px;
+  border: 2px solid transparent;
+  cursor: pointer;
+  transition: all 0.15s;
+  padding: 0;
+}
+
+.color-palette-item:hover:not(:disabled) {
+  transform: scale(1.15);
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+}
+
+.color-palette-item.selected {
+  border-color: var(--text-primary);
+  box-shadow: 0 0 0 2px white, 0 0 0 4px rgba(0, 0, 0, 0.2);
+}
+
+.color-palette-item:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+/* 카테고리 선택 with 색상 박스 */
+.category-select-wrapper {
+  position: relative;
+  width: 100%;
+}
+
+.category-select-current {
+  display: flex;
+  align-items: center;
+  position: relative;
+}
+
+.category-color-box {
+  position: absolute;
+  left: 8px;
+  width: 12px;
+  height: 12px;
+  border-radius: 3px;
+  pointer-events: none;
+  z-index: 1;
+}
+
+.category-select-current select {
+  width: 100%;
+  padding: 8px 10px 8px 28px;
+  border: 1px solid var(--border-medium);
+  border-radius: var(--border-radius);
+  font-size: 13px;
+  background: white;
+  cursor: pointer;
+  appearance: none;
+  -webkit-appearance: none;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%236b7280' d='M3 4.5l3 3 3-3'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 8px center;
+}
+
+.category-select-current select:focus {
+  outline: none;
+  border-color: var(--primary);
+}
+
+.category-select-current select:disabled {
+  background-color: var(--bg-sidebar);
+  cursor: not-allowed;
+}
+
+/* ==============================================
+   MCP Data Styles ("행동하는 AI" 결과)
+   ============================================== */
+
+.mcp-data-container {
+  margin: 8px 0 16px 48px;
+  padding: 0;
+}
+
+.mcp-section {
+  background: white;
+  border-radius: 12px;
+  padding: 16px;
+  margin-bottom: 12px;
+  border: 1px solid var(--border-light);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+}
+
+.mcp-section-title {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--text-primary);
+  margin-bottom: 12px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+/* Places / Restaurants */
+.mcp-places-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.mcp-place-card {
+  display: flex;
+  gap: 12px;
+  padding: 12px;
+  background: var(--bg-sidebar);
+  border-radius: 8px;
+  transition: background 0.2s;
+}
+
+.mcp-place-card:hover {
+  background: var(--bg-hover);
+}
+
+.mcp-place-rank {
+  width: 28px;
+  height: 28px;
+  background: var(--primary);
+  color: white;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 13px;
+  font-weight: 600;
+  flex-shrink: 0;
+}
+
+.mcp-place-info {
+  flex: 1;
+  min-width: 0;
+}
+
+.mcp-place-name {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--text-primary);
+  margin-bottom: 4px;
+}
+
+.mcp-place-details {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 12px;
+  color: var(--text-secondary);
+  margin-bottom: 4px;
+}
+
+.mcp-place-rating {
+  color: #f59e0b;
+  font-weight: 500;
+}
+
+.mcp-place-price {
+  color: var(--success);
+}
+
+.mcp-place-address {
+  font-size: 12px;
+  color: var(--text-muted);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.mcp-place-distance {
+  font-size: 11px;
+  color: var(--text-secondary);
+  margin-top: 4px;
+}
+
+.mcp-place-status {
+  font-size: 11px;
+  padding: 2px 6px;
+  border-radius: 4px;
+  display: inline-block;
+  margin-top: 4px;
+}
+
+.mcp-place-status.open {
+  background: #dcfce7;
+  color: #15803d;
+}
+
+.mcp-place-status.closed {
+  background: #fee2e2;
+  color: #b91c1c;
+}
+
+/* Products / Gifts */
+.mcp-products-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.mcp-product-card {
+  display: flex;
+  gap: 12px;
+  padding: 12px;
+  background: var(--bg-sidebar);
+  border-radius: 8px;
+  transition: background 0.2s;
+}
+
+.mcp-product-card:hover {
+  background: var(--bg-hover);
+}
+
+.mcp-product-rank {
+  width: 28px;
+  height: 28px;
+  background: #f59e0b;
+  color: white;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 13px;
+  font-weight: 600;
+  flex-shrink: 0;
+}
+
+.mcp-product-info {
+  flex: 1;
+  min-width: 0;
+}
+
+.mcp-product-title {
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--text-primary);
+  margin-bottom: 4px;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.mcp-product-price {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 4px;
+}
+
+.mcp-product-current-price {
+  font-size: 15px;
+  font-weight: 700;
+  color: var(--error);
+}
+
+.mcp-product-original-price {
+  font-size: 12px;
+  color: var(--text-muted);
+  text-decoration: line-through;
+}
+
+.mcp-product-rating {
+  font-size: 12px;
+  color: var(--text-secondary);
+}
+
+.mcp-product-seller {
+  font-size: 11px;
+  color: var(--text-muted);
+  margin-top: 2px;
+}
+
+.mcp-product-link {
+  display: inline-block;
+  margin-top: 8px;
+  padding: 6px 12px;
+  background: var(--primary);
+  color: white;
+  border-radius: 6px;
+  font-size: 12px;
+  font-weight: 500;
+  text-decoration: none;
+  transition: background 0.2s;
+}
+
+.mcp-product-link:hover {
+  background: var(--primary-dark);
+}
+
+/* Schedule Slots */
+.mcp-slots-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.mcp-slot-card {
+  padding: 10px 14px;
+  background: var(--bg-sidebar);
+  border-radius: 8px;
+  border: 1px solid var(--border-light);
+  min-width: 140px;
+}
+
+.mcp-slot-card.all-available {
+  border-color: var(--success);
+  background: #f0fdf4;
+}
+
+.mcp-slot-card.partial {
+  border-color: var(--warning);
+  background: #fffbeb;
+}
+
+.mcp-slot-date {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text-primary);
+  margin-bottom: 2px;
+}
+
+.mcp-slot-time {
+  font-size: 12px;
+  color: var(--text-secondary);
+  margin-bottom: 4px;
+}
+
+.mcp-slot-status {
+  font-size: 11px;
+  font-weight: 500;
+}
+
+.mcp-slot-status.available {
+  color: var(--success);
+}
+
+.mcp-slot-status.partial {
+  color: var(--warning);
+}
+
+/* Actions Taken */
+.mcp-actions-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.mcp-action-item {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 12px;
+  border-radius: 20px;
+  font-size: 12px;
+}
+
+.mcp-action-item.success {
+  background: #dcfce7;
+  color: #15803d;
+}
+
+.mcp-action-item.failed {
+  background: #fee2e2;
+  color: #b91c1c;
+}
+
+.mcp-action-icon {
+  font-weight: 700;
+}
+
+.mcp-action-name {
+  font-weight: 500;
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+  .mcp-data-container {
+    margin-left: 0;
+    margin-right: 0;
+  }
+
+  .mcp-section {
+    padding: 12px;
+    border-radius: 8px;
+  }
+
+  .mcp-place-card,
+  .mcp-product-card {
+    flex-direction: column;
+    gap: 8px;
+  }
+
+  .mcp-place-rank,
+  .mcp-product-rank {
+    width: 24px;
+    height: 24px;
+    font-size: 11px;
+  }
+
+  .mcp-slots-list {
+    flex-direction: column;
+  }
+
+  .mcp-slot-card {
+    min-width: auto;
+  }
+}
+
+/* ============================================
+   상품 카드 V2 - 이미지 그리드 스타일
+   ============================================ */
+
+.mcp-products-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+  gap: 12px;
+  margin-top: 8px;
+}
+
+.mcp-product-card-v2 {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  background: white;
+  border-radius: 12px;
+  border: 1px solid var(--border-light);
+  overflow: hidden;
+  text-decoration: none;
+  color: inherit;
+  transition: all 0.2s ease;
+  cursor: pointer;
+}
+
+.mcp-product-card-v2:hover {
+  border-color: var(--primary);
+  box-shadow: 0 4px 12px rgba(35, 131, 226, 0.15);
+  transform: translateY(-2px);
+}
+
+.mcp-product-card-v2.no-link {
+  cursor: default;
+}
+
+.mcp-product-card-v2.no-link:hover {
+  transform: none;
+  box-shadow: none;
+}
+
+/* 순위 뱃지 */
+.mcp-product-rank-badge {
+  position: absolute;
+  top: 8px;
+  left: 8px;
+  width: 26px;
+  height: 26px;
+  background: rgba(0, 0, 0, 0.6);
+  color: white;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 12px;
+  font-weight: 600;
+  z-index: 2;
+}
+
+.mcp-product-rank-badge.top3 {
+  background: transparent;
+  font-size: 18px;
+  width: auto;
+  height: auto;
+}
+
+/* 상품 이미지 */
+.mcp-product-image-wrapper {
+  width: 100%;
+  aspect-ratio: 1;
+  background: #f8f9fa;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+}
+
+.mcp-product-image {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  transition: transform 0.3s ease;
+}
+
+.mcp-product-card-v2:hover .mcp-product-image {
+  transform: scale(1.05);
+}
+
+.mcp-product-no-image {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 40px;
+  color: #ddd;
+  background: linear-gradient(135deg, #f5f5f5 0%, #e8e8e8 100%);
+}
+
+/* 상품 정보 */
+.mcp-product-details {
+  padding: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  flex: 1;
+}
+
+.mcp-product-title-v2 {
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--text-primary);
+  line-height: 1.4;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  min-height: 36px;
+}
+
+.mcp-product-price-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
+.mcp-product-price-v2 {
+  font-size: 16px;
+  font-weight: 700;
+  color: var(--error);
+}
+
+.mcp-product-original-price-v2 {
+  font-size: 12px;
+  color: var(--text-muted);
+  text-decoration: line-through;
+}
+
+.mcp-product-discount {
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--error);
+  background: #fee2e2;
+  padding: 2px 6px;
+  border-radius: 4px;
+}
+
+.mcp-product-rating-row {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 12px;
+  color: var(--text-secondary);
+}
+
+.mcp-product-stars {
+  color: #f59e0b;
+}
+
+.mcp-product-reviews {
+  color: var(--text-muted);
+}
+
+.mcp-product-seller-v2 {
+  font-size: 11px;
+  color: var(--text-muted);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* 추천 이유 태그 */
+.mcp-product-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  margin-top: 4px;
+}
+
+.mcp-product-tag {
+  font-size: 10px;
+  padding: 3px 8px;
+  background: var(--primary-light);
+  color: var(--primary);
+  border-radius: 10px;
+  white-space: nowrap;
+}
+
+/* 호버 오버레이 */
+.mcp-product-hover-overlay {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  padding: 10px;
+  background: linear-gradient(transparent, rgba(0, 0, 0, 0.7));
+  color: white;
+  font-size: 12px;
+  font-weight: 500;
+  text-align: center;
+  opacity: 0;
+  transition: opacity 0.2s ease;
+}
+
+.mcp-product-card-v2:hover .mcp-product-hover-overlay {
+  opacity: 1;
+}
+
+/* 반응형 - 상품 그리드 */
+@media (max-width: 768px) {
+  .mcp-products-grid {
+    grid-template-columns: repeat(2, 1fr);
+    gap: 8px;
+  }
+
+  .mcp-product-details {
+    padding: 10px;
+  }
+
+  .mcp-product-title-v2 {
+    font-size: 12px;
+    min-height: 32px;
+  }
+
+  .mcp-product-price-v2 {
+    font-size: 14px;
+  }
+
+  .mcp-product-hover-overlay {
+    display: none;
+  }
+}
+
+@media (max-width: 480px) {
+  .mcp-products-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+/* ============================================
+   마크다운 렌더링 스타일
+   ============================================ */
+
+.markdown-content {
+  line-height: 1.6;
+}
+
+.markdown-content strong {
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+.markdown-content em {
+  font-style: italic;
+  color: var(--text-secondary);
+}
+
+.markdown-line {
+  margin-bottom: 4px;
+}
+
+.markdown-break {
+  height: 8px;
+}
+
+.markdown-list-item {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 6px;
+  padding-left: 4px;
+}
+
+.markdown-bullet {
+  color: var(--primary);
+  font-weight: 600;
+  flex-shrink: 0;
+}
+
+.markdown-number {
+  color: var(--primary);
+  font-weight: 600;
+  flex-shrink: 0;
+  min-width: 20px;
+}
+
+.markdown-list-item.numbered {
+  padding-left: 0;
+}
+
+/* ============================================
+   슬라이드 UI 스타일
+   ============================================ */
+
+.mcp-slider-container {
+  position: relative;
+  width: 100%;
+}
+
+.mcp-slider-content {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 12px;
+}
+
+.mcp-slider-content.places {
+  grid-template-columns: repeat(3, 1fr);
+}
+
+.mcp-slider-nav {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  margin-top: 16px;
+}
+
+.mcp-slider-btn {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  border: 1px solid var(--border-light);
+  background: white;
+  font-size: 20px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s;
+  color: var(--text-secondary);
+}
+
+.mcp-slider-btn:hover:not(:disabled) {
+  background: var(--primary);
+  color: white;
+  border-color: var(--primary);
+}
+
+.mcp-slider-btn:disabled {
+  opacity: 0.3;
+  cursor: not-allowed;
+}
+
+.mcp-slider-dots {
+  display: flex;
+  gap: 6px;
+}
+
+.mcp-slider-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--border-medium);
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.mcp-slider-dot.active {
+  background: var(--primary);
+  width: 20px;
+  border-radius: 4px;
+}
+
+.mcp-slider-dot:hover:not(.active) {
+  background: var(--text-muted);
+}
+
+/* ============================================
+   장소 카드 v2 스타일
+   ============================================ */
+
+.mcp-place-card-v2 {
+  position: relative;
+  background: white;
+  border-radius: 12px;
+  overflow: hidden;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+  transition: all 0.2s;
+}
+
+.mcp-place-card-v2:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.12);
+}
+
+.mcp-place-rank-badge {
+  position: absolute;
+  top: 8px;
+  left: 8px;
+  width: 28px;
+  height: 28px;
+  background: rgba(0, 0, 0, 0.6);
+  color: white;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 12px;
+  font-weight: 600;
+  z-index: 2;
+}
+
+.mcp-place-rank-badge.top3 {
+  background: transparent;
+  font-size: 20px;
+}
+
+.mcp-place-image-wrapper {
+  position: relative;
+  width: 100%;
+  padding-top: 65%;
+  background: var(--bg-sidebar);
+  overflow: hidden;
+}
+
+.mcp-place-image {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.mcp-place-no-image {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+  font-size: 32px;
+}
+
+.mcp-place-status-badge {
+  position: absolute;
+  bottom: 8px;
+  right: 8px;
+  padding: 4px 10px;
+  border-radius: 12px;
+  font-size: 11px;
+  font-weight: 600;
+}
+
+.mcp-place-status-badge.open {
+  background: rgba(16, 185, 129, 0.9);
+  color: white;
+}
+
+.mcp-place-status-badge.closed {
+  background: rgba(239, 68, 68, 0.9);
+  color: white;
+}
+
+.mcp-place-details-v2 {
+  padding: 12px;
+}
+
+.mcp-place-name-v2 {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--text-primary);
+  margin-bottom: 6px;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  min-height: 40px;
+}
+
+.mcp-place-meta {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-bottom: 6px;
+  font-size: 12px;
+}
+
+.mcp-place-rating {
+  color: var(--warning);
+  font-weight: 500;
+}
+
+.mcp-place-reviews {
+  color: var(--text-muted);
+}
+
+.mcp-place-price {
+  color: var(--success);
+  font-weight: 500;
+}
+
+.mcp-place-address-v2 {
+  font-size: 12px;
+  color: var(--text-secondary);
+  display: -webkit-box;
+  -webkit-line-clamp: 1;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  margin-bottom: 4px;
+}
+
+.mcp-place-distance-v2 {
+  font-size: 11px;
+  color: var(--text-muted);
+}
+
+/* 장소 카드 링크 스타일 */
+a.mcp-place-card-v2 {
+  text-decoration: none;
+  color: inherit;
+  cursor: pointer;
+  position: relative;
+}
+
+/* 장소 카드 호버 오버레이 */
+.mcp-place-hover-overlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.6);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  opacity: 0;
+  transition: opacity 0.2s;
+  border-radius: 12px;
+}
+
+.mcp-place-hover-overlay span {
+  color: white;
+  font-size: 14px;
+  font-weight: 600;
+  padding: 8px 16px;
+  background: var(--primary);
+  border-radius: 20px;
+}
+
+.mcp-place-card-v2:hover .mcp-place-hover-overlay {
+  opacity: 1;
+}
+
+/* 슬라이드 반응형 */
+@media (max-width: 768px) {
+  .mcp-slider-content,
+  .mcp-slider-content.places {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+@media (max-width: 480px) {
+  .mcp-slider-content,
+  .mcp-slider-content.places {
+    grid-template-columns: 1fr;
+  }
+
+  .mcp-slider-btn {
+    width: 32px;
+    height: 32px;
+    font-size: 18px;
+  }
+}
+
+/* ==============================================
+   뉴스 카드 스타일
+   ============================================== */
+
+.mcp-slider-content.news {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 16px;
+}
+
+.mcp-news-card {
+  display: flex;
+  flex-direction: column;
+  background: var(--bg-main);
+  border: 1px solid var(--border-light);
+  border-radius: 12px;
+  overflow: hidden;
+  text-decoration: none;
+  color: inherit;
+  transition: all 0.2s;
+  position: relative;
+}
+
+.mcp-news-card:hover {
+  border-color: var(--primary);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+  transform: translateY(-2px);
+}
+
+.mcp-news-image-wrapper {
+  position: relative;
+  width: 100%;
+  height: 120px;
+  overflow: hidden;
+  background: var(--bg-hover);
+}
+
+.mcp-news-image {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.mcp-news-no-image {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: linear-gradient(135deg, #f0f4f8 0%, #e2e8f0 100%);
+  font-size: 32px;
+}
+
+.mcp-news-category-badge {
+  position: absolute;
+  top: 8px;
+  left: 8px;
+  background: var(--primary);
+  color: white;
+  font-size: 10px;
+  font-weight: 600;
+  padding: 3px 8px;
+  border-radius: 10px;
+  text-transform: uppercase;
+}
+
+.mcp-news-details {
+  padding: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  flex: 1;
+}
+
+.mcp-news-title {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--text-primary);
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  line-height: 1.4;
+}
+
+.mcp-news-description {
+  font-size: 12px;
+  color: var(--text-secondary);
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  line-height: 1.4;
+}
+
+.mcp-news-meta {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-top: auto;
+  padding-top: 8px;
+  border-top: 1px solid var(--border-light);
+}
+
+.mcp-news-source {
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--primary);
+}
+
+.mcp-news-time {
+  font-size: 11px;
+  color: var(--text-muted);
+}
+
+/* 뉴스 카드 호버 오버레이 */
+.mcp-news-hover-overlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.6);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  opacity: 0;
+  transition: opacity 0.2s;
+  border-radius: 12px;
+}
+
+.mcp-news-hover-overlay span {
+  color: white;
+  font-size: 14px;
+  font-weight: 600;
+  padding: 8px 16px;
+  background: var(--primary);
+  border-radius: 20px;
+}
+
+.mcp-news-card:hover .mcp-news-hover-overlay {
+  opacity: 1;
+}
+
+/* 뉴스 섹션 타이틀 */
+.mcp-section.news-section .mcp-section-title {
+  color: var(--text-primary);
+}
+
+/* 뉴스 카드 반응형 */
+@media (max-width: 768px) {
+  .mcp-slider-content.news {
+    grid-template-columns: repeat(2, 1fr);
+  }
+
+  .mcp-news-image-wrapper {
+    height: 100px;
+  }
+}
+
+@media (max-width: 480px) {
+  .mcp-slider-content.news {
+    grid-template-columns: 1fr;
+  }
+
+  .mcp-news-card {
+    flex-direction: row;
+  }
+
+  .mcp-news-image-wrapper {
+    width: 100px;
+    height: auto;
+    min-height: 80px;
+    flex-shrink: 0;
+  }
+
+  .mcp-news-details {
+    padding: 10px;
+  }
+
+  .mcp-news-title {
+    font-size: 13px;
+    -webkit-line-clamp: 2;
+  }
+
+  .mcp-news-description {
+    display: none;
   }
 }

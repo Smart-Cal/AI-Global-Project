@@ -557,6 +557,7 @@ export async function createMessage(message: {
   role: 'user' | 'assistant' | 'system';
   content: string;
   pending_events?: any;
+  mcp_data?: any;
 }): Promise<Message> {
   const { data, error } = await supabase
     .from('messages')

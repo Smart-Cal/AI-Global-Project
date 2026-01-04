@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef, useEffect, useMemo } from 'react';
 import { useAuthStore } from '../../store/authStore';
 import { useGoalStore } from '../../store/goalStore';
 import { useEventStore } from '../../store/eventStore';
@@ -17,12 +17,80 @@ import {
   type PendingEvent,
   type PendingTodo,
   type PendingGoal,
-  type ChatMode,
+  type MCPResponseData,
+  type MCPPlaceResult,
+  type MCPProductResult,
+  type MCPNewsResult,
 } from '../../services/api';
 import DatePicker from '../DatePicker';
 import TimePicker from '../TimePicker';
 import { useToast } from '../Toast';
 import type { Goal } from '../../types';
+
+// 마크다운 렌더링 헬퍼 함수
+const renderMarkdown = (text: string): React.ReactNode => {
+  if (!text) return null;
+
+  // 줄바꿈으로 분리
+  const lines = text.split('\n');
+
+  return lines.map((line, lineIdx) => {
+    // 각 라인을 파싱
+    let content: React.ReactNode = line;
+
+    // **bold** 처리
+    const boldParts = line.split(/(\*\*[^*]+\*\*)/g);
+    if (boldParts.length > 1) {
+      content = boldParts.map((part, i) => {
+        if (part.startsWith('**') && part.endsWith('**')) {
+          return <strong key={i}>{part.slice(2, -2)}</strong>;
+        }
+        return part;
+      });
+    }
+
+    // *italic* 처리 (이미 ** 처리된 후)
+    if (typeof content === 'string') {
+      const italicParts = content.split(/(\*[^*]+\*)/g);
+      if (italicParts.length > 1) {
+        content = italicParts.map((part, i) => {
+          if (part.startsWith('*') && part.endsWith('*') && !part.startsWith('**')) {
+            return <em key={i}>{part.slice(1, -1)}</em>;
+          }
+          return part;
+        });
+      }
+    }
+
+    // 리스트 아이템 (- 또는 •)
+    if (line.trim().startsWith('- ') || line.trim().startsWith('• ')) {
+      return (
+        <div key={lineIdx} className="markdown-list-item">
+          <span className="markdown-bullet">•</span>
+          <span>{typeof content === 'string' ? content.replace(/^[\s]*[-•]\s*/, '') : content}</span>
+        </div>
+      );
+    }
+
+    // 숫자 리스트 (1. 2. 3.)
+    const numberedMatch = line.trim().match(/^(\d+)\.\s+(.*)$/);
+    if (numberedMatch) {
+      return (
+        <div key={lineIdx} className="markdown-list-item numbered">
+          <span className="markdown-number">{numberedMatch[1]}.</span>
+          <span>{numberedMatch[2]}</span>
+        </div>
+      );
+    }
+
+    // 빈 줄
+    if (line.trim() === '') {
+      return <div key={lineIdx} className="markdown-break" />;
+    }
+
+    return <div key={lineIdx} className="markdown-line">{content}</div>;
+  });
+};
 
 interface LocalMessage {
   id: string;
@@ -31,6 +99,7 @@ interface LocalMessage {
   pending_events?: PendingEvent[];
   pending_todos?: PendingTodo[];
   pending_goals?: PendingGoal[];
+  mcp_data?: MCPResponseData;  // MCP 데이터 ("행동하는 AI" 기능)
   created_at: string;
 }
 
@@ -49,7 +118,7 @@ const AssistantView: React.FC = () => {
   const { user } = useAuthStore();
   const { getActiveGoals } = useGoalStore();
   const { loadEvents, events } = useEventStore();
-  const { categories } = useCategoryStore();
+  const { categories, fetchCategories, addCategory } = useCategoryStore();
   const { showToast } = useToast();
 
   // Conversations state
@@ -63,13 +132,14 @@ const AssistantView: React.FC = () => {
   const [selectedGoal, setSelectedGoal] = useState<Goal | null>(null);
   const [showGoalSelector, setShowGoalSelector] = useState(false);
   const [showConversationList, setShowConversationList] = useState(true);
-  const [chatMode, setChatMode] = useState<ChatMode>('auto');
 
   // Event confirmation state - 메시지 ID별로 관리
   const [activeMessageId, setActiveMessageId] = useState<string | null>(null);
   const [activeItemType, setActiveItemType] = useState<'event' | 'todo' | 'goal' | null>(null);
   const [eventDecisions, setEventDecisions] = useState<EventDecisionState>({});
   const [editingEvents, setEditingEvents] = useState<{ [index: number]: PendingEvent }>({});
+  // useRef로 editingEvents의 최신 값을 항상 참조
+  const editingEventsRef = useRef<{ [index: number]: PendingEvent }>({});
 
   // TODO confirmation state
   const [todoDecisions, setTodoDecisions] = useState<DecisionState>({});
@@ -88,13 +158,43 @@ const AssistantView: React.FC = () => {
     items?: any[];
   } | null>(null);
 
+  // 새 카테고리 추가 상태
+  const [showNewCategoryInput, setShowNewCategoryInput] = useState<{
+    type: 'event' | 'todo' | 'goal';
+    index: number;
+  } | null>(null);
+  const [newCategoryName, setNewCategoryName] = useState('');
+  const [newCategoryColor, setNewCategoryColor] = useState('#6366f1');
+  const [isCreatingCategory, setIsCreatingCategory] = useState(false);
+  const [showColorPalette, setShowColorPalette] = useState(false);
+
+  // 색상 팔레트
+  const colorPalette = [
+    '#ef4444', // 빨강
+    '#f97316', // 주황
+    '#f59e0b', // 노랑
+    '#22c55e', // 초록
+    '#14b8a6', // 청록
+    '#3b82f6', // 파랑
+    '#6366f1', // 남색
+    '#8b5cf6', // 보라
+    '#ec4899', // 분홍
+    '#6b7280', // 회색
+  ];
+
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const activeGoals = getActiveGoals();
 
-  // Load conversations on mount
+  // Load conversations and categories on mount
   useEffect(() => {
     loadConversations();
+    fetchCategories();
   }, []);
+
+  // 디버깅: 카테고리 상태 확인
+  useEffect(() => {
+    console.log('[AssistantView] Categories updated:', categories);
+  }, [categories]);
 
   const loadConversations = async () => {
     try {
@@ -116,6 +216,7 @@ const AssistantView: React.FC = () => {
         pending_events: m.pending_events,
         pending_todos: m.pending_todos,
         pending_goals: m.pending_goals,
+        mcp_data: m.mcp_data,  // MCP 데이터 (상품 카드 등) 로드
         created_at: m.created_at,
       })));
       resetConfirmationState();
@@ -129,6 +230,7 @@ const AssistantView: React.FC = () => {
     setActiveItemType(null);
     setEventDecisions({});
     setEditingEvents({});
+    editingEventsRef.current = {}; // ref도 초기화
     setTodoDecisions({});
     setEditingTodos({});
     setGoalDecisions({});
@@ -188,7 +290,13 @@ const AssistantView: React.FC = () => {
     setCompletedResults(null);
 
     try {
-      const response = await sendChatMessage(messageContent, currentConversationId || undefined, chatMode);
+      const response = await sendChatMessage(messageContent, currentConversationId || undefined, 'auto');
+
+      // 디버깅: API 응답 확인
+      console.log('[AssistantView] API Response:', response);
+      console.log('[AssistantView] pending_goals:', response.pending_goals);
+      console.log('[AssistantView] pending_events:', response.pending_events);
+      console.log('[AssistantView] pending_todos:', response.pending_todos);
 
       // Update conversation ID if new
       if (!currentConversationId) {
@@ -214,6 +322,7 @@ const AssistantView: React.FC = () => {
         pending_events: response.pending_events,
         pending_todos: response.pending_todos,
         pending_goals: response.pending_goals,
+        mcp_data: response.mcp_data,  // MCP 데이터 추가
         created_at: new Date().toISOString(),
       };
 
@@ -260,12 +369,35 @@ const AssistantView: React.FC = () => {
   };
 
   const handleEditEvent = (index: number, field: keyof PendingEvent, value: string | number) => {
+    console.log('[handleEditEvent] Called with:', { index, field, value, activeMessageId });
     const currentEvents = messages.find(m => m.id === activeMessageId)?.pending_events || [];
-    const currentEvent = editingEvents[index] || currentEvents[index];
-    setEditingEvents(prev => ({
-      ...prev,
-      [index]: { ...currentEvent, [field]: value }
-    }));
+    console.log('[handleEditEvent] currentEvents:', currentEvents);
+    // editingEventsRef에서 최신 값을 가져옴
+    const currentEvent = editingEventsRef.current[index] || currentEvents[index];
+    console.log('[handleEditEvent] currentEvent:', currentEvent);
+    if (!currentEvent) {
+      console.error('[handleEditEvent] No currentEvent found!');
+      return;
+    }
+    const updatedEvent = { ...currentEvent, [field]: value };
+    console.log('[handleEditEvent] updatedEvent:', updatedEvent);
+
+    // ref를 먼저 업데이트 (동기적)
+    editingEventsRef.current = {
+      ...editingEventsRef.current,
+      [index]: updatedEvent
+    };
+    console.log('[handleEditEvent] Updated editingEventsRef:', editingEventsRef.current);
+
+    // 상태도 업데이트 (UI 리렌더링용)
+    setEditingEvents(prev => {
+      const newState = {
+        ...prev,
+        [index]: updatedEvent
+      };
+      console.log('[handleEditEvent] New editingEvents state:', newState);
+      return newState;
+    });
   };
 
   // datetime에서 날짜 부분만 추출 (YYYY-MM-DD)
@@ -299,7 +431,10 @@ const AssistantView: React.FC = () => {
   };
 
   const getEventWithEdits = (index: number, originalEvent: PendingEvent): PendingEvent => {
-    return editingEvents[index] || originalEvent;
+    // editingEventsRef에서 최신 값을 가져옴 (클로저 문제 방지)
+    const edited = editingEventsRef.current[index];
+    console.log('[getEventWithEdits] index:', index, 'edited:', edited, 'original:', originalEvent);
+    return edited || originalEvent;
   };
 
   // 모든 일정이 처리되었는지 확인
@@ -316,12 +451,18 @@ const AssistantView: React.FC = () => {
     const confirmedEvents: PendingEvent[] = [];
     const rejectedCount = Object.values(eventDecisions).filter(d => d === 'rejected').length;
 
+    console.log('[handleFinalConfirmEvents] editingEvents:', editingEvents);
+    console.log('[handleFinalConfirmEvents] pendingEvents:', pendingEvents);
+
     for (let i = 0; i < pendingEvents.length; i++) {
       if (eventDecisions[i] === 'confirmed') {
         const eventWithEdits = getEventWithEdits(i, pendingEvents[i]);
+        console.log(`[handleFinalConfirmEvents] Event ${i} with edits:`, eventWithEdits);
         confirmedEvents.push(eventWithEdits);
       }
     }
+
+    console.log('[handleFinalConfirmEvents] confirmedEvents to save:', confirmedEvents);
 
     try {
       if (confirmedEvents.length > 0) {
@@ -621,6 +762,295 @@ const AssistantView: React.FC = () => {
     return conflictingEvents;
   };
 
+  // 새 카테고리 생성 핸들러
+  const handleCreateCategory = async (type: 'event' | 'todo' | 'goal', index: number) => {
+    // 이미 생성 중이면 중복 호출 방지
+    if (isCreatingCategory) {
+      console.log('[handleCreateCategory] Already creating, skipping...');
+      return;
+    }
+
+    const categoryName = newCategoryName.trim();
+    if (!categoryName) {
+      showToast('카테고리 이름을 입력해주세요', 'error');
+      return;
+    }
+
+    // 이미 존재하는 카테고리인지 확인
+    const existingCategory = categories.find(
+      cat => cat.name.toLowerCase() === categoryName.toLowerCase()
+    );
+    if (existingCategory) {
+      console.log('[handleCreateCategory] Category already exists:', existingCategory);
+      // 기존 카테고리를 선택
+      if (type === 'event') {
+        handleEditEvent(index, 'category', existingCategory.name);
+      } else if (type === 'todo') {
+        handleEditTodo(index, 'category', existingCategory.name);
+      } else if (type === 'goal') {
+        handleEditGoal(index, 'category', existingCategory.name);
+      }
+      showToast(`"${existingCategory.name}" 카테고리를 선택했습니다`, 'info');
+      setShowNewCategoryInput(null);
+      setNewCategoryName('');
+      setNewCategoryColor('#6366f1');
+      setShowColorPalette(false);
+      return;
+    }
+
+    console.log('[handleCreateCategory] Creating category:', { type, index, name: categoryName, color: newCategoryColor });
+    console.log('[handleCreateCategory] activeMessageId:', activeMessageId);
+
+    setIsCreatingCategory(true);
+    try {
+      const newCategory = await addCategory(categoryName, newCategoryColor);
+      console.log('[handleCreateCategory] Created category:', newCategory);
+
+      // 생성된 카테고리를 해당 항목에 설정
+      if (type === 'event') {
+        console.log('[handleCreateCategory] Calling handleEditEvent for index:', index);
+        handleEditEvent(index, 'category', newCategory.name);
+      } else if (type === 'todo') {
+        console.log('[handleCreateCategory] Calling handleEditTodo for index:', index);
+        handleEditTodo(index, 'category', newCategory.name);
+      } else if (type === 'goal') {
+        console.log('[handleCreateCategory] Calling handleEditGoal for index:', index);
+        handleEditGoal(index, 'category', newCategory.name);
+      }
+
+      showToast(`"${newCategory.name}" 카테고리가 생성되었습니다`, 'success');
+      setShowNewCategoryInput(null);
+      setNewCategoryName('');
+      setNewCategoryColor('#6366f1');
+      setShowColorPalette(false);
+    } catch (error) {
+      console.error('Failed to create category:', error);
+      showToast('카테고리 생성에 실패했습니다', 'error');
+    } finally {
+      setIsCreatingCategory(false);
+    }
+  };
+
+  // 카테고리 선택 컴포넌트 렌더링
+  const renderCategorySelect = (
+    type: 'event' | 'todo' | 'goal',
+    index: number,
+    currentValue: string | undefined,
+    onChange: (value: string) => void,
+    disabled: boolean
+  ) => {
+    const isAddingNew = showNewCategoryInput?.type === type && showNewCategoryInput?.index === index;
+
+    if (isAddingNew) {
+      return (
+        <div style={{
+          position: 'relative',
+          display: 'flex',
+          flexDirection: 'row',
+          alignItems: 'center',
+          gap: '6px',
+          width: '100%',
+          flexWrap: 'nowrap',
+          height: '36px'
+        }}>
+          <input
+            type="text"
+            value={newCategoryName}
+            onChange={(e) => setNewCategoryName(e.target.value)}
+            placeholder="카테고리명"
+            style={{
+              flex: '1 1 auto',
+              minWidth: '80px',
+              height: '36px',
+              padding: '8px 12px',
+              fontSize: '14px',
+              border: '1px solid var(--primary)',
+              borderRadius: '6px',
+              outline: 'none',
+              boxSizing: 'border-box'
+            }}
+            autoFocus
+            onKeyDown={(e) => {
+              if (e.key === 'Enter') {
+                handleCreateCategory(type, index);
+              } else if (e.key === 'Escape') {
+                setShowNewCategoryInput(null);
+                setNewCategoryName('');
+                setNewCategoryColor('#6366f1');
+                setShowColorPalette(false);
+              }
+            }}
+            disabled={isCreatingCategory}
+          />
+          {/* 색상 선택 버튼 */}
+          <button
+            type="button"
+            style={{
+              width: '36px',
+              height: '36px',
+              minWidth: '36px',
+              padding: '4px',
+              border: '1px solid #ddd',
+              borderRadius: '6px',
+              cursor: 'pointer',
+              backgroundColor: 'white',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              flexShrink: 0,
+              boxSizing: 'border-box'
+            }}
+            onClick={() => setShowColorPalette(!showColorPalette)}
+            disabled={isCreatingCategory}
+            title="색상 선택"
+          >
+            <span style={{
+              width: '22px',
+              height: '22px',
+              borderRadius: '4px',
+              backgroundColor: newCategoryColor,
+              display: 'block'
+            }} />
+          </button>
+          {/* 확인 버튼 */}
+          <button
+            style={{
+              width: '36px',
+              height: '36px',
+              minWidth: '36px',
+              border: 'none',
+              borderRadius: '6px',
+              cursor: 'pointer',
+              backgroundColor: '#10b981',
+              color: 'white',
+              fontSize: '16px',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              flexShrink: 0,
+              boxSizing: 'border-box'
+            }}
+            onClick={() => handleCreateCategory(type, index)}
+            disabled={isCreatingCategory || !newCategoryName.trim()}
+          >
+            {isCreatingCategory ? '·' : '✓'}
+          </button>
+          {/* 취소 버튼 */}
+          <button
+            style={{
+              width: '36px',
+              height: '36px',
+              minWidth: '36px',
+              border: '1px solid #ddd',
+              borderRadius: '6px',
+              cursor: 'pointer',
+              backgroundColor: '#f3f4f6',
+              color: '#6b7280',
+              fontSize: '16px',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              flexShrink: 0,
+              boxSizing: 'border-box'
+            }}
+            onClick={() => {
+              setShowNewCategoryInput(null);
+              setNewCategoryName('');
+              setNewCategoryColor('#6366f1');
+              setShowColorPalette(false);
+            }}
+            disabled={isCreatingCategory}
+          >
+            ✕
+          </button>
+          {/* 색상 팔레트 드롭다운 */}
+          {showColorPalette && (
+            <div style={{
+              position: 'absolute',
+              top: '100%',
+              left: 0,
+              marginTop: '4px',
+              padding: '8px',
+              backgroundColor: 'white',
+              border: '1px solid #ddd',
+              borderRadius: '6px',
+              boxShadow: '0 4px 12px rgba(0,0,0,0.15)',
+              display: 'flex',
+              gap: '6px',
+              flexWrap: 'wrap',
+              zIndex: 100,
+              width: 'max-content'
+            }}>
+              {colorPalette.map((color) => (
+                <button
+                  key={color}
+                  type="button"
+                  style={{
+                    width: '28px',
+                    height: '28px',
+                    borderRadius: '4px',
+                    backgroundColor: color,
+                    border: newCategoryColor === color ? '2px solid #333' : '2px solid transparent',
+                    cursor: 'pointer',
+                    padding: 0,
+                    outline: 'none',
+                    boxShadow: newCategoryColor === color ? '0 0 0 2px white, 0 0 0 4px rgba(0,0,0,0.2)' : '0 1px 3px rgba(0,0,0,0.1)'
+                  }}
+                  onClick={(e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    setNewCategoryColor(color);
+                    setShowColorPalette(false);
+                  }}
+                  disabled={isCreatingCategory}
+                  title={color}
+                />
+              ))}
+            </div>
+          )}
+        </div>
+      );
+    }
+
+    const selectedCategory = categories.find(cat => cat.name === currentValue);
+
+    return (
+      <div className="category-select-wrapper">
+        <div
+          className="category-select-current"
+          style={{ borderLeftColor: selectedCategory?.color || 'transparent' }}
+        >
+          {selectedCategory && (
+            <span
+              className="category-color-box"
+              style={{ backgroundColor: selectedCategory.color }}
+            />
+          )}
+          <select
+            value={currentValue || ''}
+            onChange={(e) => {
+              console.log('[renderCategorySelect] onChange:', { type, index, value: e.target.value });
+              if (e.target.value === '__new__') {
+                setShowNewCategoryInput({ type, index });
+                setNewCategoryName('');
+              } else {
+                console.log('[renderCategorySelect] Calling onChange callback with:', e.target.value);
+                onChange(e.target.value);
+              }
+            }}
+            disabled={disabled}
+          >
+            <option value="">선택</option>
+            {categories.map(cat => (
+              <option key={cat.id} value={cat.name}>{cat.name}</option>
+            ))}
+            <option value="__new__">+ 새 카테고리 추가</option>
+          </select>
+        </div>
+      </div>
+    );
+  };
+
   // 일정 카드 렌더링 (인라인)
   const renderEventCard = (event: PendingEvent, index: number, isActive: boolean) => {
     const eventWithEdits = getEventWithEdits(index, event);
@@ -742,16 +1172,13 @@ const AssistantView: React.FC = () => {
 
             <div className="event-card-row half">
               <label>카테고리</label>
-              <select
-                value={eventWithEdits.category || ''}
-                onChange={(e) => handleEditEvent(index, 'category', e.target.value)}
-                disabled={decision === 'rejected'}
-              >
-                <option value="">선택</option>
-                {categories.map(cat => (
-                  <option key={cat.id} value={cat.name}>{cat.name}</option>
-                ))}
-              </select>
+              {renderCategorySelect(
+                'event',
+                index,
+                eventWithEdits.category,
+                (value) => handleEditEvent(index, 'category', value),
+                decision === 'rejected'
+              )}
             </div>
           </div>
 
@@ -887,16 +1314,13 @@ const AssistantView: React.FC = () => {
 
           <div className="item-card-row">
             <label>카테고리</label>
-            <select
-              value={todoWithEdits.category || ''}
-              onChange={(e) => handleEditTodo(index, 'category', e.target.value)}
-              disabled={decision === 'rejected'}
-            >
-              <option value="">선택</option>
-              {categories.map(cat => (
-                <option key={cat.id} value={cat.name}>{cat.name}</option>
-              ))}
-            </select>
+            {renderCategorySelect(
+              'todo',
+              index,
+              todoWithEdits.category,
+              (value) => handleEditTodo(index, 'category', value),
+              decision === 'rejected'
+            )}
           </div>
 
           <div className="item-card-row">
@@ -1000,16 +1424,13 @@ const AssistantView: React.FC = () => {
 
           <div className="item-card-row">
             <label>카테고리</label>
-            <select
-              value={goalWithEdits.category || ''}
-              onChange={(e) => handleEditGoal(index, 'category', e.target.value)}
-              disabled={decision === 'rejected'}
-            >
-              <option value="">선택</option>
-              {categories.map(cat => (
-                <option key={cat.id} value={cat.name}>{cat.name}</option>
-              ))}
-            </select>
+            {renderCategorySelect(
+              'goal',
+              index,
+              goalWithEdits.category,
+              (value) => handleEditGoal(index, 'category', value),
+              decision === 'rejected'
+            )}
           </div>
 
           <div className="item-card-row">
@@ -1039,6 +1460,430 @@ const AssistantView: React.FC = () => {
             </div>
           )}
         </div>
+      </div>
+    );
+  };
+
+  // 슬라이드 컴포넌트 (상품/장소 공용)
+  const CardSlider: React.FC<{
+    items: any[];
+    type: 'product' | 'place';
+    itemsPerPage?: number;
+  }> = ({ items, type, itemsPerPage = 3 }) => {
+    const [currentPage, setCurrentPage] = useState(0);
+    const maxItems = 9; // 최대 9개
+    const limitedItems = items.slice(0, maxItems);
+    const totalPages = Math.ceil(limitedItems.length / itemsPerPage);
+
+    const goToPrev = () => setCurrentPage(prev => Math.max(0, prev - 1));
+    const goToNext = () => setCurrentPage(prev => Math.min(totalPages - 1, prev + 1));
+
+    const visibleItems = limitedItems.slice(
+      currentPage * itemsPerPage,
+      (currentPage + 1) * itemsPerPage
+    );
+
+    if (type === 'product') {
+      return (
+        <div className="mcp-slider-container">
+          <div className="mcp-slider-content">
+            {visibleItems.map((product: MCPProductResult, idx: number) => {
+              const globalIdx = currentPage * itemsPerPage + idx;
+              return (
+                <a
+                  key={product.id || globalIdx}
+                  href={product.productUrl || '#'}
+                  target={product.productUrl ? '_blank' : '_self'}
+                  rel="noopener noreferrer"
+                  className={`mcp-product-card-v2 ${!product.productUrl ? 'no-link' : ''}`}
+                  onClick={(e) => { if (!product.productUrl) e.preventDefault(); }}
+                >
+                  <div className={`mcp-product-rank-badge ${globalIdx < 3 ? 'top3' : ''}`}>
+                    {globalIdx === 0 ? '🥇' : globalIdx === 1 ? '🥈' : globalIdx === 2 ? '🥉' : globalIdx + 1}
+                  </div>
+                  <div className="mcp-product-image-wrapper">
+                    {product.imageUrl ? (
+                      <img
+                        src={product.imageUrl}
+                        alt={product.title}
+                        className="mcp-product-image"
+                        onError={(e) => {
+                          (e.target as HTMLImageElement).src = 'data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" width="100" height="100" viewBox="0 0 100 100"><rect fill="%23f3f4f6" width="100" height="100"/><text x="50%" y="50%" dominant-baseline="middle" text-anchor="middle" fill="%239ca3af" font-size="12">No Image</text></svg>';
+                        }}
+                      />
+                    ) : (
+                      <div className="mcp-product-no-image"><span>🛒</span></div>
+                    )}
+                  </div>
+                  <div className="mcp-product-details">
+                    <div className="mcp-product-title-v2">{product.title}</div>
+                    <div className="mcp-product-price-row">
+                      <span className="mcp-product-price-v2">
+                        {product.currency === 'USD' ? '$' : ''}{product.price?.toLocaleString()}{product.currency === 'KRW' ? '원' : product.currency !== 'USD' ? product.currency : ''}
+                      </span>
+                      {product.originalPrice && product.originalPrice > product.price && (
+                        <>
+                          <span className="mcp-product-original-price-v2">
+                            {product.currency === 'USD' ? '$' : ''}{product.originalPrice.toLocaleString()}
+                          </span>
+                          <span className="mcp-product-discount">
+                            {Math.round((1 - product.price / product.originalPrice) * 100)}%
+                          </span>
+                        </>
+                      )}
+                    </div>
+                    {(product.rating || product.reviewCount) && (
+                      <div className="mcp-product-rating-row">
+                        {product.rating && <span className="mcp-product-stars">⭐ {product.rating.toFixed(1)}</span>}
+                        {product.reviewCount && <span className="mcp-product-reviews">({product.reviewCount.toLocaleString()})</span>}
+                      </div>
+                    )}
+                    {product.seller && <div className="mcp-product-seller-v2">{product.seller}</div>}
+                  </div>
+                  {product.productUrl && (
+                    <div className="mcp-product-hover-overlay"><span>바로가기 →</span></div>
+                  )}
+                </a>
+              );
+            })}
+          </div>
+          {totalPages > 1 && (
+            <div className="mcp-slider-nav">
+              <button
+                className="mcp-slider-btn prev"
+                onClick={goToPrev}
+                disabled={currentPage === 0}
+              >
+                ‹
+              </button>
+              <div className="mcp-slider-dots">
+                {Array.from({ length: totalPages }).map((_, i) => (
+                  <span
+                    key={i}
+                    className={`mcp-slider-dot ${i === currentPage ? 'active' : ''}`}
+                    onClick={() => setCurrentPage(i)}
+                  />
+                ))}
+              </div>
+              <button
+                className="mcp-slider-btn next"
+                onClick={goToNext}
+                disabled={currentPage === totalPages - 1}
+              >
+                ›
+              </button>
+            </div>
+          )}
+        </div>
+      );
+    }
+
+    // 장소 카드 - 링크 클릭 시 구글맵으로 이동
+    return (
+      <div className="mcp-slider-container">
+        <div className="mcp-slider-content places">
+          {visibleItems.map((place: MCPPlaceResult, idx: number) => {
+            const globalIdx = currentPage * itemsPerPage + idx;
+            // 이미지 URL 결정: photoUrl > photos[0] > 기본 이미지
+            const imageUrl = place.photoUrl || (place.photos && place.photos.length > 0 ? place.photos[0] : null);
+            // 구글맵 URL
+            const mapsUrl = place.mapsUrl || (place.placeId ? `https://www.google.com/maps/place/?q=place_id:${place.placeId}` : `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(place.name + ' ' + place.address)}`);
+            // 리뷰 수 (백엔드 필드명 호환)
+            const reviewCount = place.reviewCount || place.userRatingsTotal;
+
+            return (
+              <a
+                key={place.id || place.placeId || globalIdx}
+                href={mapsUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="mcp-place-card-v2"
+              >
+                <div className={`mcp-place-rank-badge ${globalIdx < 3 ? 'top3' : ''}`}>
+                  {globalIdx === 0 ? '🥇' : globalIdx === 1 ? '🥈' : globalIdx === 2 ? '🥉' : globalIdx + 1}
+                </div>
+                <div className="mcp-place-image-wrapper">
+                  {imageUrl ? (
+                    <img
+                      src={imageUrl}
+                      alt={place.name}
+                      className="mcp-place-image"
+                      onError={(e) => {
+                        (e.target as HTMLImageElement).src = 'data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" width="100" height="100" viewBox="0 0 100 100"><rect fill="%23f3f4f6" width="100" height="100"/><text x="50%" y="50%" dominant-baseline="middle" text-anchor="middle" fill="%239ca3af" font-size="24">📍</text></svg>';
+                      }}
+                    />
+                  ) : (
+                    <div className="mcp-place-no-image">
+                      <span>📍</span>
+                    </div>
+                  )}
+                  {place.openNow !== undefined && (
+                    <span className={`mcp-place-status-badge ${place.openNow ? 'open' : 'closed'}`}>
+                      {place.openNow ? '영업 중' : '영업 종료'}
+                    </span>
+                  )}
+                </div>
+                <div className="mcp-place-details-v2">
+                  <div className="mcp-place-name-v2">{place.name}</div>
+                  <div className="mcp-place-meta">
+                    {place.rating && <span className="mcp-place-rating">⭐ {place.rating}</span>}
+                    {reviewCount && <span className="mcp-place-reviews">({reviewCount.toLocaleString()})</span>}
+                    {place.priceLevel && <span className="mcp-place-price">{typeof place.priceLevel === 'number' ? '💰'.repeat(place.priceLevel) : place.priceLevel}</span>}
+                  </div>
+                  <div className="mcp-place-address-v2">{place.address}</div>
+                  {place.distance && (
+                    <div className="mcp-place-distance-v2">
+                      📍 {place.distance} {place.duration && `(${place.duration})`}
+                    </div>
+                  )}
+                </div>
+                {/* 호버 시 구글맵 링크 표시 */}
+                <div className="mcp-place-hover-overlay">
+                  <span>지도에서 보기 →</span>
+                </div>
+              </a>
+            );
+          })}
+        </div>
+        {totalPages > 1 && (
+          <div className="mcp-slider-nav">
+            <button
+              className="mcp-slider-btn prev"
+              onClick={goToPrev}
+              disabled={currentPage === 0}
+            >
+              ‹
+            </button>
+            <div className="mcp-slider-dots">
+              {Array.from({ length: totalPages }).map((_, i) => (
+                <span
+                  key={i}
+                  className={`mcp-slider-dot ${i === currentPage ? 'active' : ''}`}
+                  onClick={() => setCurrentPage(i)}
+                />
+              ))}
+            </div>
+            <button
+              className="mcp-slider-btn next"
+              onClick={goToNext}
+              disabled={currentPage === totalPages - 1}
+            >
+              ›
+            </button>
+          </div>
+        )}
+      </div>
+    );
+  };
+
+  // 뉴스 카드 슬라이더
+  const NewsCardSlider: React.FC<{ items: MCPNewsResult[] }> = ({ items }) => {
+    const [currentPage, setCurrentPage] = useState(0);
+    const itemsPerPage = 3;
+    const maxItems = 9;
+    const limitedItems = items.slice(0, maxItems);
+    const totalPages = Math.ceil(limitedItems.length / itemsPerPage);
+
+    const goToPrev = () => setCurrentPage(prev => Math.max(0, prev - 1));
+    const goToNext = () => setCurrentPage(prev => Math.min(totalPages - 1, prev + 1));
+
+    const visibleItems = limitedItems.slice(
+      currentPage * itemsPerPage,
+      (currentPage + 1) * itemsPerPage
+    );
+
+    // 상대 시간 포맷
+    const formatRelativeTime = (dateString: string) => {
+      const date = new Date(dateString);
+      const now = new Date();
+      const diffMs = now.getTime() - date.getTime();
+      const diffMins = Math.floor(diffMs / 60000);
+      const diffHours = Math.floor(diffMs / 3600000);
+      const diffDays = Math.floor(diffMs / 86400000);
+
+      if (diffMins < 60) return `${diffMins}분 전`;
+      if (diffHours < 24) return `${diffHours}시간 전`;
+      if (diffDays < 7) return `${diffDays}일 전`;
+      return date.toLocaleDateString('ko-KR', { month: 'short', day: 'numeric' });
+    };
+
+    return (
+      <div className="mcp-slider-container">
+        <div className="mcp-slider-content news">
+          {visibleItems.map((article, idx) => {
+            const globalIdx = currentPage * itemsPerPage + idx;
+            return (
+              <a
+                key={article.id || globalIdx}
+                href={article.url}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="mcp-news-card"
+              >
+                <div className="mcp-news-image-wrapper">
+                  {article.imageUrl ? (
+                    <img
+                      src={article.imageUrl}
+                      alt={article.title}
+                      className="mcp-news-image"
+                      onError={(e) => {
+                        (e.target as HTMLImageElement).src = 'data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" width="100" height="100" viewBox="0 0 100 100"><rect fill="%23f3f4f6" width="100" height="100"/><text x="50%" y="50%" dominant-baseline="middle" text-anchor="middle" fill="%239ca3af" font-size="24">📰</text></svg>';
+                      }}
+                    />
+                  ) : (
+                    <div className="mcp-news-no-image">
+                      <span>📰</span>
+                    </div>
+                  )}
+                  {article.category && (
+                    <span className="mcp-news-category-badge">{article.category}</span>
+                  )}
+                </div>
+                <div className="mcp-news-details">
+                  <div className="mcp-news-title">{article.title}</div>
+                  {article.description && (
+                    <div className="mcp-news-description">
+                      {article.description.length > 80
+                        ? article.description.substring(0, 80) + '...'
+                        : article.description}
+                    </div>
+                  )}
+                  <div className="mcp-news-meta">
+                    <span className="mcp-news-source">{article.source}</span>
+                    <span className="mcp-news-time">{formatRelativeTime(article.publishedAt)}</span>
+                  </div>
+                </div>
+                <div className="mcp-news-hover-overlay">
+                  <span>기사 읽기 →</span>
+                </div>
+              </a>
+            );
+          })}
+        </div>
+        {totalPages > 1 && (
+          <div className="mcp-slider-nav">
+            <button
+              className="mcp-slider-btn prev"
+              onClick={goToPrev}
+              disabled={currentPage === 0}
+            >
+              ‹
+            </button>
+            <div className="mcp-slider-dots">
+              {Array.from({ length: totalPages }).map((_, i) => (
+                <span
+                  key={i}
+                  className={`mcp-slider-dot ${i === currentPage ? 'active' : ''}`}
+                  onClick={() => setCurrentPage(i)}
+                />
+              ))}
+            </div>
+            <button
+              className="mcp-slider-btn next"
+              onClick={goToNext}
+              disabled={currentPage === totalPages - 1}
+            >
+              ›
+            </button>
+          </div>
+        )}
+      </div>
+    );
+  };
+
+  // MCP 데이터 렌더링 ("행동하는 AI" 결과)
+  const renderMCPData = (mcpData: MCPResponseData) => {
+    const hasRestaurants = mcpData.restaurants && mcpData.restaurants.length > 0;
+    const hasPlaces = mcpData.places && mcpData.places.length > 0;
+    const hasProducts = mcpData.products && mcpData.products.length > 0;
+    const hasGifts = mcpData.gifts && mcpData.gifts.length > 0;
+    const hasNews = mcpData.news && mcpData.news.length > 0;
+    const hasAvailableSlots = mcpData.availableSlots && mcpData.availableSlots.length > 0;
+
+    if (!hasRestaurants && !hasPlaces && !hasProducts && !hasGifts && !hasNews && !hasAvailableSlots) {
+      return null;
+    }
+
+    return (
+      <div className="mcp-data-container">
+        {/* 맛집/장소 추천 - 슬라이드 UI */}
+        {(hasRestaurants || hasPlaces) && (
+          <div className="mcp-section places-section">
+            <h4 className="mcp-section-title">
+              {hasRestaurants ? '🍽️ 맛집 추천' : '📍 장소 추천'}
+            </h4>
+            <CardSlider
+              items={mcpData.restaurants || mcpData.places || []}
+              type="place"
+              itemsPerPage={3}
+            />
+          </div>
+        )}
+
+        {/* 상품/선물 추천 - 슬라이드 UI */}
+        {(hasProducts || hasGifts) && (
+          <div className="mcp-section products-section">
+            <h4 className="mcp-section-title">
+              {hasGifts ? '🎁 선물 추천' : '🛒 상품 추천'}
+            </h4>
+            <CardSlider
+              items={mcpData.gifts || mcpData.products || []}
+              type="product"
+              itemsPerPage={3}
+            />
+          </div>
+        )}
+
+        {/* 뉴스 브리핑 - 슬라이드 UI */}
+        {hasNews && (
+          <div className="mcp-section news-section">
+            <h4 className="mcp-section-title">📰 뉴스 브리핑</h4>
+            <NewsCardSlider items={mcpData.news || []} />
+          </div>
+        )}
+
+        {/* 그룹 가능 시간 */}
+        {hasAvailableSlots && (
+          <div className="mcp-section schedule-section">
+            <h4 className="mcp-section-title">📅 가능한 시간</h4>
+            <div className="mcp-slots-list">
+              {mcpData.availableSlots!.slice(0, 5).map((slot, idx) => (
+                <div
+                  key={idx}
+                  className={`mcp-slot-card ${slot.allAvailable ? 'all-available' : 'partial'}`}
+                >
+                  <div className="mcp-slot-date">{slot.date}</div>
+                  <div className="mcp-slot-time">{slot.startTime} - {slot.endTime}</div>
+                  {slot.allAvailable ? (
+                    <span className="mcp-slot-status available">✓ 모두 가능</span>
+                  ) : (
+                    <span className="mcp-slot-status partial">
+                      ⚠️ {slot.unavailableMembers?.length || 0}명 불가
+                    </span>
+                  )}
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* 실행된 액션 표시 */}
+        {mcpData.actions_taken && mcpData.actions_taken.length > 0 && (
+          <div className="mcp-section actions-section">
+            <h4 className="mcp-section-title">✅ 실행 완료</h4>
+            <div className="mcp-actions-list">
+              {mcpData.actions_taken.map((action, idx) => (
+                <div
+                  key={idx}
+                  className={`mcp-action-item ${action.success ? 'success' : 'failed'}`}
+                >
+                  <span className="mcp-action-icon">{action.success ? '✓' : '✗'}</span>
+                  <span className="mcp-action-name">{action.action}</span>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
       </div>
     );
   };
@@ -1164,10 +2009,13 @@ const AssistantView: React.FC = () => {
             messages.map(msg => (
               <React.Fragment key={msg.id}>
                 <div className={`chat-message ${msg.role}`}>
-                  <div className="message-bubble">
-                    {msg.content}
+                  <div className="message-bubble markdown-content">
+                    {msg.role === 'assistant' ? renderMarkdown(msg.content) : msg.content}
                   </div>
                 </div>
+
+                {/* MCP 데이터 표시 ("행동하는 AI" 결과) */}
+                {msg.mcp_data && renderMCPData(msg.mcp_data)}
 
                 {/* 일정 확인 UI - 메시지 바로 아래에 표시 */}
                 {msg.pending_events && msg.pending_events.length > 0 && msg.id === activeMessageId && activeItemType === 'event' && (
@@ -1289,45 +2137,6 @@ const AssistantView: React.FC = () => {
 
         {/* Input Area */}
         <div className="chat-input-area">
-          {/* Mode Selector */}
-          <div className="chat-mode-selector">
-            <button
-              className={`chat-mode-btn ${chatMode === 'auto' ? 'active' : ''}`}
-              onClick={() => setChatMode('auto')}
-              title="AI가 자동으로 판단"
-            >
-              자동
-            </button>
-            <button
-              className={`chat-mode-btn ${chatMode === 'event' ? 'active' : ''}`}
-              onClick={() => setChatMode('event')}
-              title="일정 추가"
-            >
-              일정
-            </button>
-            <button
-              className={`chat-mode-btn ${chatMode === 'todo' ? 'active' : ''}`}
-              onClick={() => setChatMode('todo')}
-              title="할 일 추가"
-            >
-              TODO
-            </button>
-            <button
-              className={`chat-mode-btn ${chatMode === 'goal' ? 'active' : ''}`}
-              onClick={() => setChatMode('goal')}
-              title="목표 설정 및 분해"
-            >
-              Goal
-            </button>
-            <button
-              className={`chat-mode-btn ${chatMode === 'briefing' ? 'active' : ''}`}
-              onClick={() => setChatMode('briefing')}
-              title="오늘 브리핑"
-            >
-              브리핑
-            </button>
-          </div>
-
           <div className="chat-input-wrapper">
             <button
               className="chat-attach-btn"
@@ -1339,13 +2148,7 @@ const AssistantView: React.FC = () => {
             <input
               type="text"
               className="chat-input"
-              placeholder={
-                chatMode === 'event' ? '일정을 입력하세요... (예: 내일 3시 미팅)' :
-                chatMode === 'todo' ? '할 일을 입력하세요... (예: 보고서 작성)' :
-                chatMode === 'goal' ? '목표를 입력하세요... (예: 토익 900점)' :
-                chatMode === 'briefing' ? '브리핑 요청... (예: 오늘 일정 알려줘)' :
-                '무엇이든 물어보세요...'
-              }
+              placeholder="무엇이든 물어보세요... (일정, 할 일, 목표, 브리핑 등)"
               value={input}
               onChange={(e) => setInput(e.target.value)}
               onKeyDown={handleKeyDown}

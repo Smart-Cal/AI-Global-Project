@@ -125,6 +125,92 @@ export interface PendingGoal {
   decomposed_todos?: PendingTodo[];
 }
 
+// MCP 데이터 타입 ("행동하는 AI" 기능)
+export interface MCPPlaceResult {
+  id: string;
+  placeId?: string;       // Google Place ID
+  name: string;
+  address: string;
+  rating?: number;
+  reviewCount?: number;
+  userRatingsTotal?: number;  // 백엔드에서 오는 필드명
+  priceLevel?: string | number;
+  distance?: string;
+  duration?: string;
+  photos?: string[];
+  photoUrl?: string;      // 대표 사진 URL
+  mapsUrl?: string;       // Google Maps 링크
+  openNow?: boolean;
+  types?: string[];
+}
+
+export interface MCPProductResult {
+  id: string;
+  title: string;
+  price: number;
+  originalPrice?: number;
+  currency: string;
+  rating?: number;
+  reviewCount?: number;
+  seller?: string;
+  imageUrl?: string;
+  productUrl?: string;
+  isPrime?: boolean;
+  matchReasons?: string[];  // 추천 이유
+}
+
+export interface MCPGroupScheduleResult {
+  groupId: string;
+  groupName: string;
+  members: string[];
+  availableSlots: {
+    date: string;
+    startTime: string;
+    endTime: string;
+    allAvailable: boolean;
+    unavailableMembers?: string[];
+  }[];
+  recommendedSlot?: {
+    date: string;
+    time: string;
+    reason: string;
+  };
+}
+
+export interface MCPNewsResult {
+  id: string;
+  title: string;
+  description: string;
+  source: string;
+  author?: string;
+  url: string;
+  imageUrl?: string;
+  publishedAt: string;
+  category?: string;
+}
+
+export interface MCPResponseData {
+  places?: MCPPlaceResult[];
+  restaurants?: MCPPlaceResult[];
+  products?: MCPProductResult[];
+  gifts?: MCPProductResult[];
+  news?: MCPNewsResult[];  // 뉴스 결과
+  group_schedule?: MCPGroupScheduleResult;
+  availableSlots?: {
+    date: string;
+    startTime: string;
+    endTime: string;
+    allAvailable: boolean;
+    unavailableMembers?: string[];
+  }[];
+  actions_taken?: {
+    action: string;
+    success: boolean;
+    result?: any;
+    error?: string;
+  }[];
+}
+
 export interface ChatResponse {
   conversation_id: string;
   message_id: string;
@@ -153,6 +239,7 @@ export interface Message {
   pending_events?: PendingEvent[];
   pending_todos?: PendingTodo[];
   pending_goals?: PendingGoal[];
+  mcp_data?: MCPResponseData;  // MCP 데이터 ("행동하는 AI" 결과)
   created_at: string;
 }
 

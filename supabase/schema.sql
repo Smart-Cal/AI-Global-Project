@@ -222,6 +222,7 @@ CREATE TABLE messages (
   role TEXT NOT NULL CHECK (role IN ('user', 'assistant', 'system')),
   content TEXT NOT NULL,
   pending_events JSONB,
+  mcp_data JSONB,                -- MCP 데이터 (상품 추천, 장소 추천 등) - "행동하는 AI" 결과
   created_at TIMESTAMPTZ DEFAULT NOW()
 );
 

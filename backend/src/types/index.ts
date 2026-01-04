@@ -326,7 +326,8 @@ export interface Message {
   conversation_id: string;
   role: 'user' | 'assistant' | 'system';
   content: string;
-  pending_events?: any;           // JSON으로 저장
+  pending_events?: any;           // JSON으로 저장 (pending_events, pending_todos, pending_goals)
+  mcp_data?: any;                 // MCP 데이터 (상품 추천, 장소 추천 등) - "행동하는 AI" 결과
   created_at: string;
 }
 
@@ -347,6 +348,7 @@ export interface MorningBriefing {
     condition: string;
     icon: string;
     recommendation: string;       // 옷차림 추천
+    city: string;                 // 도시명
   };
   today_events: Event[];
   incomplete_todos: Todo[];
@@ -358,6 +360,13 @@ export interface EveningBriefing {
   completed_todos: Todo[];
   completion_rate: number;        // 오늘 달성률 (%)
   tomorrow_first_event?: Event;
+  tomorrow_weather?: {
+    temperature: number;
+    condition: string;
+    icon: string;
+    recommendation: string;
+    city: string;                 // 도시명
+  };
   message: string;                // AI 생성 브리핑 메시지
 }
 
@@ -470,6 +479,99 @@ export interface AgentResponse {
   todos_to_schedule?: ScheduledItem[];  // 레거시 호환
   needs_user_input?: boolean;
   suggestions?: string[];
+  // MCP 데이터 ("행동하는 AI" 기능)
+  mcp_data?: MCPResponseData;
+}
+
+// MCP 응답 데이터 (장소 추천, 쇼핑 검색 등)
+export interface MCPResponseData {
+  // 장소 추천 결과
+  places?: MCPPlaceResult[];
+  // 맛집 추천 결과
+  restaurants?: MCPPlaceResult[];
+  // 상품 검색 결과
+  products?: MCPProductResult[];
+  // 선물 추천 결과
+  gifts?: MCPProductResult[];
+  // 뉴스 결과
+  news?: MCPNewsResult[];
+  // 그룹 일정 매칭 결과
+  group_schedule?: MCPGroupScheduleResult;
+  // 가능한 시간 슬롯 (그룹 약속용)
+  availableSlots?: {
+    date: string;
+    startTime: string;
+    endTime: string;
+    allAvailable: boolean;
+    unavailableMembers?: string[];
+  }[];
+  // 실행된 액션들
+  actions_taken?: MCPActionResult[];
+}
+
+export interface MCPPlaceResult {
+  id: string;
+  name: string;
+  address: string;
+  rating?: number;
+  reviewCount?: number;
+  priceLevel?: string;
+  distance?: string;
+  duration?: string;
+  photos?: string[];
+  openNow?: boolean;
+  types?: string[];
+}
+
+export interface MCPProductResult {
+  id: string;
+  title: string;
+  price: number;
+  originalPrice?: number;
+  currency: string;
+  rating?: number;
+  reviewCount?: number;
+  seller?: string;
+  imageUrl?: string;
+  productUrl?: string;
+  isPrime?: boolean;
+}
+
+export interface MCPGroupScheduleResult {
+  groupId: string;
+  groupName: string;
+  members: string[];
+  availableSlots: {
+    date: string;
+    startTime: string;
+    endTime: string;
+    allAvailable: boolean;
+    unavailableMembers?: string[];
+  }[];
+  recommendedSlot?: {
+    date: string;
+    time: string;
+    reason: string;
+  };
+}
+
+export interface MCPActionResult {
+  action: string;  // 'calendar_create', 'place_search', 'product_search' 등
+  success: boolean;
+  result?: any;
+  error?: string;
+}
+
+export interface MCPNewsResult {
+  id: string;
+  title: string;
+  description: string;
+  source: string;
+  author?: string;
+  url: string;
+  imageUrl?: string;
+  publishedAt: string;
+  category?: string;
 }
 
 // ==============================================

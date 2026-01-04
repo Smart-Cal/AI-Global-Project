@@ -1,5 +1,5 @@
 import { Router, Response } from 'express';
-import { createAgentLoop } from '../agents/index.js';
+import { createAgentLoop, createMCPAgentLoop } from '../agents/index.js';
 import {
   getEventsByUser,
   getTodosByUser,
@@ -105,26 +105,53 @@ router.post('/', authenticate, async (req: AuthRequest, res: Response) => {
       conversation_history: history
     };
 
-    // Agent Loop로 메시지 처리 (Function Calling 사용)
-    const agent = createAgentLoop(context);
-    const response = await agent.processMessage(message, mode);
+    // Agent 선택: MCP 모드 또는 기본 모드
+    // mode: 'auto' | 'mcp' | 'basic'
+    // - 'mcp': MCP 통합 에이전트 사용 (장소 추천, 그룹 일정, 쇼핑 등 지원)
+    // - 'basic': 기존 에이전트 사용
+    // - 'auto': 기본적으로 MCP 에이전트 사용 (더 많은 기능 지원)
+    const useMCP = mode !== 'basic';
+
+    let response;
+    if (useMCP) {
+      // MCP 통합 에이전트 ("말하는 AI" → "행동하는 AI")
+      console.log('[Chat API] Using MCP Agent Loop');
+      const mcpAgent = createMCPAgentLoop(context);
+      response = await mcpAgent.processMessage(message, mode);
+    } else {
+      // 기존 에이전트
+      console.log('[Chat API] Using Basic Agent Loop');
+      const agent = createAgentLoop(context);
+      response = await agent.processMessage(message, mode);
+    }
+
+    console.log('[Chat API] Agent response:', JSON.stringify(response, null, 2));
 
     // 응답에서 pending 항목들 추출
     const pendingEvents = response.events_to_create || [];
     const pendingTodos = response.todos_to_create || [];
     const pendingGoals = response.goals_to_create || [];
 
-    // AI 응답 메시지 저장 (pending 항목들 포함)
+    console.log('[Chat API] Pending goals count:', pendingGoals.length);
+    if (pendingGoals.length > 0) {
+      console.log('[Chat API] Pending goals:', JSON.stringify(pendingGoals, null, 2));
+    }
+
+    // AI 응답 메시지 저장 (pending 항목들 및 MCP 데이터 포함)
     const pendingData: any = {};
     if (pendingEvents.length > 0) pendingData.pending_events = pendingEvents;
     if (pendingTodos.length > 0) pendingData.pending_todos = pendingTodos;
     if (pendingGoals.length > 0) pendingData.pending_goals = pendingGoals;
 
+    // MCP 데이터 (상품 추천, 장소 추천 등)
+    const mcpData = (response as any).mcp_data;
+
     const assistantMessage = await createMessage({
       conversation_id: conversation.id,
       role: 'assistant',
       content: response.message,
-      pending_events: Object.keys(pendingData).length > 0 ? pendingData : null
+      pending_events: Object.keys(pendingData).length > 0 ? pendingData : null,
+      mcp_data: mcpData || null
     });
 
     res.json({
@@ -136,7 +163,9 @@ router.post('/', authenticate, async (req: AuthRequest, res: Response) => {
       pending_goals: pendingGoals,
       scheduled_items: response.todos_to_schedule,
       needs_user_input: response.needs_user_input,
-      suggestions: response.suggestions
+      suggestions: response.suggestions,
+      // MCP 데이터 (장소 추천, 상품 검색 결과 등)
+      mcp_data: (response as any).mcp_data
     });
   } catch (error) {
     console.error('Chat error:', error);
@@ -220,6 +249,8 @@ router.post('/confirm-events', authenticate, async (req: AuthRequest, res: Respo
     const { events } = req.body;
     const userId = req.userId!;
 
+    console.log('[confirm-events] Received events:', JSON.stringify(events, null, 2));
+
     if (!events || !Array.isArray(events)) {
       res.status(400).json({ error: 'Events array is required' });
       return;
@@ -227,18 +258,22 @@ router.post('/confirm-events', authenticate, async (req: AuthRequest, res: Respo
 
     // 사용자의 카테고리 목록 가져오기
     const categories = await getCategoriesByUser(userId);
+    console.log('[confirm-events] User categories:', categories.map(c => ({ id: c.id, name: c.name })));
 
     const createdEvents: LegacyEvent[] = [];
 
     for (const event of events) {
+      console.log('[confirm-events] Processing event:', { title: event.title, category: event.category });
       // AI가 추천한 카테고리 이름으로 category_id 찾기
       const categoryId = findCategoryId(categories, event.category);
+      console.log('[confirm-events] Found categoryId:', categoryId, 'for category name:', event.category);
 
       const dbEvent = eventToDbEvent({
         ...event,
         user_id: userId,
         category_id: categoryId
       } as Partial<LegacyEvent>);
+      console.log('[confirm-events] dbEvent to create:', dbEvent);
       const created = await createEvent(dbEvent);
       createdEvents.push(dbEventToEvent(created));
     }
