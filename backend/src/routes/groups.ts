@@ -16,10 +16,12 @@ import {
   respondToInvitation,
   cancelInvitation,
   findGroupAvailableSlots,
-  getUserById
+  getUserById,
+  createEvent
 } from '../services/database.js';
 import { AuthRequest, authenticate } from '../middleware/auth.js';
 import { Group, GroupMember, GroupInvitation, GroupMatchSlot } from '../types/index.js';
+import { getMCPOrchestrator } from '../mcp/index.js';
 
 const router = Router();
 
@@ -489,6 +491,261 @@ router.post('/:id/find-meeting-time', authenticate, async (req: AuthRequest, res
   } catch (error) {
     console.error('Find meeting time error:', error);
     res.status(500).json({ error: 'Failed to find meeting time' });
+  }
+});
+
+// ==============================================
+// MCP 기반 고급 그룹 기능 ("행동하는 AI")
+// ==============================================
+
+/**
+ * POST /api/groups/:id/plan-meeting
+ * MCP 기반 그룹 미팅 계획 (일정 + 장소 추천)
+ *
+ * "행동하는 AI" - 일정 찾기 + 장소 추천을 한 번에 처리
+ */
+router.post('/:id/plan-meeting', authenticate, async (req: AuthRequest, res: Response) => {
+  try {
+    const userId = req.userId!;
+    const { id } = req.params;
+    const {
+      title = '그룹 모임',
+      duration = 60,
+      location_area,      // 예: "홍대", "강남"
+      place_type = 'restaurant',  // restaurant, cafe, etc.
+      budget,             // 예: 20000 (1인당)
+      preferences         // 추가 요청사항
+    } = req.body;
+
+    // 멤버 권한 확인
+    const isMember = await isGroupMember(id, userId);
+    if (!isMember) {
+      res.status(403).json({ error: 'Not a member of this group' });
+      return;
+    }
+
+    // 그룹 정보 및 멤버 조회
+    const group = await getGroupById(id);
+    const members = await getGroupMembers(id);
+
+    if (!group) {
+      res.status(404).json({ error: 'Group not found' });
+      return;
+    }
+
+    // MCP Orchestrator 사용
+    const mcp = getMCPOrchestrator(userId);
+
+    // 1. 가능한 시간 찾기 (내부 DB 기반)
+    const today = new Date();
+    const startDate = today.toISOString().split('T')[0];
+    const endDate = new Date(today.getTime() + 14 * 24 * 60 * 60 * 1000).toISOString().split('T')[0];
+    const slots = await findGroupAvailableSlots(id, startDate, endDate, duration);
+
+    const availableSlots = slots.filter(s => s.type === 'available').slice(0, 5);
+    const negotiableSlots = slots.filter(s => s.type === 'negotiable').slice(0, 3);
+
+    // 2. 장소 추천 (MCP Maps API)
+    let placeRecommendations = null;
+    if (location_area) {
+      const placeResult = await mcp.executeTool({
+        name: 'maps_recommend_restaurants',
+        arguments: {
+          location: location_area,
+          type: place_type,
+          radius: 1000,
+          minRating: 4.0,
+          maxResults: 5
+        }
+      });
+
+      if (placeResult.success) {
+        placeRecommendations = placeResult.data;
+      }
+    }
+
+    // 3. 추천 결과 구성
+    const recommendations = {
+      group: {
+        id: group.id,
+        name: group.name,
+        member_count: members.length
+      },
+      available_times: {
+        best: availableSlots.map(s => ({
+          date: s.date,
+          time: `${s.start_time} - ${s.end_time}`,
+          type: 'all_available',
+          reason: '모든 멤버가 가능한 시간'
+        })),
+        alternatives: negotiableSlots.map(s => ({
+          date: s.date,
+          time: `${s.start_time} - ${s.end_time}`,
+          type: 'negotiable',
+          conflicting_members: s.conflicting_members,
+          reason: `${s.conflicting_members?.length || 0}명이 유동 일정 있음`
+        }))
+      },
+      place_recommendations: placeRecommendations,
+      suggested_plan: availableSlots.length > 0 && placeRecommendations?.restaurants?.[0]
+        ? {
+            date: availableSlots[0].date,
+            time: availableSlots[0].start_time,
+            place: placeRecommendations.restaurants[0],
+            message: `${group.name} 모임을 ${availableSlots[0].date} ${availableSlots[0].start_time}에 ${placeRecommendations.restaurants[0].name}에서 어떠세요?`
+          }
+        : null
+    };
+
+    res.json(recommendations);
+  } catch (error) {
+    console.error('Plan meeting error:', error);
+    res.status(500).json({ error: 'Failed to plan meeting' });
+  }
+});
+
+/**
+ * POST /api/groups/:id/create-meeting
+ * 그룹 미팅 확정 및 일정 생성
+ *
+ * "행동하는 AI" - 실제로 모든 멤버의 캘린더에 일정 추가
+ */
+router.post('/:id/create-meeting', authenticate, async (req: AuthRequest, res: Response) => {
+  try {
+    const userId = req.userId!;
+    const { id } = req.params;
+    const {
+      title,
+      date,           // YYYY-MM-DD
+      start_time,     // HH:MM
+      end_time,       // HH:MM
+      location,
+      description
+    } = req.body;
+
+    // 유효성 검사
+    if (!title || !date || !start_time) {
+      res.status(400).json({ error: 'title, date, start_time are required' });
+      return;
+    }
+
+    // 멤버 권한 확인
+    const isMember = await isGroupMember(id, userId);
+    if (!isMember) {
+      res.status(403).json({ error: 'Not a member of this group' });
+      return;
+    }
+
+    // 그룹 정보 및 멤버 조회
+    const group = await getGroupById(id);
+    const members = await getGroupMembers(id);
+
+    if (!group) {
+      res.status(404).json({ error: 'Group not found' });
+      return;
+    }
+
+    // 모든 멤버에게 일정 생성
+    const createdEvents = [];
+    const failedMembers = [];
+
+    // 종료 시간 계산 (기본 1시간)
+    const calculatedEndTime = end_time || (() => {
+      const [h, m] = start_time.split(':').map(Number);
+      const endHour = (h + 1) % 24;
+      return `${endHour.toString().padStart(2, '0')}:${m.toString().padStart(2, '0')}`;
+    })();
+
+    for (const member of members) {
+      try {
+        const event = await createEvent({
+          user_id: member.user_id,
+          title: `[${group.name}] ${title}`,
+          description: description || `${group.name} 그룹 모임`,
+          event_date: date,
+          start_time: start_time,
+          end_time: calculatedEndTime,
+          location: location,
+          is_all_day: false,
+          is_fixed: true,  // 그룹 일정은 고정
+          priority: 4      // 높은 우선순위
+        });
+        createdEvents.push({
+          member_id: member.user_id,
+          event_id: event.id
+        });
+      } catch (err) {
+        failedMembers.push(member.user_id);
+        console.error(`Failed to create event for member ${member.user_id}:`, err);
+      }
+    }
+
+    res.json({
+      success: true,
+      message: `${createdEvents.length}명의 캘린더에 일정이 추가되었습니다.`,
+      meeting: {
+        title: `[${group.name}] ${title}`,
+        date,
+        time: `${start_time} - ${calculatedEndTime}`,
+        location
+      },
+      created_for: createdEvents.length,
+      failed_for: failedMembers.length,
+      failed_members: failedMembers.length > 0 ? failedMembers : undefined
+    });
+  } catch (error) {
+    console.error('Create meeting error:', error);
+    res.status(500).json({ error: 'Failed to create meeting' });
+  }
+});
+
+/**
+ * POST /api/groups/:id/find-midpoint
+ * 멤버들의 중간 지점 찾기 (MCP Maps)
+ */
+router.post('/:id/find-midpoint', authenticate, async (req: AuthRequest, res: Response) => {
+  try {
+    const userId = req.userId!;
+    const { id } = req.params;
+    const { member_locations } = req.body;  // [{ user_id, location: { lat, lng } }]
+
+    // 멤버 권한 확인
+    const isMember = await isGroupMember(id, userId);
+    if (!isMember) {
+      res.status(403).json({ error: 'Not a member of this group' });
+      return;
+    }
+
+    if (!member_locations || member_locations.length < 2) {
+      res.status(400).json({ error: 'At least 2 member locations required' });
+      return;
+    }
+
+    // MCP Orchestrator 사용
+    const mcp = getMCPOrchestrator(userId);
+
+    const result = await mcp.executeTool({
+      name: 'maps_find_midpoint',
+      arguments: {
+        locations: member_locations.map((m: any) => m.location),
+        searchNearby: true,
+        placeType: 'restaurant'
+      }
+    });
+
+    if (!result.success) {
+      res.status(500).json({ error: result.error || 'Failed to find midpoint' });
+      return;
+    }
+
+    res.json({
+      midpoint: result.data.midpoint,
+      nearby_places: result.data.nearbyPlaces,
+      member_distances: result.data.distances
+    });
+  } catch (error) {
+    console.error('Find midpoint error:', error);
+    res.status(500).json({ error: 'Failed to find midpoint' });
   }
 });
 

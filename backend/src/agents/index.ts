@@ -15,6 +15,9 @@ export { MainOrchestrator, createOrchestrator } from './orchestrator.js';
 // New Agent Loop (with Function Calling + Router → Specialized Agent Pattern)
 export { AgentLoop, createAgentLoop } from './agentLoop.js';
 
+// MCP-Enhanced Agent Loop ("말하는 AI" → "행동하는 AI")
+export { MCPAgentLoop, createMCPAgentLoop } from './mcpAgentLoop.js';
+
 // Router Agent - 의도 파악 전문
 export { routeIntent, type RouterResult, type IntentType } from './routerAgent.js';
 
@@ -47,3 +50,13 @@ export {
   getOptimalTimeForActivity,
   type Chronotype as LegacyChronotype
 } from './tools/palmTools.js';
+
+// MCP (Model Context Protocol) Integration
+export {
+  GoogleCalendarMCP,
+  GoogleMapsMCP,
+  ShoppingMCP,
+  MCPOrchestrator,
+  getMCPOrchestrator,
+  mcpToolDefinitions
+} from '../mcp/index.js';

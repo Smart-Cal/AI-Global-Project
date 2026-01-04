@@ -1,5 +1,5 @@
 import { Router, Response } from 'express';
-import { createAgentLoop } from '../agents/index.js';
+import { createAgentLoop, createMCPAgentLoop } from '../agents/index.js';
 import {
   getEventsByUser,
   getTodosByUser,
@@ -105,9 +105,25 @@ router.post('/', authenticate, async (req: AuthRequest, res: Response) => {
       conversation_history: history
     };
 
-    // Agent Loop로 메시지 처리 (Function Calling 사용)
-    const agent = createAgentLoop(context);
-    const response = await agent.processMessage(message, mode);
+    // Agent 선택: MCP 모드 또는 기본 모드
+    // mode: 'auto' | 'mcp' | 'basic'
+    // - 'mcp': MCP 통합 에이전트 사용 (장소 추천, 그룹 일정, 쇼핑 등 지원)
+    // - 'basic': 기존 에이전트 사용
+    // - 'auto': 기본적으로 MCP 에이전트 사용 (더 많은 기능 지원)
+    const useMCP = mode !== 'basic';
+
+    let response;
+    if (useMCP) {
+      // MCP 통합 에이전트 ("말하는 AI" → "행동하는 AI")
+      console.log('[Chat API] Using MCP Agent Loop');
+      const mcpAgent = createMCPAgentLoop(context);
+      response = await mcpAgent.processMessage(message, mode);
+    } else {
+      // 기존 에이전트
+      console.log('[Chat API] Using Basic Agent Loop');
+      const agent = createAgentLoop(context);
+      response = await agent.processMessage(message, mode);
+    }
 
     console.log('[Chat API] Agent response:', JSON.stringify(response, null, 2));
 
@@ -143,7 +159,9 @@ router.post('/', authenticate, async (req: AuthRequest, res: Response) => {
       pending_goals: pendingGoals,
       scheduled_items: response.todos_to_schedule,
       needs_user_input: response.needs_user_input,
-      suggestions: response.suggestions
+      suggestions: response.suggestions,
+      // MCP 데이터 (장소 추천, 상품 검색 결과 등)
+      mcp_data: (response as any).mcp_data
     });
   } catch (error) {
     console.error('Chat error:', error);

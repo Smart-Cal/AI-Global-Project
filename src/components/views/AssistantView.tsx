@@ -17,6 +17,9 @@ import {
   type PendingEvent,
   type PendingTodo,
   type PendingGoal,
+  type MCPResponseData,
+  type MCPPlaceResult,
+  type MCPProductResult,
 } from '../../services/api';
 import DatePicker from '../DatePicker';
 import TimePicker from '../TimePicker';
@@ -30,6 +33,7 @@ interface LocalMessage {
   pending_events?: PendingEvent[];
   pending_todos?: PendingTodo[];
   pending_goals?: PendingGoal[];
+  mcp_data?: MCPResponseData;  // MCP 데이터 ("행동하는 AI" 기능)
   created_at: string;
 }
 
@@ -251,6 +255,7 @@ const AssistantView: React.FC = () => {
         pending_events: response.pending_events,
         pending_todos: response.pending_todos,
         pending_goals: response.pending_goals,
+        mcp_data: response.mcp_data,  // MCP 데이터 추가
         created_at: new Date().toISOString(),
       };
 
@@ -1392,6 +1397,149 @@ const AssistantView: React.FC = () => {
     );
   };
 
+  // MCP 데이터 렌더링 ("행동하는 AI" 결과)
+  const renderMCPData = (mcpData: MCPResponseData) => {
+    const hasRestaurants = mcpData.restaurants && mcpData.restaurants.length > 0;
+    const hasPlaces = mcpData.places && mcpData.places.length > 0;
+    const hasProducts = mcpData.products && mcpData.products.length > 0;
+    const hasGifts = mcpData.gifts && mcpData.gifts.length > 0;
+    const hasAvailableSlots = mcpData.availableSlots && mcpData.availableSlots.length > 0;
+
+    if (!hasRestaurants && !hasPlaces && !hasProducts && !hasGifts && !hasAvailableSlots) {
+      return null;
+    }
+
+    return (
+      <div className="mcp-data-container">
+        {/* 맛집/장소 추천 */}
+        {(hasRestaurants || hasPlaces) && (
+          <div className="mcp-section places-section">
+            <h4 className="mcp-section-title">
+              {hasRestaurants ? '🍽️ 맛집 추천' : '📍 장소 추천'}
+            </h4>
+            <div className="mcp-places-list">
+              {(mcpData.restaurants || mcpData.places || []).map((place: MCPPlaceResult, idx: number) => (
+                <div key={place.id || idx} className="mcp-place-card">
+                  <div className="mcp-place-rank">{idx + 1}</div>
+                  <div className="mcp-place-info">
+                    <div className="mcp-place-name">{place.name}</div>
+                    <div className="mcp-place-details">
+                      {place.rating && <span className="mcp-place-rating">⭐ {place.rating}</span>}
+                      {place.reviewCount && <span className="mcp-place-reviews">({place.reviewCount})</span>}
+                      {place.priceLevel && <span className="mcp-place-price">{place.priceLevel}</span>}
+                    </div>
+                    <div className="mcp-place-address">{place.address}</div>
+                    {place.distance && (
+                      <div className="mcp-place-distance">
+                        📍 {place.distance} {place.duration && `(${place.duration})`}
+                      </div>
+                    )}
+                    {place.openNow !== undefined && (
+                      <span className={`mcp-place-status ${place.openNow ? 'open' : 'closed'}`}>
+                        {place.openNow ? '영업 중' : '영업 종료'}
+                      </span>
+                    )}
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* 상품/선물 추천 */}
+        {(hasProducts || hasGifts) && (
+          <div className="mcp-section products-section">
+            <h4 className="mcp-section-title">
+              {hasGifts ? '🎁 선물 추천' : '🛒 상품 추천'}
+            </h4>
+            <div className="mcp-products-list">
+              {(mcpData.gifts || mcpData.products || []).map((product: MCPProductResult, idx: number) => (
+                <div key={product.id || idx} className="mcp-product-card">
+                  <div className="mcp-product-rank">{idx + 1}</div>
+                  <div className="mcp-product-info">
+                    <div className="mcp-product-title">{product.title}</div>
+                    <div className="mcp-product-price">
+                      <span className="mcp-product-current-price">
+                        {product.price.toLocaleString()}{product.currency || '원'}
+                      </span>
+                      {product.originalPrice && product.originalPrice > product.price && (
+                        <span className="mcp-product-original-price">
+                          {product.originalPrice.toLocaleString()}{product.currency || '원'}
+                        </span>
+                      )}
+                    </div>
+                    {product.rating && (
+                      <div className="mcp-product-rating">
+                        ⭐ {product.rating}
+                        {product.reviewCount && <span>({product.reviewCount})</span>}
+                      </div>
+                    )}
+                    {product.seller && (
+                      <div className="mcp-product-seller">{product.seller}</div>
+                    )}
+                    {product.productUrl && (
+                      <a
+                        href={product.productUrl}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="mcp-product-link"
+                      >
+                        구매하기 →
+                      </a>
+                    )}
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* 그룹 가능 시간 */}
+        {hasAvailableSlots && (
+          <div className="mcp-section schedule-section">
+            <h4 className="mcp-section-title">📅 가능한 시간</h4>
+            <div className="mcp-slots-list">
+              {mcpData.availableSlots!.slice(0, 5).map((slot, idx) => (
+                <div
+                  key={idx}
+                  className={`mcp-slot-card ${slot.allAvailable ? 'all-available' : 'partial'}`}
+                >
+                  <div className="mcp-slot-date">{slot.date}</div>
+                  <div className="mcp-slot-time">{slot.startTime} - {slot.endTime}</div>
+                  {slot.allAvailable ? (
+                    <span className="mcp-slot-status available">✓ 모두 가능</span>
+                  ) : (
+                    <span className="mcp-slot-status partial">
+                      ⚠️ {slot.unavailableMembers?.length || 0}명 불가
+                    </span>
+                  )}
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* 실행된 액션 표시 */}
+        {mcpData.actions_taken && mcpData.actions_taken.length > 0 && (
+          <div className="mcp-section actions-section">
+            <h4 className="mcp-section-title">✅ 실행 완료</h4>
+            <div className="mcp-actions-list">
+              {mcpData.actions_taken.map((action, idx) => (
+                <div
+                  key={idx}
+                  className={`mcp-action-item ${action.success ? 'success' : 'failed'}`}
+                >
+                  <span className="mcp-action-icon">{action.success ? '✓' : '✗'}</span>
+                  <span className="mcp-action-name">{action.action}</span>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+      </div>
+    );
+  };
+
   // 결과 메시지 렌더링
   const renderCompletedResults = () => {
     if (!completedResults) return null;
@@ -1517,6 +1665,9 @@ const AssistantView: React.FC = () => {
                     {msg.content}
                   </div>
                 </div>
+
+                {/* MCP 데이터 표시 ("행동하는 AI" 결과) */}
+                {msg.mcp_data && renderMCPData(msg.mcp_data)}
 
                 {/* 일정 확인 UI - 메시지 바로 아래에 표시 */}
                 {msg.pending_events && msg.pending_events.length > 0 && msg.id === activeMessageId && activeItemType === 'event' && (

@@ -125,6 +125,74 @@ export interface PendingGoal {
   decomposed_todos?: PendingTodo[];
 }
 
+// MCP 데이터 타입 ("행동하는 AI" 기능)
+export interface MCPPlaceResult {
+  id: string;
+  name: string;
+  address: string;
+  rating?: number;
+  reviewCount?: number;
+  priceLevel?: string;
+  distance?: string;
+  duration?: string;
+  photos?: string[];
+  openNow?: boolean;
+  types?: string[];
+}
+
+export interface MCPProductResult {
+  id: string;
+  title: string;
+  price: number;
+  originalPrice?: number;
+  currency: string;
+  rating?: number;
+  reviewCount?: number;
+  seller?: string;
+  imageUrl?: string;
+  productUrl?: string;
+  isPrime?: boolean;
+}
+
+export interface MCPGroupScheduleResult {
+  groupId: string;
+  groupName: string;
+  members: string[];
+  availableSlots: {
+    date: string;
+    startTime: string;
+    endTime: string;
+    allAvailable: boolean;
+    unavailableMembers?: string[];
+  }[];
+  recommendedSlot?: {
+    date: string;
+    time: string;
+    reason: string;
+  };
+}
+
+export interface MCPResponseData {
+  places?: MCPPlaceResult[];
+  restaurants?: MCPPlaceResult[];
+  products?: MCPProductResult[];
+  gifts?: MCPProductResult[];
+  group_schedule?: MCPGroupScheduleResult;
+  availableSlots?: {
+    date: string;
+    startTime: string;
+    endTime: string;
+    allAvailable: boolean;
+    unavailableMembers?: string[];
+  }[];
+  actions_taken?: {
+    action: string;
+    success: boolean;
+    result?: any;
+    error?: string;
+  }[];
+}
+
 export interface ChatResponse {
   conversation_id: string;
   message_id: string;
@@ -135,6 +203,8 @@ export interface ChatResponse {
   scheduled_items?: any[];
   needs_user_input?: boolean;
   suggestions?: string[];
+  // MCP 데이터 ("행동하는 AI" 기능)
+  mcp_data?: MCPResponseData;
 }
 
 export interface Conversation {

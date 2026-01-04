@@ -7025,3 +7025,343 @@ textarea.form-input {
   background-color: var(--bg-sidebar);
   cursor: not-allowed;
 }
+
+/* ==============================================
+   MCP Data Styles ("행동하는 AI" 결과)
+   ============================================== */
+
+.mcp-data-container {
+  margin: 8px 0 16px 48px;
+  padding: 0;
+}
+
+.mcp-section {
+  background: white;
+  border-radius: 12px;
+  padding: 16px;
+  margin-bottom: 12px;
+  border: 1px solid var(--border-light);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+}
+
+.mcp-section-title {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--text-primary);
+  margin-bottom: 12px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+/* Places / Restaurants */
+.mcp-places-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.mcp-place-card {
+  display: flex;
+  gap: 12px;
+  padding: 12px;
+  background: var(--bg-sidebar);
+  border-radius: 8px;
+  transition: background 0.2s;
+}
+
+.mcp-place-card:hover {
+  background: var(--bg-hover);
+}
+
+.mcp-place-rank {
+  width: 28px;
+  height: 28px;
+  background: var(--primary);
+  color: white;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 13px;
+  font-weight: 600;
+  flex-shrink: 0;
+}
+
+.mcp-place-info {
+  flex: 1;
+  min-width: 0;
+}
+
+.mcp-place-name {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--text-primary);
+  margin-bottom: 4px;
+}
+
+.mcp-place-details {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 12px;
+  color: var(--text-secondary);
+  margin-bottom: 4px;
+}
+
+.mcp-place-rating {
+  color: #f59e0b;
+  font-weight: 500;
+}
+
+.mcp-place-price {
+  color: var(--success);
+}
+
+.mcp-place-address {
+  font-size: 12px;
+  color: var(--text-muted);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.mcp-place-distance {
+  font-size: 11px;
+  color: var(--text-secondary);
+  margin-top: 4px;
+}
+
+.mcp-place-status {
+  font-size: 11px;
+  padding: 2px 6px;
+  border-radius: 4px;
+  display: inline-block;
+  margin-top: 4px;
+}
+
+.mcp-place-status.open {
+  background: #dcfce7;
+  color: #15803d;
+}
+
+.mcp-place-status.closed {
+  background: #fee2e2;
+  color: #b91c1c;
+}
+
+/* Products / Gifts */
+.mcp-products-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.mcp-product-card {
+  display: flex;
+  gap: 12px;
+  padding: 12px;
+  background: var(--bg-sidebar);
+  border-radius: 8px;
+  transition: background 0.2s;
+}
+
+.mcp-product-card:hover {
+  background: var(--bg-hover);
+}
+
+.mcp-product-rank {
+  width: 28px;
+  height: 28px;
+  background: #f59e0b;
+  color: white;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 13px;
+  font-weight: 600;
+  flex-shrink: 0;
+}
+
+.mcp-product-info {
+  flex: 1;
+  min-width: 0;
+}
+
+.mcp-product-title {
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--text-primary);
+  margin-bottom: 4px;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.mcp-product-price {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 4px;
+}
+
+.mcp-product-current-price {
+  font-size: 15px;
+  font-weight: 700;
+  color: var(--error);
+}
+
+.mcp-product-original-price {
+  font-size: 12px;
+  color: var(--text-muted);
+  text-decoration: line-through;
+}
+
+.mcp-product-rating {
+  font-size: 12px;
+  color: var(--text-secondary);
+}
+
+.mcp-product-seller {
+  font-size: 11px;
+  color: var(--text-muted);
+  margin-top: 2px;
+}
+
+.mcp-product-link {
+  display: inline-block;
+  margin-top: 8px;
+  padding: 6px 12px;
+  background: var(--primary);
+  color: white;
+  border-radius: 6px;
+  font-size: 12px;
+  font-weight: 500;
+  text-decoration: none;
+  transition: background 0.2s;
+}
+
+.mcp-product-link:hover {
+  background: var(--primary-dark);
+}
+
+/* Schedule Slots */
+.mcp-slots-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.mcp-slot-card {
+  padding: 10px 14px;
+  background: var(--bg-sidebar);
+  border-radius: 8px;
+  border: 1px solid var(--border-light);
+  min-width: 140px;
+}
+
+.mcp-slot-card.all-available {
+  border-color: var(--success);
+  background: #f0fdf4;
+}
+
+.mcp-slot-card.partial {
+  border-color: var(--warning);
+  background: #fffbeb;
+}
+
+.mcp-slot-date {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text-primary);
+  margin-bottom: 2px;
+}
+
+.mcp-slot-time {
+  font-size: 12px;
+  color: var(--text-secondary);
+  margin-bottom: 4px;
+}
+
+.mcp-slot-status {
+  font-size: 11px;
+  font-weight: 500;
+}
+
+.mcp-slot-status.available {
+  color: var(--success);
+}
+
+.mcp-slot-status.partial {
+  color: var(--warning);
+}
+
+/* Actions Taken */
+.mcp-actions-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.mcp-action-item {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 12px;
+  border-radius: 20px;
+  font-size: 12px;
+}
+
+.mcp-action-item.success {
+  background: #dcfce7;
+  color: #15803d;
+}
+
+.mcp-action-item.failed {
+  background: #fee2e2;
+  color: #b91c1c;
+}
+
+.mcp-action-icon {
+  font-weight: 700;
+}
+
+.mcp-action-name {
+  font-weight: 500;
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+  .mcp-data-container {
+    margin-left: 0;
+    margin-right: 0;
+  }
+
+  .mcp-section {
+    padding: 12px;
+    border-radius: 8px;
+  }
+
+  .mcp-place-card,
+  .mcp-product-card {
+    flex-direction: column;
+    gap: 8px;
+  }
+
+  .mcp-place-rank,
+  .mcp-product-rank {
+    width: 24px;
+    height: 24px;
+    font-size: 11px;
+  }
+
+  .mcp-slots-list {
+    flex-direction: column;
+  }
+
+  .mcp-slot-card {
+    min-width: auto;
+  }
+}

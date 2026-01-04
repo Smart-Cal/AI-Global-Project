@@ -470,6 +470,85 @@ export interface AgentResponse {
   todos_to_schedule?: ScheduledItem[];  // 레거시 호환
   needs_user_input?: boolean;
   suggestions?: string[];
+  // MCP 데이터 ("행동하는 AI" 기능)
+  mcp_data?: MCPResponseData;
+}
+
+// MCP 응답 데이터 (장소 추천, 쇼핑 검색 등)
+export interface MCPResponseData {
+  // 장소 추천 결과
+  places?: MCPPlaceResult[];
+  // 맛집 추천 결과
+  restaurants?: MCPPlaceResult[];
+  // 상품 검색 결과
+  products?: MCPProductResult[];
+  // 선물 추천 결과
+  gifts?: MCPProductResult[];
+  // 그룹 일정 매칭 결과
+  group_schedule?: MCPGroupScheduleResult;
+  // 가능한 시간 슬롯 (그룹 약속용)
+  availableSlots?: {
+    date: string;
+    startTime: string;
+    endTime: string;
+    allAvailable: boolean;
+    unavailableMembers?: string[];
+  }[];
+  // 실행된 액션들
+  actions_taken?: MCPActionResult[];
+}
+
+export interface MCPPlaceResult {
+  id: string;
+  name: string;
+  address: string;
+  rating?: number;
+  reviewCount?: number;
+  priceLevel?: string;
+  distance?: string;
+  duration?: string;
+  photos?: string[];
+  openNow?: boolean;
+  types?: string[];
+}
+
+export interface MCPProductResult {
+  id: string;
+  title: string;
+  price: number;
+  originalPrice?: number;
+  currency: string;
+  rating?: number;
+  reviewCount?: number;
+  seller?: string;
+  imageUrl?: string;
+  productUrl?: string;
+  isPrime?: boolean;
+}
+
+export interface MCPGroupScheduleResult {
+  groupId: string;
+  groupName: string;
+  members: string[];
+  availableSlots: {
+    date: string;
+    startTime: string;
+    endTime: string;
+    allAvailable: boolean;
+    unavailableMembers?: string[];
+  }[];
+  recommendedSlot?: {
+    date: string;
+    time: string;
+    reason: string;
+  };
+}
+
+export interface MCPActionResult {
+  action: string;  // 'calendar_create', 'place_search', 'product_search' 등
+  success: boolean;
+  result?: any;
+  error?: string;
 }
 
 // ==============================================
