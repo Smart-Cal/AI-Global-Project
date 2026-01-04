@@ -604,6 +604,7 @@ export interface WeatherInfo {
   condition: string;
   icon: string;
   recommendation: string;
+  city?: string;
 }
 
 export interface MorningBriefing {

@@ -347,6 +347,7 @@ export interface MorningBriefing {
     condition: string;
     icon: string;
     recommendation: string;       // 옷차림 추천
+    city: string;                 // 도시명
   };
   today_events: Event[];
   incomplete_todos: Todo[];
@@ -363,6 +364,7 @@ export interface EveningBriefing {
     condition: string;
     icon: string;
     recommendation: string;
+    city: string;                 // 도시명
   };
   message: string;                // AI 생성 브리핑 메시지
 }

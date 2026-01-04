@@ -405,6 +405,11 @@ export const NewDashboard: React.FC<NewDashboardProps> = ({ onNavigate }) => {
                     <span style={{ fontSize: '14px', color: '#6B7280' }}>
                       {briefing.weather.condition}
                     </span>
+                    {briefing.weather.city && (
+                      <span style={{ fontSize: '12px', color: '#9CA3AF', marginLeft: '4px' }}>
+                        📍 {briefing.weather.city}
+                      </span>
+                    )}
                   </div>
                   {briefing.weather.recommendation && (
                     <p style={{ margin: '4px 0 0', fontSize: '13px', color: '#6B7280' }}>
@@ -504,7 +509,12 @@ export const NewDashboard: React.FC<NewDashboardProps> = ({ onNavigate }) => {
               >
                 {getWeatherIcon(briefing.tomorrowWeather.condition)}
                 <div style={{ flex: 1 }}>
-                  <div style={{ fontSize: '12px', color: '#6B7280' }}>내일 날씨</div>
+                  <div style={{ fontSize: '12px', color: '#6B7280', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                    내일 날씨
+                    {briefing.tomorrowWeather.city && (
+                      <span style={{ color: '#9CA3AF' }}>📍 {briefing.tomorrowWeather.city}</span>
+                    )}
+                  </div>
                   <div style={{ fontSize: '14px', fontWeight: 500, color: '#1F2937' }}>
                     {briefing.tomorrowWeather.temperature}°C, {briefing.tomorrowWeather.condition}
                   </div>

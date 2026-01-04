@@ -74,7 +74,8 @@ router.get('/morning', authenticate, async (req: AuthRequest, res: Response) => 
         temperature: weather.temperature,
         condition: weather.condition,
         icon: weather.icon,
-        recommendation: weather.recommendation
+        recommendation: weather.recommendation,
+        city
       } : undefined,
       today_events: todayEvents,
       incomplete_todos: incompleteTodos,
@@ -161,7 +162,8 @@ router.get('/evening', authenticate, async (req: AuthRequest, res: Response) => 
         temperature: tomorrowWeather.temperature,
         condition: tomorrowWeather.condition,
         icon: tomorrowWeather.icon,
-        recommendation: tomorrowWeather.recommendation
+        recommendation: tomorrowWeather.recommendation,
+        city
       } : undefined,
       message
     };
