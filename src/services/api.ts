@@ -933,3 +933,18 @@ export async function findGroupMidpoint(
     body: JSON.stringify({ member_locations: memberLocations }),
   });
 }
+
+// 그룹 AI 비서 채팅
+export async function sendGroupChatMessage(
+  groupId: string,
+  message: string
+): Promise<{
+  message: string;
+  available_slots: AvailableSlot[];
+  member_count: number;
+}> {
+  return apiRequest(`/groups/${groupId}/chat`, {
+    method: 'POST',
+    body: JSON.stringify({ message }),
+  });
+}

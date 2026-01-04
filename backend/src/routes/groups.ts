@@ -20,8 +20,10 @@ import {
   createEvent,
   getGroupByInviteCode,
   joinGroupByInviteCode,
-  regenerateInviteCode
+  regenerateInviteCode,
+  getEventsByUser
 } from '../services/database.js';
+import OpenAI from 'openai';
 import { AuthRequest, authenticate } from '../middleware/auth.js';
 import { Group, GroupMember, GroupInvitation, GroupMatchSlot } from '../types/index.js';
 import { getMCPOrchestrator } from '../mcp/index.js';
@@ -835,6 +837,129 @@ router.post('/:id/find-midpoint', authenticate, async (req: AuthRequest, res: Re
   } catch (error) {
     console.error('Find midpoint error:', error);
     res.status(500).json({ error: 'Failed to find midpoint' });
+  }
+});
+
+// ==============================================
+// 그룹 AI 비서 채팅
+// ==============================================
+
+const openai = new OpenAI({
+  apiKey: process.env.OPENAI_API_KEY
+});
+
+/**
+ * POST /api/groups/:id/chat
+ * 그룹 AI 비서와 대화 - 일정 조율 전용
+ */
+router.post('/:id/chat', authenticate, async (req: AuthRequest, res: Response) => {
+  try {
+    const userId = req.userId!;
+    const { id } = req.params;
+    const { message } = req.body;
+
+    if (!message) {
+      res.status(400).json({ error: 'Message is required' });
+      return;
+    }
+
+    // 멤버 권한 확인
+    const isMember = await isGroupMember(id, userId);
+    if (!isMember) {
+      res.status(403).json({ error: 'Not a member of this group' });
+      return;
+    }
+
+    // 그룹 정보 가져오기
+    const group = await getGroupById(id);
+    if (!group) {
+      res.status(404).json({ error: 'Group not found' });
+      return;
+    }
+
+    // 멤버 목록 가져오기
+    const members = await getGroupMembers(id);
+
+    // 각 멤버의 일정 가져오기 (향후 7일)
+    const today = new Date();
+    const startDate = today.toISOString().split('T')[0];
+    const endDate = new Date(today.getTime() + 7 * 24 * 60 * 60 * 1000).toISOString().split('T')[0];
+
+    const memberSchedules: { name: string; events: any[] }[] = [];
+    for (const member of members) {
+      const events = await getEventsByUser(member.user_id, startDate, endDate);
+      memberSchedules.push({
+        name: member.user?.name || member.user?.email || '멤버',
+        events: events.map(e => ({
+          title: e.title,
+          date: e.event_date,
+          start_time: e.start_time,
+          end_time: e.end_time,
+          is_fixed: e.is_fixed
+        }))
+      });
+    }
+
+    // 공통 가용 시간 찾기
+    const availableSlots = await findGroupAvailableSlots(id, startDate, endDate, 60);
+
+    // AI 프롬프트 구성
+    const systemPrompt = `당신은 "${group.name}" 그룹의 일정 조율 AI 비서입니다.
+
+## 역할
+- 그룹 멤버들의 일정을 분석하여 모임 시간을 추천합니다.
+- 친근하고 자연스러운 한국어로 대화합니다.
+- 구체적인 날짜와 시간을 제안합니다.
+
+## 현재 그룹 정보
+- 그룹명: ${group.name}
+- 멤버 수: ${members.length}명
+- 멤버: ${members.map(m => m.user?.name || m.user?.email).join(', ')}
+
+## 멤버별 향후 7일 일정
+${memberSchedules.map(m => `
+### ${m.name}
+${m.events.length === 0 ? '예정된 일정 없음' : m.events.map(e =>
+  `- ${e.date} ${e.start_time || ''}-${e.end_time || ''}: ${e.title}${e.is_fixed ? ' (고정)' : ''}`
+).join('\n')}`).join('\n')}
+
+## 공통 가용 시간 (모두 가능한 시간)
+${availableSlots.filter(s => s.type === 'available').slice(0, 5).map(s =>
+  `- ${s.date} ${s.start_time}-${s.end_time}`
+).join('\n') || '모두 가능한 시간이 없습니다.'}
+
+## 조율 가능한 시간 (일부 유동 일정 있음)
+${availableSlots.filter(s => s.type === 'negotiable').slice(0, 3).map(s =>
+  `- ${s.date} ${s.start_time}-${s.end_time} (${s.conflicting_members?.length || 0}명 유동 일정)`
+).join('\n') || '없음'}
+
+## 응답 지침
+1. 사용자 질문에 맞게 일정을 추천하세요.
+2. 가능하면 "모두 가능한 시간"에서 먼저 추천하세요.
+3. 구체적인 날짜(예: 1월 15일 수요일)와 시간을 말하세요.
+4. 여러 옵션을 제시할 때는 1, 2, 3 순위로 정리하세요.
+5. 응답은 짧고 명확하게 하세요.`;
+
+    const completion = await openai.chat.completions.create({
+      model: 'gpt-4o-mini',
+      messages: [
+        { role: 'system', content: systemPrompt },
+        { role: 'user', content: message }
+      ],
+      max_tokens: 500,
+      temperature: 0.7
+    });
+
+    const aiResponse = completion.choices[0]?.message?.content || '죄송합니다. 응답을 생성하지 못했습니다.';
+
+    res.json({
+      message: aiResponse,
+      available_slots: availableSlots.filter(s => s.type === 'available').slice(0, 5),
+      member_count: members.length
+    });
+  } catch (error) {
+    console.error('Group chat error:', error);
+    res.status(500).json({ error: 'Failed to process message' });
   }
 });
 

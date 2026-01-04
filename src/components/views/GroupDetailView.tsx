@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import {
   getGroup,
   removeGroupMember,
@@ -7,6 +7,7 @@ import {
   getGroupAvailableSlots,
   findMeetingTime,
   createGroupMeeting,
+  sendGroupChatMessage,
   type Group,
   type GroupMember,
   type AvailableSlot,
@@ -48,6 +49,12 @@ const GroupDetailView: React.FC<GroupDetailViewProps> = ({ groupId, onBack }) =>
   });
   const [isCreatingMeeting, setIsCreatingMeeting] = useState(false);
   const [recommendations, setRecommendations] = useState<any[]>([]);
+
+  // AI 채팅 관련
+  const [chatMessages, setChatMessages] = useState<{ role: 'user' | 'assistant'; content: string }[]>([]);
+  const [chatInput, setChatInput] = useState('');
+  const [isSendingChat, setIsSendingChat] = useState(false);
+  const chatEndRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     loadGroupData();
@@ -173,6 +180,33 @@ const GroupDetailView: React.FC<GroupDetailViewProps> = ({ groupId, onBack }) =>
       setError(err instanceof Error ? err.message : '미팅 생성에 실패했습니다.');
     } finally {
       setIsCreatingMeeting(false);
+    }
+  };
+
+  // AI 채팅
+  const scrollToBottom = () => {
+    chatEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+  };
+
+  useEffect(() => {
+    scrollToBottom();
+  }, [chatMessages]);
+
+  const handleSendChat = async () => {
+    if (!chatInput.trim() || isSendingChat) return;
+
+    const userMessage = chatInput.trim();
+    setChatInput('');
+    setChatMessages(prev => [...prev, { role: 'user', content: userMessage }]);
+    setIsSendingChat(true);
+
+    try {
+      const response = await sendGroupChatMessage(groupId, userMessage);
+      setChatMessages(prev => [...prev, { role: 'assistant', content: response.message }]);
+    } catch (err) {
+      setChatMessages(prev => [...prev, { role: 'assistant', content: '죄송합니다. 오류가 발생했습니다.' }]);
+    } finally {
+      setIsSendingChat(false);
     }
   };
 
@@ -319,6 +353,58 @@ const GroupDetailView: React.FC<GroupDetailViewProps> = ({ groupId, onBack }) =>
       {/* Schedule Tab */}
       {activeTab === 'schedule' && (
         <div className="tab-content">
+          {/* AI 비서 채팅 */}
+          <div className="ai-chat-section">
+            <div className="ai-chat-header">
+              <div className="ai-avatar">🤖</div>
+              <div className="ai-info">
+                <span className="ai-name">일정 조율 AI</span>
+                <span className="ai-desc">모임 시간을 물어보세요</span>
+              </div>
+            </div>
+            <div className="chat-messages">
+              {chatMessages.length === 0 && (
+                <div className="chat-welcome">
+                  <p>안녕하세요! 그룹 일정 조율을 도와드릴게요.</p>
+                  <p className="chat-examples">
+                    예시: "이번 주 모임 가능한 시간 알려줘", "금요일 저녁 괜찮아?", "2시간 정도 모임할 시간 찾아줘"
+                  </p>
+                </div>
+              )}
+              {chatMessages.map((msg, idx) => (
+                <div key={idx} className={`chat-message ${msg.role}`}>
+                  <div className="message-content">{msg.content}</div>
+                </div>
+              ))}
+              {isSendingChat && (
+                <div className="chat-message assistant">
+                  <div className="message-content typing">
+                    <span></span><span></span><span></span>
+                  </div>
+                </div>
+              )}
+              <div ref={chatEndRef} />
+            </div>
+            <div className="chat-input-area">
+              <input
+                type="text"
+                className="chat-input"
+                placeholder="모임 시간을 물어보세요..."
+                value={chatInput}
+                onChange={(e) => setChatInput(e.target.value)}
+                onKeyDown={(e) => e.key === 'Enter' && handleSendChat()}
+                disabled={isSendingChat}
+              />
+              <button
+                className="btn btn-primary"
+                onClick={handleSendChat}
+                disabled={isSendingChat || !chatInput.trim()}
+              >
+                전송
+              </button>
+            </div>
+          </div>
+
           <div className="section-header">
             <h3>공통 가용 시간</h3>
             <button
@@ -580,6 +666,159 @@ const GroupDetailView: React.FC<GroupDetailViewProps> = ({ groupId, onBack }) =>
           opacity: 0.8;
           margin-top: 12px;
           margin-bottom: 0;
+        }
+
+        /* AI 채팅 섹션 */
+        .ai-chat-section {
+          background: white;
+          border: 1px solid #e0e0e0;
+          border-radius: 12px;
+          margin-bottom: 24px;
+          overflow: hidden;
+        }
+
+        .ai-chat-header {
+          display: flex;
+          align-items: center;
+          gap: 12px;
+          padding: 16px;
+          background: linear-gradient(135deg, #4A90A4 0%, #357ABD 100%);
+          color: white;
+        }
+
+        .ai-avatar {
+          width: 40px;
+          height: 40px;
+          background: rgba(255,255,255,0.2);
+          border-radius: 50%;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          font-size: 20px;
+        }
+
+        .ai-info {
+          display: flex;
+          flex-direction: column;
+        }
+
+        .ai-name {
+          font-weight: 600;
+          font-size: 15px;
+        }
+
+        .ai-desc {
+          font-size: 12px;
+          opacity: 0.9;
+        }
+
+        .chat-messages {
+          height: 250px;
+          overflow-y: auto;
+          padding: 16px;
+          background: #fafafa;
+        }
+
+        .chat-welcome {
+          text-align: center;
+          color: #666;
+          padding: 20px;
+        }
+
+        .chat-welcome p {
+          margin: 8px 0;
+        }
+
+        .chat-examples {
+          font-size: 13px;
+          color: #888;
+        }
+
+        .chat-message {
+          margin-bottom: 12px;
+          display: flex;
+        }
+
+        .chat-message.user {
+          justify-content: flex-end;
+        }
+
+        .chat-message.assistant {
+          justify-content: flex-start;
+        }
+
+        .message-content {
+          max-width: 80%;
+          padding: 10px 14px;
+          border-radius: 16px;
+          font-size: 14px;
+          line-height: 1.5;
+          white-space: pre-wrap;
+        }
+
+        .chat-message.user .message-content {
+          background: #4A90A4;
+          color: white;
+          border-bottom-right-radius: 4px;
+        }
+
+        .chat-message.assistant .message-content {
+          background: white;
+          color: #333;
+          border: 1px solid #e0e0e0;
+          border-bottom-left-radius: 4px;
+        }
+
+        .message-content.typing {
+          display: flex;
+          gap: 4px;
+          padding: 14px 18px;
+        }
+
+        .message-content.typing span {
+          width: 8px;
+          height: 8px;
+          background: #999;
+          border-radius: 50%;
+          animation: typing 1.4s infinite;
+        }
+
+        .message-content.typing span:nth-child(2) {
+          animation-delay: 0.2s;
+        }
+
+        .message-content.typing span:nth-child(3) {
+          animation-delay: 0.4s;
+        }
+
+        @keyframes typing {
+          0%, 60%, 100% { transform: translateY(0); }
+          30% { transform: translateY(-4px); }
+        }
+
+        .chat-input-area {
+          display: flex;
+          gap: 8px;
+          padding: 12px 16px;
+          border-top: 1px solid #e0e0e0;
+          background: white;
+        }
+
+        .chat-input {
+          flex: 1;
+          padding: 10px 14px;
+          border: 1px solid #ddd;
+          border-radius: 20px;
+          font-size: 14px;
+          outline: none;
+        }
+
+        .chat-input:focus {
+          border-color: #4A90A4;
+        }
+
+        .chat-input:disabled {
+          background: #f5f5f5;
         }
 
         .tabs {
