@@ -1,17 +1,14 @@
 import React, { useState, useEffect } from 'react';
 import {
   getGroup,
-  getGroupInvitations,
-  inviteToGroup,
   removeGroupMember,
   leaveGroup,
-  cancelInvitation,
+  regenerateInviteCode,
   getGroupAvailableSlots,
   findMeetingTime,
   createGroupMeeting,
   type Group,
   type GroupMember,
-  type GroupInvitation,
   type AvailableSlot,
 } from '../../services/api';
 
@@ -25,16 +22,15 @@ type TabType = 'members' | 'schedule' | 'meeting';
 const GroupDetailView: React.FC<GroupDetailViewProps> = ({ groupId, onBack }) => {
   const [group, setGroup] = useState<Group | null>(null);
   const [members, setMembers] = useState<GroupMember[]>([]);
-  const [invitations, setInvitations] = useState<GroupInvitation[]>([]);
   const [isOwner, setIsOwner] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [successMessage, setSuccessMessage] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState<TabType>('members');
 
-  // 초대 관련
-  const [showInviteModal, setShowInviteModal] = useState(false);
-  const [inviteEmail, setInviteEmail] = useState('');
-  const [isInviting, setIsInviting] = useState(false);
+  // 초대 코드 관련
+  const [isCopied, setIsCopied] = useState(false);
+  const [isRegenerating, setIsRegenerating] = useState(false);
 
   // 일정 매칭 관련
   const [availableSlots, setAvailableSlots] = useState<AvailableSlot[]>([]);
@@ -61,14 +57,10 @@ const GroupDetailView: React.FC<GroupDetailViewProps> = ({ groupId, onBack }) =>
     setIsLoading(true);
     setError(null);
     try {
-      const [groupRes, invitationsRes] = await Promise.all([
-        getGroup(groupId),
-        getGroupInvitations(groupId).catch(() => ({ invitations: [] })),
-      ]);
+      const groupRes = await getGroup(groupId);
       setGroup(groupRes.group);
       setMembers(groupRes.members);
       setIsOwner(groupRes.is_owner);
-      setInvitations(invitationsRes.invitations.filter(i => i.status === 'pending'));
     } catch (err) {
       setError(err instanceof Error ? err.message : '데이터를 불러오는데 실패했습니다.');
     } finally {
@@ -76,19 +68,41 @@ const GroupDetailView: React.FC<GroupDetailViewProps> = ({ groupId, onBack }) =>
     }
   };
 
-  const handleInvite = async () => {
-    if (!inviteEmail.trim() || !inviteEmail.includes('@')) return;
+  // 초대 코드 복사
+  const handleCopyInviteCode = async () => {
+    if (!group?.invite_code) return;
 
-    setIsInviting(true);
     try {
-      const { invitation } = await inviteToGroup(groupId, inviteEmail.trim());
-      setInvitations([...invitations, invitation]);
-      setInviteEmail('');
-      setShowInviteModal(false);
+      await navigator.clipboard.writeText(group.invite_code);
+      setIsCopied(true);
+      setTimeout(() => setIsCopied(false), 2000);
+    } catch {
+      // Fallback for older browsers
+      const textArea = document.createElement('textarea');
+      textArea.value = group.invite_code;
+      document.body.appendChild(textArea);
+      textArea.select();
+      document.execCommand('copy');
+      document.body.removeChild(textArea);
+      setIsCopied(true);
+      setTimeout(() => setIsCopied(false), 2000);
+    }
+  };
+
+  // 초대 코드 재생성 (owner만)
+  const handleRegenerateCode = async () => {
+    if (!confirm('새 초대 코드를 생성하면 기존 코드는 사용할 수 없게 됩니다. 계속하시겠습니까?')) return;
+
+    setIsRegenerating(true);
+    try {
+      const { invite_code } = await regenerateInviteCode(groupId);
+      setGroup(prev => prev ? { ...prev, invite_code } : null);
+      setSuccessMessage('새 초대 코드가 생성되었습니다.');
+      setTimeout(() => setSuccessMessage(null), 3000);
     } catch (err) {
-      setError(err instanceof Error ? err.message : '초대에 실패했습니다.');
+      setError(err instanceof Error ? err.message : '초대 코드 재생성에 실패했습니다.');
     } finally {
-      setIsInviting(false);
+      setIsRegenerating(false);
     }
   };
 
@@ -111,15 +125,6 @@ const GroupDetailView: React.FC<GroupDetailViewProps> = ({ groupId, onBack }) =>
       onBack();
     } catch (err) {
       setError(err instanceof Error ? err.message : '그룹 나가기에 실패했습니다.');
-    }
-  };
-
-  const handleCancelInvitation = async (invitationId: string) => {
-    try {
-      await cancelInvitation(groupId, invitationId);
-      setInvitations(invitations.filter(i => i.id !== invitationId));
-    } catch (err) {
-      setError(err instanceof Error ? err.message : '초대 취소에 실패했습니다.');
     }
   };
 
@@ -251,11 +256,34 @@ const GroupDetailView: React.FC<GroupDetailViewProps> = ({ groupId, onBack }) =>
       {/* Members Tab */}
       {activeTab === 'members' && (
         <div className="tab-content">
+          {/* 초대 코드 섹션 */}
+          <div className="invite-code-section">
+            <div className="invite-code-header">
+              <h3>초대 코드</h3>
+              {isOwner && (
+                <button
+                  className="btn btn-secondary btn-sm"
+                  onClick={handleRegenerateCode}
+                  disabled={isRegenerating}
+                >
+                  {isRegenerating ? '생성 중...' : '새 코드 생성'}
+                </button>
+              )}
+            </div>
+            <div className="invite-code-box">
+              <span className="invite-code">{group?.invite_code || '------'}</span>
+              <button
+                className="btn btn-primary btn-sm"
+                onClick={handleCopyInviteCode}
+              >
+                {isCopied ? '복사됨!' : '복사'}
+              </button>
+            </div>
+            <p className="invite-code-hint">이 코드를 공유하여 친구를 그룹에 초대하세요</p>
+          </div>
+
           <div className="section-header">
-            <h3>멤버</h3>
-            <button className="btn btn-primary btn-sm" onClick={() => setShowInviteModal(true)}>
-              + 초대
-            </button>
+            <h3>멤버 ({members.length}명)</h3>
           </div>
 
           <div className="member-list">
@@ -285,26 +313,6 @@ const GroupDetailView: React.FC<GroupDetailViewProps> = ({ groupId, onBack }) =>
               </div>
             ))}
           </div>
-
-          {/* Pending Invitations */}
-          {invitations.length > 0 && (
-            <>
-              <h3 style={{ marginTop: '24px' }}>대기 중인 초대</h3>
-              <div className="invitation-list">
-                {invitations.map(invitation => (
-                  <div key={invitation.id} className="invitation-item">
-                    <span>{invitation.invitee_email}</span>
-                    <button
-                      className="btn btn-sm btn-danger-ghost"
-                      onClick={() => handleCancelInvitation(invitation.id)}
-                    >
-                      취소
-                    </button>
-                  </div>
-                ))}
-              </div>
-            </>
-          )}
         </div>
       )}
 
@@ -386,44 +394,6 @@ const GroupDetailView: React.FC<GroupDetailViewProps> = ({ groupId, onBack }) =>
               ))}
             </div>
           )}
-        </div>
-      )}
-
-      {/* Invite Modal */}
-      {showInviteModal && (
-        <div className="modal-overlay" onClick={() => setShowInviteModal(false)}>
-          <div className="modal-content" onClick={e => e.stopPropagation()}>
-            <div className="modal-header">
-              <h3>멤버 초대</h3>
-              <button className="btn btn-icon" onClick={() => setShowInviteModal(false)}>×</button>
-            </div>
-            <div className="modal-body">
-              <div className="form-group">
-                <label>이메일 주소</label>
-                <input
-                  type="email"
-                  className="form-input"
-                  placeholder="friend@example.com"
-                  value={inviteEmail}
-                  onChange={(e) => setInviteEmail(e.target.value)}
-                  onKeyDown={(e) => e.key === 'Enter' && handleInvite()}
-                  autoFocus
-                />
-              </div>
-            </div>
-            <div className="modal-footer">
-              <button className="btn btn-secondary" onClick={() => setShowInviteModal(false)}>
-                취소
-              </button>
-              <button
-                className="btn btn-primary"
-                onClick={handleInvite}
-                disabled={!inviteEmail.includes('@') || isInviting}
-              >
-                {isInviting ? '초대 중...' : '초대하기'}
-              </button>
-            </div>
-          </div>
         </div>
       )}
 
@@ -562,7 +532,54 @@ const GroupDetailView: React.FC<GroupDetailViewProps> = ({ groupId, onBack }) =>
           border: none;
           font-size: 18px;
           cursor: pointer;
-          color: #c00;
+        }
+
+        /* 초대 코드 섹션 */
+        .invite-code-section {
+          background: linear-gradient(135deg, #4A90A4 0%, #357ABD 100%);
+          border-radius: 12px;
+          padding: 20px;
+          color: white;
+          margin-bottom: 24px;
+        }
+
+        .invite-code-header {
+          display: flex;
+          justify-content: space-between;
+          align-items: center;
+          margin-bottom: 12px;
+        }
+
+        .invite-code-header h3 {
+          margin: 0;
+          font-size: 14px;
+          font-weight: 500;
+          opacity: 0.9;
+        }
+
+        .invite-code-box {
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          gap: 16px;
+          background: rgba(255, 255, 255, 0.15);
+          border-radius: 8px;
+          padding: 16px;
+        }
+
+        .invite-code {
+          font-size: 28px;
+          font-weight: 700;
+          font-family: monospace;
+          letter-spacing: 4px;
+        }
+
+        .invite-code-hint {
+          text-align: center;
+          font-size: 13px;
+          opacity: 0.8;
+          margin-top: 12px;
+          margin-bottom: 0;
         }
 
         .tabs {

@@ -265,11 +265,13 @@ CREATE POLICY "Users can manage life_logs" ON life_logs
 CREATE TABLE groups (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   name VARCHAR(100) NOT NULL,
+  invite_code VARCHAR(10) UNIQUE,                -- 디스코드 스타일 초대 코드 (예: "ABC123")
   created_by UUID NOT NULL REFERENCES users(id),
   created_at TIMESTAMPTZ DEFAULT NOW()
 );
 
 CREATE INDEX idx_groups_created_by ON groups(created_by);
+CREATE INDEX idx_groups_invite_code ON groups(invite_code);
 
 ALTER TABLE groups ENABLE ROW LEVEL SECURITY;
 

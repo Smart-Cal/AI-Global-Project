@@ -675,6 +675,7 @@ export async function reverseGeocode(lat: number, lon: number): Promise<{ city: 
 export interface Group {
   id: string;
   name: string;
+  invite_code: string;  // 디스코드 스타일 초대 코드
   owner_id: string;
   created_at: string;
   updated_at: string;
@@ -782,7 +783,23 @@ export async function leaveGroup(groupId: string): Promise<void> {
   await apiRequest(`/groups/${groupId}/leave`, { method: 'POST' });
 }
 
-// 그룹 초대
+// 초대 코드 (디스코드 스타일)
+export async function joinGroupByCode(inviteCode: string): Promise<{ message: string; group: Group }> {
+  return apiRequest('/groups/join', {
+    method: 'POST',
+    body: JSON.stringify({ invite_code: inviteCode }),
+  });
+}
+
+export async function getGroupByCode(inviteCode: string): Promise<{ group: { id: string; name: string; member_count: number } }> {
+  return apiRequest(`/groups/code/${inviteCode}`);
+}
+
+export async function regenerateInviteCode(groupId: string): Promise<{ message: string; invite_code: string }> {
+  return apiRequest(`/groups/${groupId}/regenerate-code`, { method: 'POST' });
+}
+
+// 그룹 초대 (이메일 - 레거시)
 export async function getPendingInvitations(): Promise<{ invitations: GroupInvitation[] }> {
   return apiRequest('/groups/invitations/pending');
 }

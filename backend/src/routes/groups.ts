@@ -17,7 +17,10 @@ import {
   cancelInvitation,
   findGroupAvailableSlots,
   getUserById,
-  createEvent
+  createEvent,
+  getGroupByInviteCode,
+  joinGroupByInviteCode,
+  regenerateInviteCode
 } from '../services/database.js';
 import { AuthRequest, authenticate } from '../middleware/auth.js';
 import { Group, GroupMember, GroupInvitation, GroupMatchSlot } from '../types/index.js';
@@ -148,6 +151,92 @@ router.delete('/:id', authenticate, async (req: AuthRequest, res: Response) => {
   } catch (error) {
     console.error('Delete group error:', error);
     res.status(500).json({ error: 'Failed to delete group' });
+  }
+});
+
+// ==============================================
+// Invite Code (디스코드 스타일)
+// ==============================================
+
+/**
+ * POST /api/groups/join
+ * 초대 코드로 그룹 가입
+ */
+router.post('/join', authenticate, async (req: AuthRequest, res: Response) => {
+  try {
+    const userId = req.userId!;
+    const { invite_code } = req.body;
+
+    if (!invite_code || invite_code.trim().length === 0) {
+      res.status(400).json({ error: '초대 코드를 입력해주세요.' });
+      return;
+    }
+
+    const group = await joinGroupByInviteCode(invite_code.trim().toUpperCase(), userId);
+    res.json({
+      message: `'${group.name}' 그룹에 가입되었습니다!`,
+      group
+    });
+  } catch (error: any) {
+    console.error('Join group error:', error);
+    res.status(400).json({ error: error.message || 'Failed to join group' });
+  }
+});
+
+/**
+ * POST /api/groups/:id/regenerate-code
+ * 초대 코드 재생성 (owner만)
+ */
+router.post('/:id/regenerate-code', authenticate, async (req: AuthRequest, res: Response) => {
+  try {
+    const userId = req.userId!;
+    const { id } = req.params;
+
+    // owner 권한 확인
+    const isOwner = await isGroupOwner(id, userId);
+    if (!isOwner) {
+      res.status(403).json({ error: 'Only group owner can regenerate invite code' });
+      return;
+    }
+
+    const newCode = await regenerateInviteCode(id);
+    res.json({
+      message: '새 초대 코드가 생성되었습니다.',
+      invite_code: newCode
+    });
+  } catch (error) {
+    console.error('Regenerate code error:', error);
+    res.status(500).json({ error: 'Failed to regenerate invite code' });
+  }
+});
+
+/**
+ * GET /api/groups/code/:code
+ * 초대 코드로 그룹 정보 미리보기 (가입 전 확인용)
+ */
+router.get('/code/:code', authenticate, async (req: AuthRequest, res: Response) => {
+  try {
+    const { code } = req.params;
+
+    const group = await getGroupByInviteCode(code.toUpperCase());
+    if (!group) {
+      res.status(404).json({ error: '유효하지 않은 초대 코드입니다.' });
+      return;
+    }
+
+    const members = await getGroupMembers(group.id);
+
+    // 민감한 정보는 제외하고 반환
+    res.json({
+      group: {
+        id: group.id,
+        name: group.name,
+        member_count: members.length
+      }
+    });
+  } catch (error) {
+    console.error('Get group by code error:', error);
+    res.status(500).json({ error: 'Failed to get group info' });
   }
 });
 

@@ -3,10 +3,9 @@ import {
   getGroups,
   createGroup,
   deleteGroup,
-  getPendingInvitations,
-  respondToInvitation,
+  joinGroupByCode,
+  getGroupByCode,
   type Group,
-  type GroupInvitation,
 } from '../../services/api';
 
 interface GroupsViewProps {
@@ -15,12 +14,17 @@ interface GroupsViewProps {
 
 const GroupsView: React.FC<GroupsViewProps> = ({ onGroupClick }) => {
   const [groups, setGroups] = useState<Group[]>([]);
-  const [invitations, setInvitations] = useState<GroupInvitation[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [successMessage, setSuccessMessage] = useState<string | null>(null);
   const [showCreateModal, setShowCreateModal] = useState(false);
+  const [showJoinModal, setShowJoinModal] = useState(false);
   const [newGroupName, setNewGroupName] = useState('');
+  const [inviteCode, setInviteCode] = useState('');
+  const [previewGroup, setPreviewGroup] = useState<{ id: string; name: string; member_count: number } | null>(null);
   const [isCreating, setIsCreating] = useState(false);
+  const [isJoining, setIsJoining] = useState(false);
+  const [isCheckingCode, setIsCheckingCode] = useState(false);
 
   useEffect(() => {
     loadData();
@@ -30,16 +34,53 @@ const GroupsView: React.FC<GroupsViewProps> = ({ onGroupClick }) => {
     setIsLoading(true);
     setError(null);
     try {
-      const [groupsRes, invitationsRes] = await Promise.all([
-        getGroups(),
-        getPendingInvitations(),
-      ]);
+      const groupsRes = await getGroups();
       setGroups(groupsRes.groups);
-      setInvitations(invitationsRes.invitations);
     } catch (err) {
       setError(err instanceof Error ? err.message : '데이터를 불러오는데 실패했습니다.');
     } finally {
       setIsLoading(false);
+    }
+  };
+
+  // 초대 코드 확인 (6자리 입력 시 자동 확인)
+  const handleInviteCodeChange = async (code: string) => {
+    const upperCode = code.toUpperCase().replace(/[^A-Z0-9]/g, '').slice(0, 6);
+    setInviteCode(upperCode);
+    setPreviewGroup(null);
+    setError(null);
+
+    if (upperCode.length === 6) {
+      setIsCheckingCode(true);
+      try {
+        const { group } = await getGroupByCode(upperCode);
+        setPreviewGroup(group);
+      } catch (err) {
+        setError(err instanceof Error ? err.message : '유효하지 않은 초대 코드입니다.');
+      } finally {
+        setIsCheckingCode(false);
+      }
+    }
+  };
+
+  // 초대 코드로 그룹 가입
+  const handleJoinGroup = async () => {
+    if (!previewGroup) return;
+
+    setIsJoining(true);
+    setError(null);
+    try {
+      const { message, group } = await joinGroupByCode(inviteCode);
+      setGroups([...groups, group]);
+      setSuccessMessage(message);
+      setShowJoinModal(false);
+      setInviteCode('');
+      setPreviewGroup(null);
+      setTimeout(() => setSuccessMessage(null), 3000);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : '그룹 가입에 실패했습니다.');
+    } finally {
+      setIsJoining(false);
     }
   };
 
@@ -71,16 +112,11 @@ const GroupsView: React.FC<GroupsViewProps> = ({ onGroupClick }) => {
     }
   };
 
-  const handleInvitationResponse = async (invitationId: string, accept: boolean) => {
-    try {
-      await respondToInvitation(invitationId, accept);
-      setInvitations(invitations.filter(i => i.id !== invitationId));
-      if (accept) {
-        loadData(); // 수락 시 그룹 목록 새로고침
-      }
-    } catch (err) {
-      setError(err instanceof Error ? err.message : '초대 응답에 실패했습니다.');
-    }
+  const closeJoinModal = () => {
+    setShowJoinModal(false);
+    setInviteCode('');
+    setPreviewGroup(null);
+    setError(null);
   };
 
   const formatDate = (dateStr: string) => {
@@ -103,48 +139,26 @@ const GroupsView: React.FC<GroupsViewProps> = ({ onGroupClick }) => {
     <div className="groups-view">
       <div className="groups-header">
         <h2>그룹</h2>
-        <button className="btn btn-primary" onClick={() => setShowCreateModal(true)}>
-          + 새 그룹
-        </button>
+        <div className="header-actions">
+          <button className="btn btn-secondary" onClick={() => setShowJoinModal(true)}>
+            초대 코드로 가입
+          </button>
+          <button className="btn btn-primary" onClick={() => setShowCreateModal(true)}>
+            + 새 그룹
+          </button>
+        </div>
       </div>
 
-      {error && (
-        <div className="error-message">
-          {error}
-          <button onClick={() => setError(null)}>×</button>
+      {successMessage && (
+        <div className="success-message">
+          {successMessage}
         </div>
       )}
 
-      {/* 대기 중인 초대 */}
-      {invitations.length > 0 && (
-        <div className="invitations-section">
-          <h3>받은 초대 ({invitations.length})</h3>
-          <div className="invitation-list">
-            {invitations.map(invitation => (
-              <div key={invitation.id} className="invitation-card">
-                <div className="invitation-info">
-                  <span className="invitation-group-name">{invitation.group_name}</span>
-                  <span className="invitation-from">
-                    {invitation.inviter_name}님이 초대했습니다
-                  </span>
-                </div>
-                <div className="invitation-actions">
-                  <button
-                    className="btn btn-success btn-sm"
-                    onClick={() => handleInvitationResponse(invitation.id, true)}
-                  >
-                    수락
-                  </button>
-                  <button
-                    className="btn btn-danger btn-sm"
-                    onClick={() => handleInvitationResponse(invitation.id, false)}
-                  >
-                    거절
-                  </button>
-                </div>
-              </div>
-            ))}
-          </div>
+      {error && !showJoinModal && (
+        <div className="error-message">
+          {error}
+          <button onClick={() => setError(null)}>×</button>
         </div>
       )}
 
@@ -232,6 +246,73 @@ const GroupsView: React.FC<GroupsViewProps> = ({ onGroupClick }) => {
         </div>
       )}
 
+      {/* 초대 코드로 가입 모달 */}
+      {showJoinModal && (
+        <div className="modal-overlay" onClick={closeJoinModal}>
+          <div className="modal-content join-modal" onClick={e => e.stopPropagation()}>
+            <div className="modal-header">
+              <h3>초대 코드로 가입</h3>
+              <button className="btn btn-icon" onClick={closeJoinModal}>
+                ×
+              </button>
+            </div>
+            <div className="modal-body">
+              <div className="form-group">
+                <label htmlFor="inviteCode">초대 코드 입력</label>
+                <input
+                  id="inviteCode"
+                  type="text"
+                  className="form-input invite-code-input"
+                  placeholder="ABC123"
+                  value={inviteCode}
+                  onChange={(e) => handleInviteCodeChange(e.target.value)}
+                  maxLength={6}
+                  autoFocus
+                />
+                <p className="input-hint">그룹 관리자에게 받은 6자리 코드를 입력하세요</p>
+              </div>
+
+              {isCheckingCode && (
+                <div className="checking-status">
+                  <div className="spinner-small"></div>
+                  <span>코드 확인 중...</span>
+                </div>
+              )}
+
+              {error && showJoinModal && (
+                <div className="error-inline">{error}</div>
+              )}
+
+              {previewGroup && (
+                <div className="group-preview">
+                  <div className="preview-icon">
+                    <svg width="32" height="32" viewBox="0 0 24 24" fill="none">
+                      <path d="M12 12C14.21 12 16 10.21 16 8C16 5.79 14.21 4 12 4C9.79 4 8 5.79 8 8C8 10.21 9.79 12 12 12ZM12 14C9.33 14 4 15.34 4 18V20H20V18C20 15.34 14.67 14 12 14Z" fill="currentColor"/>
+                    </svg>
+                  </div>
+                  <div className="preview-info">
+                    <span className="preview-name">{previewGroup.name}</span>
+                    <span className="preview-members">{previewGroup.member_count}명의 멤버</span>
+                  </div>
+                </div>
+              )}
+            </div>
+            <div className="modal-footer">
+              <button className="btn btn-secondary" onClick={closeJoinModal}>
+                취소
+              </button>
+              <button
+                className="btn btn-primary"
+                onClick={handleJoinGroup}
+                disabled={!previewGroup || isJoining}
+              >
+                {isJoining ? '가입 중...' : '가입하기'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       <style>{`
         .groups-view {
           padding: 20px;
@@ -250,6 +331,19 @@ const GroupsView: React.FC<GroupsViewProps> = ({ onGroupClick }) => {
           margin: 0;
           font-size: 24px;
           font-weight: 600;
+        }
+
+        .header-actions {
+          display: flex;
+          gap: 8px;
+        }
+
+        .success-message {
+          background: #d4edda;
+          color: #155724;
+          padding: 12px 16px;
+          border-radius: 8px;
+          margin-bottom: 16px;
         }
 
         .loading-container {
@@ -293,11 +387,6 @@ const GroupsView: React.FC<GroupsViewProps> = ({ onGroupClick }) => {
           color: #c00;
         }
 
-        .invitations-section {
-          margin-bottom: 24px;
-        }
-
-        .invitations-section h3,
         .groups-section h3 {
           font-size: 16px;
           font-weight: 500;
@@ -305,58 +394,84 @@ const GroupsView: React.FC<GroupsViewProps> = ({ onGroupClick }) => {
           margin-bottom: 12px;
         }
 
-        .invitation-list {
-          display: flex;
-          flex-direction: column;
-          gap: 8px;
+        /* 초대 코드 가입 모달 스타일 */
+        .join-modal .invite-code-input {
+          font-size: 24px;
+          text-align: center;
+          letter-spacing: 8px;
+          font-family: monospace;
+          text-transform: uppercase;
         }
 
-        .invitation-card {
+        .input-hint {
+          font-size: 13px;
+          color: #888;
+          margin-top: 8px;
+          text-align: center;
+        }
+
+        .checking-status {
           display: flex;
-          justify-content: space-between;
           align-items: center;
+          justify-content: center;
+          gap: 8px;
+          padding: 12px;
+          color: #666;
+        }
+
+        .spinner-small {
+          width: 16px;
+          height: 16px;
+          border: 2px solid #e0e0e0;
+          border-top-color: #4A90A4;
+          border-radius: 50%;
+          animation: spin 1s linear infinite;
+        }
+
+        .error-inline {
+          background: #fee;
+          color: #c00;
+          padding: 12px;
+          border-radius: 8px;
+          text-align: center;
+          margin-top: 12px;
+        }
+
+        .group-preview {
+          display: flex;
+          align-items: center;
+          gap: 16px;
           padding: 16px;
           background: linear-gradient(135deg, #4A90A4 0%, #357ABD 100%);
           border-radius: 12px;
           color: white;
+          margin-top: 16px;
         }
 
-        .invitation-info {
+        .preview-icon {
+          width: 48px;
+          height: 48px;
+          background: rgba(255, 255, 255, 0.2);
+          border-radius: 50%;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+        }
+
+        .preview-info {
           display: flex;
           flex-direction: column;
           gap: 4px;
         }
 
-        .invitation-group-name {
+        .preview-name {
           font-weight: 600;
-          font-size: 16px;
+          font-size: 18px;
         }
 
-        .invitation-from {
-          font-size: 13px;
+        .preview-members {
+          font-size: 14px;
           opacity: 0.9;
-        }
-
-        .invitation-actions {
-          display: flex;
-          gap: 8px;
-        }
-
-        .btn-sm {
-          padding: 6px 12px;
-          font-size: 13px;
-        }
-
-        .btn-success {
-          background: #10B981;
-          color: white;
-          border: none;
-        }
-
-        .btn-danger {
-          background: #EF4444;
-          color: white;
-          border: none;
         }
 
         .group-list {
