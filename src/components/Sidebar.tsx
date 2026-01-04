@@ -61,6 +61,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
     { id: 'calendar' as SidebarView, icon: 'calendar', label: '캘린더' },
     { id: 'goals' as SidebarView, icon: 'target', label: '목표', badge: activeGoals.length || undefined },
     { id: 'todos' as SidebarView, icon: 'check', label: '할 일', badge: pendingTodos.length || undefined },
+    { id: 'groups' as SidebarView, icon: 'users', label: '그룹' },
   ];
 
   return (

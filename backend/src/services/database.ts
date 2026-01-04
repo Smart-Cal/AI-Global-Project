@@ -654,17 +654,37 @@ export async function getGroupById(id: string): Promise<Group | null> {
   return data;
 }
 
+// 랜덤 초대 코드 생성 (디스코드 스타일: 6자리 영숫자)
+function generateInviteCode(): string {
+  const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789'; // 혼동되는 문자 제외 (0/O, 1/I/L)
+  let code = '';
+  for (let i = 0; i < 6; i++) {
+    code += chars.charAt(Math.floor(Math.random() * chars.length));
+  }
+  return code;
+}
+
 export async function createGroup(name: string, creatorId: string): Promise<Group> {
-  // 1. 그룹 생성
+  // 1. 유니크한 초대 코드 생성
+  let inviteCode = generateInviteCode();
+  let attempts = 0;
+  while (attempts < 10) {
+    const existing = await getGroupByInviteCode(inviteCode);
+    if (!existing) break;
+    inviteCode = generateInviteCode();
+    attempts++;
+  }
+
+  // 2. 그룹 생성
   const { data: group, error: groupError } = await supabase
     .from('groups')
-    .insert({ name, created_by: creatorId })
+    .insert({ name, created_by: creatorId, invite_code: inviteCode })
     .select()
     .single();
 
   if (groupError) throw new Error(`Failed to create group: ${groupError.message}`);
 
-  // 2. 생성자를 owner로 추가
+  // 3. 생성자를 owner로 추가
   const { error: memberError } = await supabase
     .from('group_members')
     .insert({
@@ -676,6 +696,66 @@ export async function createGroup(name: string, creatorId: string): Promise<Grou
   if (memberError) throw new Error(`Failed to add owner to group: ${memberError.message}`);
 
   return group;
+}
+
+// 초대 코드로 그룹 조회
+export async function getGroupByInviteCode(inviteCode: string): Promise<Group | null> {
+  const { data, error } = await supabase
+    .from('groups')
+    .select('*')
+    .eq('invite_code', inviteCode.toUpperCase())
+    .single();
+
+  if (error && error.code !== 'PGRST116') throw new Error(`Failed to get group: ${error.message}`);
+  return data;
+}
+
+// 초대 코드로 그룹 가입
+export async function joinGroupByInviteCode(inviteCode: string, userId: string): Promise<Group> {
+  const group = await getGroupByInviteCode(inviteCode);
+  if (!group) {
+    throw new Error('유효하지 않은 초대 코드입니다.');
+  }
+
+  // 이미 멤버인지 확인
+  const existingMember = await getGroupMember(group.id, userId);
+  if (existingMember) {
+    throw new Error('이미 이 그룹의 멤버입니다.');
+  }
+
+  // 멤버로 추가
+  const { error } = await supabase
+    .from('group_members')
+    .insert({
+      group_id: group.id,
+      user_id: userId,
+      role: 'member'
+    });
+
+  if (error) throw new Error(`Failed to join group: ${error.message}`);
+
+  return group;
+}
+
+// 초대 코드 재생성 (owner만)
+export async function regenerateInviteCode(groupId: string): Promise<string> {
+  let newCode = generateInviteCode();
+  let attempts = 0;
+  while (attempts < 10) {
+    const existing = await getGroupByInviteCode(newCode);
+    if (!existing) break;
+    newCode = generateInviteCode();
+    attempts++;
+  }
+
+  const { error } = await supabase
+    .from('groups')
+    .update({ invite_code: newCode })
+    .eq('id', groupId);
+
+  if (error) throw new Error(`Failed to regenerate invite code: ${error.message}`);
+
+  return newCode;
 }
 
 export async function updateGroup(id: string, updates: Partial<Group>): Promise<Group> {

@@ -273,6 +273,7 @@ export interface LifeLog {
 export interface Group {
   id: string;
   name: string;
+  invite_code: string;           // 디스코드 스타일 초대 코드 (예: "ABC123")
   created_by: string;
   created_at?: string;
 }

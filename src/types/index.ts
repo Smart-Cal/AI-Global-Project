@@ -283,7 +283,7 @@ export interface Notification {
 }
 
 // View types for UI
-export type SidebarView = 'dashboard' | 'assistant' | 'calendar' | 'goals' | 'todos' | 'chat' | 'settings';
+export type SidebarView = 'dashboard' | 'assistant' | 'calendar' | 'goals' | 'todos' | 'groups' | 'chat' | 'settings';
 export type CalendarView = 'month' | 'week' | 'day';
 
 // =============================================
