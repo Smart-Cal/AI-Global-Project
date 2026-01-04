@@ -14,6 +14,8 @@ import CalendarView from './components/views/CalendarView';
 import ScheduleView from './components/views/ScheduleView';
 import GoalView from './components/views/GoalView';
 import NewDashboard from './components/views/NewDashboard';
+import GroupsView from './components/views/GroupsView';
+import GroupDetailView from './components/views/GroupDetailView';
 import AuthPage from './pages/AuthPage';
 import AuthCallback from './pages/AuthCallback';
 import { ToastProvider } from './components/Toast';
@@ -22,8 +24,8 @@ import ChronotypeSettings from './components/ChronotypeSettings';
 import { MenuIcon, PlusIcon, SearchIcon } from './components/Icons';
 import type { CalendarView as CalendarViewType, CalendarEvent, Goal } from './types';
 
-// View types - dashboard 추가
-type AppView = 'dashboard' | 'assistant' | 'calendar' | 'schedule' | 'goal';
+// View types - groups 추가
+type AppView = 'dashboard' | 'assistant' | 'calendar' | 'schedule' | 'goal' | 'groups' | 'group-detail';
 
 const ProtectedRoute: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const { user, isLoading } = useAuthStore();
@@ -49,6 +51,7 @@ const MainLayout: React.FC = () => {
   const [currentView, setCurrentView] = useState<AppView>('dashboard');
   const [calendarView, setCalendarView] = useState<CalendarViewType>('month');
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [selectedGroupId, setSelectedGroupId] = useState<string | null>(null);
 
   // Modal states
   const [eventModalOpen, setEventModalOpen] = useState(false);
@@ -118,6 +121,16 @@ const MainLayout: React.FC = () => {
     setTodoModalOpen(true);
   };
 
+  const handleGroupClick = (groupId: string) => {
+    setSelectedGroupId(groupId);
+    setCurrentView('group-detail');
+  };
+
+  const handleBackFromGroup = () => {
+    setSelectedGroupId(null);
+    setCurrentView('groups');
+  };
+
 
   const getContentTitle = () => {
     switch (currentView) {
@@ -131,6 +144,10 @@ const MainLayout: React.FC = () => {
         return '일정';
       case 'goal':
         return 'Goal';
+      case 'groups':
+        return '그룹';
+      case 'group-detail':
+        return '그룹 상세';
       default:
         return '';
     }
@@ -170,6 +187,19 @@ const MainLayout: React.FC = () => {
             onAddGoal={handleAddGoal}
           />
         );
+      case 'groups':
+        return (
+          <GroupsView
+            onGroupClick={handleGroupClick}
+          />
+        );
+      case 'group-detail':
+        return selectedGroupId ? (
+          <GroupDetailView
+            groupId={selectedGroupId}
+            onBack={handleBackFromGroup}
+          />
+        ) : null;
       default:
         return null;
     }
@@ -182,6 +212,7 @@ const MainLayout: React.FC = () => {
     'calendar': 'calendar',
     'goals': 'goal',
     'todos': 'schedule',
+    'groups': 'groups',
   };
 
   const handleSidebarViewChange = (view: string) => {
@@ -197,6 +228,9 @@ const MainLayout: React.FC = () => {
       case 'calendar': return 'calendar';
       case 'goal': return 'goals';
       case 'schedule': return 'todos';
+      case 'groups':
+      case 'group-detail':
+        return 'groups';
       default: return 'dashboard';
     }
   };

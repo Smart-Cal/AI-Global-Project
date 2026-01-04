@@ -667,3 +667,252 @@ export async function getWeatherByCoords(lat: number, lon: number): Promise<Weat
 export async function reverseGeocode(lat: number, lon: number): Promise<{ city: string; lat: number; lon: number }> {
   return apiRequest(`/briefing/geocode/reverse?lat=${lat}&lon=${lon}`);
 }
+
+// ==============================================
+// Groups API (그룹 일정)
+// ==============================================
+
+export interface Group {
+  id: string;
+  name: string;
+  owner_id: string;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface GroupMember {
+  user_id: string;
+  group_id: string;
+  role: 'owner' | 'member';
+  joined_at: string;
+  user_name?: string;
+  user_email?: string;
+}
+
+export interface GroupInvitation {
+  id: string;
+  group_id: string;
+  group_name?: string;
+  inviter_id: string;
+  inviter_name?: string;
+  invitee_email: string;
+  status: 'pending' | 'accepted' | 'declined' | 'cancelled';
+  created_at: string;
+  responded_at?: string;
+}
+
+export interface AvailableSlot {
+  date: string;
+  start_time: string;
+  end_time: string;
+  type: 'available' | 'negotiable';
+  available_members?: string[];
+  conflicting_members?: string[];
+}
+
+export interface MeetingRecommendation {
+  group: {
+    id: string;
+    name: string;
+    member_count: number;
+  };
+  available_times: {
+    best: {
+      date: string;
+      time: string;
+      type: string;
+      reason: string;
+    }[];
+    alternatives: {
+      date: string;
+      time: string;
+      type: string;
+      conflicting_members?: string[];
+      reason: string;
+    }[];
+  };
+  place_recommendations?: {
+    restaurants?: MCPPlaceResult[];
+  };
+  suggested_plan?: {
+    date: string;
+    time: string;
+    place: MCPPlaceResult;
+    message: string;
+  };
+}
+
+// 그룹 CRUD
+export async function getGroups(): Promise<{ groups: Group[] }> {
+  return apiRequest<{ groups: Group[] }>('/groups');
+}
+
+export async function getGroup(id: string): Promise<{ group: Group; members: GroupMember[]; is_owner: boolean }> {
+  return apiRequest(`/groups/${id}`);
+}
+
+export async function createGroup(name: string): Promise<{ group: Group }> {
+  return apiRequest<{ group: Group }>('/groups', {
+    method: 'POST',
+    body: JSON.stringify({ name }),
+  });
+}
+
+export async function updateGroup(id: string, name: string): Promise<{ group: Group }> {
+  return apiRequest<{ group: Group }>(`/groups/${id}`, {
+    method: 'PUT',
+    body: JSON.stringify({ name }),
+  });
+}
+
+export async function deleteGroup(id: string): Promise<void> {
+  await apiRequest(`/groups/${id}`, { method: 'DELETE' });
+}
+
+// 그룹 멤버
+export async function getGroupMembers(groupId: string): Promise<{ members: GroupMember[] }> {
+  return apiRequest(`/groups/${groupId}/members`);
+}
+
+export async function removeGroupMember(groupId: string, memberId: string): Promise<void> {
+  await apiRequest(`/groups/${groupId}/members/${memberId}`, { method: 'DELETE' });
+}
+
+export async function leaveGroup(groupId: string): Promise<void> {
+  await apiRequest(`/groups/${groupId}/leave`, { method: 'POST' });
+}
+
+// 그룹 초대
+export async function getPendingInvitations(): Promise<{ invitations: GroupInvitation[] }> {
+  return apiRequest('/groups/invitations/pending');
+}
+
+export async function getGroupInvitations(groupId: string): Promise<{ invitations: GroupInvitation[] }> {
+  return apiRequest(`/groups/${groupId}/invitations`);
+}
+
+export async function inviteToGroup(groupId: string, email: string): Promise<{ invitation: GroupInvitation }> {
+  return apiRequest(`/groups/${groupId}/invitations`, {
+    method: 'POST',
+    body: JSON.stringify({ email }),
+  });
+}
+
+export async function respondToInvitation(invitationId: string, accept: boolean): Promise<{ invitation: GroupInvitation; message: string }> {
+  return apiRequest(`/groups/invitations/${invitationId}/respond`, {
+    method: 'POST',
+    body: JSON.stringify({ accept }),
+  });
+}
+
+export async function cancelInvitation(groupId: string, invitationId: string): Promise<void> {
+  await apiRequest(`/groups/${groupId}/invitations/${invitationId}`, { method: 'DELETE' });
+}
+
+// 그룹 일정 매칭
+export async function getGroupAvailableSlots(
+  groupId: string,
+  options?: {
+    start_date?: string;
+    end_date?: string;
+    min_duration?: number;
+    work_start?: number;
+    work_end?: number;
+  }
+): Promise<{ slots: AvailableSlot[]; member_count: number; date_range: { start: string; end: string } }> {
+  const params = new URLSearchParams();
+  if (options?.start_date) params.append('start_date', options.start_date);
+  if (options?.end_date) params.append('end_date', options.end_date);
+  if (options?.min_duration) params.append('min_duration', options.min_duration.toString());
+  if (options?.work_start) params.append('work_start', options.work_start.toString());
+  if (options?.work_end) params.append('work_end', options.work_end.toString());
+
+  const query = params.toString() ? `?${params.toString()}` : '';
+  return apiRequest(`/groups/${groupId}/available-slots${query}`);
+}
+
+export async function findMeetingTime(
+  groupId: string,
+  options?: {
+    duration?: number;
+    preferred_dates?: string[];
+    preferred_times?: string[];
+  }
+): Promise<{
+  recommendations: {
+    date: string;
+    start_time: string;
+    end_time: string;
+    type: string;
+    recommendation_type: 'best' | 'alternative';
+    reason: string;
+    conflicting_members?: string[];
+  }[];
+  total_available: number;
+  total_negotiable: number;
+}> {
+  return apiRequest(`/groups/${groupId}/find-meeting-time`, {
+    method: 'POST',
+    body: JSON.stringify(options || {}),
+  });
+}
+
+// MCP 기반 그룹 미팅 계획
+export async function planGroupMeeting(
+  groupId: string,
+  options?: {
+    title?: string;
+    duration?: number;
+    location_area?: string;
+    place_type?: string;
+    budget?: number;
+    preferences?: string;
+  }
+): Promise<MeetingRecommendation> {
+  return apiRequest(`/groups/${groupId}/plan-meeting`, {
+    method: 'POST',
+    body: JSON.stringify(options || {}),
+  });
+}
+
+export async function createGroupMeeting(
+  groupId: string,
+  meeting: {
+    title: string;
+    date: string;
+    start_time: string;
+    end_time?: string;
+    location?: string;
+    description?: string;
+  }
+): Promise<{
+  success: boolean;
+  message: string;
+  meeting: {
+    title: string;
+    date: string;
+    time: string;
+    location?: string;
+  };
+  created_for: number;
+  failed_for: number;
+}> {
+  return apiRequest(`/groups/${groupId}/create-meeting`, {
+    method: 'POST',
+    body: JSON.stringify(meeting),
+  });
+}
+
+export async function findGroupMidpoint(
+  groupId: string,
+  memberLocations: { user_id: string; location: { lat: number; lng: number } }[]
+): Promise<{
+  midpoint: { lat: number; lng: number };
+  nearby_places: MCPPlaceResult[];
+  member_distances: { user_id: string; distance: string }[];
+}> {
+  return apiRequest(`/groups/${groupId}/find-midpoint`, {
+    method: 'POST',
+    body: JSON.stringify({ member_locations: memberLocations }),
+  });
+}
