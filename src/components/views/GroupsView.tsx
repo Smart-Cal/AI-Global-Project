@@ -37,13 +37,13 @@ const GroupsView: React.FC<GroupsViewProps> = ({ onGroupClick }) => {
       const groupsRes = await getGroups();
       setGroups(groupsRes.groups);
     } catch (err) {
-      setError(err instanceof Error ? err.message : '데이터를 불러오는데 실패했습니다.');
+      setError(err instanceof Error ? err.message : 'Failed to load data.');
     } finally {
       setIsLoading(false);
     }
   };
 
-  // 초대 코드 확인 (6자리 입력 시 자동 확인)
+  // Check invite code (auto-verify when 6 digits entered)
   const handleInviteCodeChange = async (code: string) => {
     const upperCode = code.toUpperCase().replace(/[^A-Z0-9]/g, '').slice(0, 6);
     setInviteCode(upperCode);
@@ -56,14 +56,14 @@ const GroupsView: React.FC<GroupsViewProps> = ({ onGroupClick }) => {
         const { group } = await getGroupByCode(upperCode);
         setPreviewGroup(group);
       } catch (err) {
-        setError(err instanceof Error ? err.message : '유효하지 않은 초대 코드입니다.');
+        setError(err instanceof Error ? err.message : 'Invalid invite code.');
       } finally {
         setIsCheckingCode(false);
       }
     }
   };
 
-  // 초대 코드로 그룹 가입
+  // Join group with invite code
   const handleJoinGroup = async () => {
     if (!previewGroup) return;
 
@@ -78,7 +78,7 @@ const GroupsView: React.FC<GroupsViewProps> = ({ onGroupClick }) => {
       setPreviewGroup(null);
       setTimeout(() => setSuccessMessage(null), 3000);
     } catch (err) {
-      setError(err instanceof Error ? err.message : '그룹 가입에 실패했습니다.');
+      setError(err instanceof Error ? err.message : 'Failed to join group.');
     } finally {
       setIsJoining(false);
     }
@@ -94,7 +94,7 @@ const GroupsView: React.FC<GroupsViewProps> = ({ onGroupClick }) => {
       setNewGroupName('');
       setShowCreateModal(false);
     } catch (err) {
-      setError(err instanceof Error ? err.message : '그룹 생성에 실패했습니다.');
+      setError(err instanceof Error ? err.message : 'Failed to create group.');
     } finally {
       setIsCreating(false);
     }
@@ -102,13 +102,13 @@ const GroupsView: React.FC<GroupsViewProps> = ({ onGroupClick }) => {
 
   const handleDeleteGroup = async (groupId: string, e: React.MouseEvent) => {
     e.stopPropagation();
-    if (!confirm('정말 이 그룹을 삭제하시겠습니까?')) return;
+    if (!confirm('Are you sure you want to delete this group?')) return;
 
     try {
       await deleteGroup(groupId);
       setGroups(groups.filter(g => g.id !== groupId));
     } catch (err) {
-      setError(err instanceof Error ? err.message : '그룹 삭제에 실패했습니다.');
+      setError(err instanceof Error ? err.message : 'Failed to delete group.');
     }
   };
 
@@ -129,7 +129,7 @@ const GroupsView: React.FC<GroupsViewProps> = ({ onGroupClick }) => {
       <div className="groups-view">
         <div className="loading-container">
           <div className="spinner"></div>
-          <p>로딩 중...</p>
+          <p>Loading...</p>
         </div>
       </div>
     );
@@ -138,13 +138,13 @@ const GroupsView: React.FC<GroupsViewProps> = ({ onGroupClick }) => {
   return (
     <div className="groups-view">
       <div className="groups-header">
-        <h2>그룹</h2>
+        <h2>Groups</h2>
         <div className="header-actions">
           <button className="btn btn-secondary" onClick={() => setShowJoinModal(true)}>
-            초대 코드로 가입
+            Join with Code
           </button>
           <button className="btn btn-primary" onClick={() => setShowCreateModal(true)}>
-            + 새 그룹
+            + New Group
           </button>
         </div>
       </div>
@@ -162,13 +162,13 @@ const GroupsView: React.FC<GroupsViewProps> = ({ onGroupClick }) => {
         </div>
       )}
 
-      {/* 그룹 목록 */}
+      {/* Group List */}
       <div className="groups-section">
-        <h3>내 그룹 ({groups.length})</h3>
+        <h3>My Groups ({groups.length})</h3>
         {groups.length === 0 ? (
           <div className="empty-state">
-            <p>아직 그룹이 없습니다.</p>
-            <p>새 그룹을 만들어 친구들과 일정을 조율해보세요!</p>
+            <p>No groups yet.</p>
+            <p>Create a new group to coordinate schedules with friends!</p>
           </div>
         ) : (
           <div className="group-list">
@@ -185,12 +185,12 @@ const GroupsView: React.FC<GroupsViewProps> = ({ onGroupClick }) => {
                 </div>
                 <div className="group-info">
                   <span className="group-name">{group.name}</span>
-                  <span className="group-date">생성일: {formatDate(group.created_at)}</span>
+                  <span className="group-date">Created: {formatDate(group.created_at)}</span>
                 </div>
                 <button
                   className="btn btn-icon btn-danger-ghost"
                   onClick={(e) => handleDeleteGroup(group.id, e)}
-                  title="그룹 삭제"
+                  title="Delete group"
                 >
                   <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
                     <path d="M6 19C6 20.1 6.9 21 8 21H16C17.1 21 18 20.1 18 19V7H6V19ZM19 4H15.5L14.5 3H9.5L8.5 4H5V6H19V4Z" fill="currentColor"/>
@@ -202,24 +202,24 @@ const GroupsView: React.FC<GroupsViewProps> = ({ onGroupClick }) => {
         )}
       </div>
 
-      {/* 그룹 생성 모달 */}
+      {/* Create Group Modal */}
       {showCreateModal && (
         <div className="modal-overlay" onClick={() => setShowCreateModal(false)}>
           <div className="modal-content" onClick={e => e.stopPropagation()}>
             <div className="modal-header">
-              <h3>새 그룹 만들기</h3>
+              <h3>Create New Group</h3>
               <button className="btn btn-icon" onClick={() => setShowCreateModal(false)}>
                 ×
               </button>
             </div>
             <div className="modal-body">
               <div className="form-group">
-                <label htmlFor="groupName">그룹 이름</label>
+                <label htmlFor="groupName">Group Name</label>
                 <input
                   id="groupName"
                   type="text"
                   className="form-input"
-                  placeholder="예: 대학동기, 프로젝트팀"
+                  placeholder="e.g., Study Group, Project Team"
                   value={newGroupName}
                   onChange={(e) => setNewGroupName(e.target.value)}
                   onKeyDown={(e) => e.key === 'Enter' && handleCreateGroup()}
@@ -232,33 +232,33 @@ const GroupsView: React.FC<GroupsViewProps> = ({ onGroupClick }) => {
                 className="btn btn-secondary"
                 onClick={() => setShowCreateModal(false)}
               >
-                취소
+                Cancel
               </button>
               <button
                 className="btn btn-primary"
                 onClick={handleCreateGroup}
                 disabled={!newGroupName.trim() || isCreating}
               >
-                {isCreating ? '생성 중...' : '만들기'}
+                {isCreating ? 'Creating...' : 'Create'}
               </button>
             </div>
           </div>
         </div>
       )}
 
-      {/* 초대 코드로 가입 모달 */}
+      {/* Join with Invite Code Modal */}
       {showJoinModal && (
         <div className="modal-overlay" onClick={closeJoinModal}>
           <div className="modal-content join-modal" onClick={e => e.stopPropagation()}>
             <div className="modal-header">
-              <h3>초대 코드로 가입</h3>
+              <h3>Join with Invite Code</h3>
               <button className="btn btn-icon" onClick={closeJoinModal}>
                 ×
               </button>
             </div>
             <div className="modal-body">
               <div className="form-group">
-                <label htmlFor="inviteCode">초대 코드 입력</label>
+                <label htmlFor="inviteCode">Enter Invite Code</label>
                 <input
                   id="inviteCode"
                   type="text"
@@ -269,13 +269,13 @@ const GroupsView: React.FC<GroupsViewProps> = ({ onGroupClick }) => {
                   maxLength={6}
                   autoFocus
                 />
-                <p className="input-hint">그룹 관리자에게 받은 6자리 코드를 입력하세요</p>
+                <p className="input-hint">Enter the 6-digit code from your group admin</p>
               </div>
 
               {isCheckingCode && (
                 <div className="checking-status">
                   <div className="spinner-small"></div>
-                  <span>코드 확인 중...</span>
+                  <span>Checking code...</span>
                 </div>
               )}
 
@@ -292,21 +292,21 @@ const GroupsView: React.FC<GroupsViewProps> = ({ onGroupClick }) => {
                   </div>
                   <div className="preview-info">
                     <span className="preview-name">{previewGroup.name}</span>
-                    <span className="preview-members">{previewGroup.member_count}명의 멤버</span>
+                    <span className="preview-members">{previewGroup.member_count} members</span>
                   </div>
                 </div>
               )}
             </div>
             <div className="modal-footer">
               <button className="btn btn-secondary" onClick={closeJoinModal}>
-                취소
+                Cancel
               </button>
               <button
                 className="btn btn-primary"
                 onClick={handleJoinGroup}
                 disabled={!previewGroup || isJoining}
               >
-                {isJoining ? '가입 중...' : '가입하기'}
+                {isJoining ? 'Joining...' : 'Join'}
               </button>
             </div>
           </div>
@@ -394,7 +394,7 @@ const GroupsView: React.FC<GroupsViewProps> = ({ onGroupClick }) => {
           margin-bottom: 12px;
         }
 
-        /* 초대 코드 가입 모달 스타일 */
+        /* Invite code join modal styles */
         .join-modal .invite-code-input {
           font-size: 24px;
           text-align: center;

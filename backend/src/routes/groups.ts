@@ -157,12 +157,12 @@ router.delete('/:id', authenticate, async (req: AuthRequest, res: Response) => {
 });
 
 // ==============================================
-// Invite Code (디스코드 스타일)
+// Invite Code (Discord-style)
 // ==============================================
 
 /**
  * POST /api/groups/join
- * 초대 코드로 그룹 가입
+ * Join group with invite code
  */
 router.post('/join', authenticate, async (req: AuthRequest, res: Response) => {
   try {
@@ -170,13 +170,13 @@ router.post('/join', authenticate, async (req: AuthRequest, res: Response) => {
     const { invite_code } = req.body;
 
     if (!invite_code || invite_code.trim().length === 0) {
-      res.status(400).json({ error: '초대 코드를 입력해주세요.' });
+      res.status(400).json({ error: 'Please enter an invite code.' });
       return;
     }
 
     const group = await joinGroupByInviteCode(invite_code.trim().toUpperCase(), userId);
     res.json({
-      message: `'${group.name}' 그룹에 가입되었습니다!`,
+      message: `Successfully joined '${group.name}'!`,
       group
     });
   } catch (error: any) {
@@ -187,14 +187,13 @@ router.post('/join', authenticate, async (req: AuthRequest, res: Response) => {
 
 /**
  * POST /api/groups/:id/regenerate-code
- * 초대 코드 재생성 (owner만)
+ * Regenerate invite code (owner only)
  */
 router.post('/:id/regenerate-code', authenticate, async (req: AuthRequest, res: Response) => {
   try {
     const userId = req.userId!;
     const { id } = req.params;
 
-    // owner 권한 확인
     const isOwner = await isGroupOwner(id, userId);
     if (!isOwner) {
       res.status(403).json({ error: 'Only group owner can regenerate invite code' });
@@ -203,7 +202,7 @@ router.post('/:id/regenerate-code', authenticate, async (req: AuthRequest, res: 
 
     const newCode = await regenerateInviteCode(id);
     res.json({
-      message: '새 초대 코드가 생성되었습니다.',
+      message: 'New invite code generated.',
       invite_code: newCode
     });
   } catch (error) {
@@ -214,7 +213,7 @@ router.post('/:id/regenerate-code', authenticate, async (req: AuthRequest, res: 
 
 /**
  * GET /api/groups/code/:code
- * 초대 코드로 그룹 정보 미리보기 (가입 전 확인용)
+ * Preview group info by invite code (before joining)
  */
 router.get('/code/:code', authenticate, async (req: AuthRequest, res: Response) => {
   try {
@@ -222,13 +221,12 @@ router.get('/code/:code', authenticate, async (req: AuthRequest, res: Response) 
 
     const group = await getGroupByInviteCode(code.toUpperCase());
     if (!group) {
-      res.status(404).json({ error: '유효하지 않은 초대 코드입니다.' });
+      res.status(404).json({ error: 'Invalid invite code.' });
       return;
     }
 
     const members = await getGroupMembers(group.id);
 
-    // 민감한 정보는 제외하고 반환
     res.json({
       group: {
         id: group.id,
@@ -568,12 +566,12 @@ router.post('/:id/find-meeting-time', authenticate, async (req: AuthRequest, res
         ...availableSlots.slice(0, 3).map(s => ({
           ...s,
           recommendation_type: 'best',
-          reason: '모든 멤버가 가능한 시간'
+          reason: 'All members available'
         })),
         ...negotiableSlots.slice(0, 3).map(s => ({
           ...s,
           recommendation_type: 'alternative',
-          reason: `일부 멤버(${s.conflicting_members?.length || 0}명)가 유동 일정 있음`
+          reason: `${s.conflicting_members?.length || 0} member(s) have flexible schedules`
         }))
       ],
       total_available: availableSlots.length,
@@ -600,7 +598,7 @@ router.post('/:id/plan-meeting', authenticate, async (req: AuthRequest, res: Res
     const userId = req.userId!;
     const { id } = req.params;
     const {
-      title = '그룹 모임',
+      title = 'Group Meeting',
       duration = 60,
       location_area,      // 예: "홍대", "강남"
       place_type = 'restaurant',  // restaurant, cafe, etc.
@@ -667,14 +665,14 @@ router.post('/:id/plan-meeting', authenticate, async (req: AuthRequest, res: Res
           date: s.date,
           time: `${s.start_time} - ${s.end_time}`,
           type: 'all_available',
-          reason: '모든 멤버가 가능한 시간'
+          reason: 'All members available'
         })),
         alternatives: negotiableSlots.map(s => ({
           date: s.date,
           time: `${s.start_time} - ${s.end_time}`,
           type: 'negotiable',
           conflicting_members: s.conflicting_members,
-          reason: `${s.conflicting_members?.length || 0}명이 유동 일정 있음`
+          reason: `${s.conflicting_members?.length || 0} member(s) have flexible schedules`
         }))
       },
       place_recommendations: placeRecommendations,
@@ -683,7 +681,7 @@ router.post('/:id/plan-meeting', authenticate, async (req: AuthRequest, res: Res
             date: availableSlots[0].date,
             time: availableSlots[0].start_time,
             place: placeRecommendations.restaurants[0],
-            message: `${group.name} 모임을 ${availableSlots[0].date} ${availableSlots[0].start_time}에 ${placeRecommendations.restaurants[0].name}에서 어떠세요?`
+            message: `How about meeting at ${placeRecommendations.restaurants[0].name} on ${availableSlots[0].date} at ${availableSlots[0].start_time}?`
           }
         : null
     };
@@ -752,7 +750,7 @@ router.post('/:id/create-meeting', authenticate, async (req: AuthRequest, res: R
         const event = await createEvent({
           user_id: member.user_id,
           title: `[${group.name}] ${title}`,
-          description: description || `${group.name} 그룹 모임`,
+          description: description || `${group.name} group meeting`,
           event_date: date,
           start_time: start_time,
           end_time: calculatedEndTime,
@@ -773,7 +771,7 @@ router.post('/:id/create-meeting', authenticate, async (req: AuthRequest, res: R
 
     res.json({
       success: true,
-      message: `${createdEvents.length}명의 캘린더에 일정이 추가되었습니다.`,
+      message: `Event added to ${createdEvents.length} member(s)' calendars.`,
       meeting: {
         title: `[${group.name}] ${title}`,
         date,
@@ -841,7 +839,7 @@ router.post('/:id/find-midpoint', authenticate, async (req: AuthRequest, res: Re
 });
 
 // ==============================================
-// 그룹 AI 비서 채팅
+// Group AI Assistant Chat
 // ==============================================
 
 const openai = new OpenAI({
@@ -850,7 +848,7 @@ const openai = new OpenAI({
 
 /**
  * POST /api/groups/:id/chat
- * 그룹 AI 비서와 대화 - 일정 조율 전용
+ * Chat with group AI assistant - Schedule coordination
  */
 router.post('/:id/chat', authenticate, async (req: AuthRequest, res: Response) => {
   try {
@@ -863,24 +861,21 @@ router.post('/:id/chat', authenticate, async (req: AuthRequest, res: Response) =
       return;
     }
 
-    // 멤버 권한 확인
     const isMember = await isGroupMember(id, userId);
     if (!isMember) {
       res.status(403).json({ error: 'Not a member of this group' });
       return;
     }
 
-    // 그룹 정보 가져오기
     const group = await getGroupById(id);
     if (!group) {
       res.status(404).json({ error: 'Group not found' });
       return;
     }
 
-    // 멤버 목록 가져오기
     const members = await getGroupMembers(id);
 
-    // 각 멤버의 일정 가져오기 (향후 7일)
+    // Get each member's schedule for next 7 days
     const today = new Date();
     const startDate = today.toISOString().split('T')[0];
     const endDate = new Date(today.getTime() + 7 * 24 * 60 * 60 * 1000).toISOString().split('T')[0];
@@ -889,7 +884,7 @@ router.post('/:id/chat', authenticate, async (req: AuthRequest, res: Response) =
     for (const member of members) {
       const events = await getEventsByUser(member.user_id, startDate, endDate);
       memberSchedules.push({
-        name: member.user?.name || member.user?.email || '멤버',
+        name: member.user?.name || member.user?.email || 'Member',
         events: events.map(e => ({
           title: e.title,
           date: e.event_date,
@@ -900,45 +895,45 @@ router.post('/:id/chat', authenticate, async (req: AuthRequest, res: Response) =
       });
     }
 
-    // 공통 가용 시간 찾기
+    // Find common available times
     const availableSlots = await findGroupAvailableSlots(id, startDate, endDate, 60);
 
-    // AI 프롬프트 구성
-    const systemPrompt = `당신은 "${group.name}" 그룹의 일정 조율 AI 비서입니다.
+    // AI prompt
+    const systemPrompt = `You are a schedule coordination AI assistant for the "${group.name}" group.
 
-## 역할
-- 그룹 멤버들의 일정을 분석하여 모임 시간을 추천합니다.
-- 친근하고 자연스러운 한국어로 대화합니다.
-- 구체적인 날짜와 시간을 제안합니다.
+## Role
+- Analyze group members' schedules and recommend meeting times.
+- Communicate in a friendly and natural way.
+- Suggest specific dates and times.
 
-## 현재 그룹 정보
-- 그룹명: ${group.name}
-- 멤버 수: ${members.length}명
-- 멤버: ${members.map(m => m.user?.name || m.user?.email).join(', ')}
+## Current Group Info
+- Group Name: ${group.name}
+- Members: ${members.length}
+- Member Names: ${members.map(m => m.user?.name || m.user?.email).join(', ')}
 
-## 멤버별 향후 7일 일정
+## Member Schedules (Next 7 Days)
 ${memberSchedules.map(m => `
 ### ${m.name}
-${m.events.length === 0 ? '예정된 일정 없음' : m.events.map(e =>
-  `- ${e.date} ${e.start_time || ''}-${e.end_time || ''}: ${e.title}${e.is_fixed ? ' (고정)' : ''}`
+${m.events.length === 0 ? 'No scheduled events' : m.events.map(e =>
+  `- ${e.date} ${e.start_time || ''}-${e.end_time || ''}: ${e.title}${e.is_fixed ? ' (fixed)' : ''}`
 ).join('\n')}`).join('\n')}
 
-## 공통 가용 시간 (모두 가능한 시간)
+## Available Times (All Members Free)
 ${availableSlots.filter(s => s.type === 'available').slice(0, 5).map(s =>
   `- ${s.date} ${s.start_time}-${s.end_time}`
-).join('\n') || '모두 가능한 시간이 없습니다.'}
+).join('\n') || 'No times when all members are available.'}
 
-## 조율 가능한 시간 (일부 유동 일정 있음)
+## Negotiable Times (Some Have Flexible Events)
 ${availableSlots.filter(s => s.type === 'negotiable').slice(0, 3).map(s =>
-  `- ${s.date} ${s.start_time}-${s.end_time} (${s.conflicting_members?.length || 0}명 유동 일정)`
-).join('\n') || '없음'}
+  `- ${s.date} ${s.start_time}-${s.end_time} (${s.conflicting_members?.length || 0} member(s) have flexible events)`
+).join('\n') || 'None'}
 
-## 응답 지침
-1. 사용자 질문에 맞게 일정을 추천하세요.
-2. 가능하면 "모두 가능한 시간"에서 먼저 추천하세요.
-3. 구체적인 날짜(예: 1월 15일 수요일)와 시간을 말하세요.
-4. 여러 옵션을 제시할 때는 1, 2, 3 순위로 정리하세요.
-5. 응답은 짧고 명확하게 하세요.`;
+## Response Guidelines
+1. Recommend times based on the user's question.
+2. Prefer times when all members are available.
+3. Mention specific dates (e.g., Wednesday, January 15th) and times.
+4. When suggesting multiple options, rank them 1, 2, 3.
+5. Keep responses concise and clear.`;
 
     const completion = await openai.chat.completions.create({
       model: 'gpt-4o-mini',
@@ -950,7 +945,7 @@ ${availableSlots.filter(s => s.type === 'negotiable').slice(0, 3).map(s =>
       temperature: 0.7
     });
 
-    const aiResponse = completion.choices[0]?.message?.content || '죄송합니다. 응답을 생성하지 못했습니다.';
+    const aiResponse = completion.choices[0]?.message?.content || 'Sorry, I could not generate a response.';
 
     res.json({
       message: aiResponse,
