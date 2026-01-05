@@ -65,6 +65,14 @@ router.get('/morning', authenticate, async (req: AuthRequest, res: Response) => 
       precipitation = await checkPrecipitationForecast(city, today);
     }
 
+    // Default to no rain/snow if forecast check failed
+    if (!precipitation) {
+      console.log('[Morning Briefing] Precipitation check failed, using default');
+      precipitation = { willRain: false, willSnow: false };
+    } else {
+      console.log('[Morning Briefing] Precipitation data:', precipitation);
+    }
+
     // Fetch data in parallel
     const [events, todos] = await Promise.all([
       getEventsByUser(userId, today, today),
@@ -159,6 +167,11 @@ router.get('/evening', authenticate, async (req: AuthRequest, res: Response) => 
     } else {
       tomorrowWeather = await getCurrentWeather(city); // Logic might need improvement to fetch actual forecast
       tomorrowPrecipitation = await checkPrecipitationForecast(city, tomorrowStr);
+    }
+
+    // Default to no rain/snow if forecast check failed
+    if (!tomorrowPrecipitation) {
+      tomorrowPrecipitation = { willRain: false, willSnow: false };
     }
 
     // Fetch Data

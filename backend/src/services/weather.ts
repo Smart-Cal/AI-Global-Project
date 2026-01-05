@@ -268,7 +268,6 @@ export async function getWeatherForecast(city: string, days: number = 5): Promis
   }
 }
 
-}
 
 /**
  * Check specifically for rain or snow in the forecast for the rest of the day (or tomorrow)
