@@ -451,7 +451,32 @@ export async function getCategoriesByUser(userId: string): Promise<Category[]> {
     .order('created_at', { ascending: true });
 
   if (error) throw new Error(`Failed to get categories: ${error.message}`);
-  return data || [];
+
+  if (!data) return [];
+
+  // Clean up duplicate Default categories
+  const defaultCategories = data.filter(c => c.name === 'Default' || c.is_default);
+  if (defaultCategories.length > 1) {
+    // Keep the first one with is_default=true, or the first one
+    const keepCategory = defaultCategories.find(c => c.is_default) || defaultCategories[0];
+    const duplicateIds = defaultCategories
+      .filter(c => c.id !== keepCategory.id)
+      .map(c => c.id);
+
+    if (duplicateIds.length > 0) {
+      // Delete duplicates from database
+      await supabase
+        .from('categories')
+        .delete()
+        .in('id', duplicateIds);
+      console.log(`[getCategoriesByUser] Cleaned up ${duplicateIds.length} duplicate Default categories for user ${userId}`);
+
+      // Return filtered list
+      return data.filter(c => !duplicateIds.includes(c.id));
+    }
+  }
+
+  return data;
 }
 
 export async function createCategory(category: Partial<Category>): Promise<Category> {
