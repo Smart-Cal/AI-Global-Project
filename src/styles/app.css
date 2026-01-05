@@ -7693,7 +7693,9 @@ textarea.form-input {
 
 /* 2 cards per page layout for places */
 .mcp-carousel-cards.two-cards .mcp-card {
-  max-width: calc((100% - 12px) / 2);
+  flex: 0 0 calc((100% - 12px) / 2) !important;
+  max-width: calc((100% - 12px) / 2) !important;
+  min-width: 180px;
 }
 
 .mcp-carousel-cards .mcp-card-image {
@@ -7702,6 +7704,14 @@ textarea.form-input {
   flex-shrink: 0;
   position: relative;
   background: #f3f4f6;
+}
+
+.mcp-carousel-cards .mcp-card-image-placeholder {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: linear-gradient(135deg, #f3f4f6 0%, #e5e7eb 100%);
+  font-size: 40px;
 }
 
 .mcp-carousel-cards .mcp-card-image img {
