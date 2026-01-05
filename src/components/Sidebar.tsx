@@ -70,7 +70,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
       <aside className={`sidebar ${isOpen ? 'open' : ''}`}>
         <div className="sidebar-header">
           <div className="sidebar-logo"><CalendarIcon size={20} /></div>
-          <span className="sidebar-title">AI Calendar</span>
+          <span className="sidebar-title">PALM</span>
         </div>
 
         <div className="sidebar-user" onClick={handleLogout}>

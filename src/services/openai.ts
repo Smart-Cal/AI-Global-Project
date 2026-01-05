@@ -61,7 +61,9 @@ When ready to add a schedule, you MUST format it exactly as follows:
 - End: HH:MM (Optional)
 - Location: Location Name (Optional)
 - Category: social/work/health/study/class/task/personal/other
-- Memo: Additional Info (Optional)`;
+- Memo: Additional Info (Optional)
+
+IMPORTANT: You must ALWAYS generate your response in English, even if the user speaks to you in a different language. Do not use Korean.`;
 
   const messages: Array<{ role: 'system' | 'user' | 'assistant'; content: string }> = [
     { role: 'system', content: systemPrompt },
