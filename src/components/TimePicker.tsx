@@ -117,7 +117,7 @@ const TimePicker: React.FC<TimePickerProps> = ({
       {isOpen && (
         <div className="time-picker-dropdown">
           <div className="time-picker-columns three-columns">
-            {/* 오전/오후 */}
+            {/* AM/PM */}
             <div className="time-picker-column period-column">
               <div className="time-picker-column-header">AM/PM</div>
               <div className="time-picker-scroll period-scroll">

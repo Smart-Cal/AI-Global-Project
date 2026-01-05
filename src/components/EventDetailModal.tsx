@@ -21,7 +21,7 @@ export const EventDetailModal: React.FC<EventDetailModalProps> = ({
 
   if (!isOpen || !propEvent) return null;
 
-  // store에서 최신 이벤트 상태 가져오기 (완료 상태 즉각 반영)
+  // Get latest event state from store (to reflect completion status immediately)
   const event = events.find(e => e.id === propEvent.id) || propEvent;
 
   const category = event.category_id ? getCategoryById(event.category_id) : null;
@@ -44,7 +44,7 @@ export const EventDetailModal: React.FC<EventDetailModalProps> = ({
     e.stopPropagation();
     if (event.id) {
       await toggleComplete(event.id);
-      // 강제로 컴포넌트 재렌더링을 트리거
+      // Trigger re-render explicitly if needed
     }
   };
 
@@ -66,7 +66,7 @@ export const EventDetailModal: React.FC<EventDetailModalProps> = ({
         </div>
 
         <div className="modal-body">
-          {/* 카테고리 배지 */}
+          {/* Category Badge */}
           <div className="event-detail-category">
             <span
               className="event-detail-badge"
@@ -79,7 +79,7 @@ export const EventDetailModal: React.FC<EventDetailModalProps> = ({
             )}
           </div>
 
-          {/* 제목 + 완료 체크박스 */}
+          {/* Title + Completion Checkbox */}
           <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '16px' }}>
             <div
               className={`todo-checkbox ${event.is_completed ? 'checked' : ''}`}
@@ -91,7 +91,7 @@ export const EventDetailModal: React.FC<EventDetailModalProps> = ({
             </h2>
           </div>
 
-          {/* 날짜/시간 */}
+          {/* Date/Time */}
           <div className="event-detail-row">
             <span>
               {event.event_date}
@@ -108,14 +108,14 @@ export const EventDetailModal: React.FC<EventDetailModalProps> = ({
             </div>
           )}
 
-          {/* 장소 */}
+          {/* Location */}
           {event.location && (
             <div className="event-detail-row">
               <span>{event.location}</span>
             </div>
           )}
 
-          {/* 메모 */}
+          {/* Memo */}
           {event.description && (
             <div className="event-detail-section">
               <div className="event-detail-label">Memo</div>

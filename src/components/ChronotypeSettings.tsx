@@ -38,7 +38,7 @@ const ChronotypeSettings: React.FC<ChronotypeSettingsProps> = ({ isOpen, onClose
   const handleChronotypeChange = (chronotype: Chronotype) => {
     setLocalSettings(prev => ({ ...prev, chronotype }));
 
-    // Chronotype에 따른 기본 시간 설정
+    // Default time settings based on Chronotype
     switch (chronotype) {
       case 'morning':
         setLocalSettings(prev => ({ ...prev, wakeUpTime: '05:30', sleepTime: '22:00' }));
@@ -94,7 +94,7 @@ const ChronotypeSettings: React.FC<ChronotypeSettingsProps> = ({ isOpen, onClose
         </div>
 
         <div className="modal-body">
-          {/* Chronotype 설명 */}
+          {/* Chronotype Intro */}
           <div className="chronotype-intro">
             <p>
               Chronotype represents your daily energy pattern.
@@ -102,7 +102,7 @@ const ChronotypeSettings: React.FC<ChronotypeSettingsProps> = ({ isOpen, onClose
             </p>
           </div>
 
-          {/* Chronotype 선택 */}
+          {/* Select Chronotype */}
           <div className="chronotype-selector">
             {chronotypes.map((type) => (
               <div
@@ -127,7 +127,7 @@ const ChronotypeSettings: React.FC<ChronotypeSettingsProps> = ({ isOpen, onClose
             ))}
           </div>
 
-          {/* 최적 시간대 정보 */}
+          {/* Optimal Hours Info */}
           <div className="chronotype-hours-info">
             <h4>Recommended Activity Times</h4>
             <div className="hours-grid">
@@ -155,7 +155,7 @@ const ChronotypeSettings: React.FC<ChronotypeSettingsProps> = ({ isOpen, onClose
             </div>
           </div>
 
-          {/* 기상/취침 시간 설정 */}
+          {/* Wake Up / Sleep Time Settings */}
           <div className="chronotype-times">
             <h4>Wake Up & Sleep Time</h4>
             <div className="times-row">
@@ -178,7 +178,7 @@ const ChronotypeSettings: React.FC<ChronotypeSettingsProps> = ({ isOpen, onClose
             </div>
           </div>
 
-          {/* 작업 설정 */}
+          {/* Work Settings */}
           <div className="chronotype-work-settings">
             <h4>Work Settings</h4>
             <div className="work-settings-grid">
@@ -222,10 +222,10 @@ const ChronotypeSettings: React.FC<ChronotypeSettingsProps> = ({ isOpen, onClose
 
         <div className="modal-footer">
           <button className="btn btn-secondary" onClick={onClose}>
-            취소
+            Cancel
           </button>
           <button className="btn btn-primary" onClick={handleSave}>
-            저장
+            Save
           </button>
         </div>
       </div>

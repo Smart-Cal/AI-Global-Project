@@ -5,7 +5,7 @@ import { useGoalStore, calculateGoalProgress } from '../store/goalStore';
 import { useCategoryStore } from '../store/categoryStore';
 import type { CalendarEvent, Todo, Goal } from '../types';
 
-// deadline에서 날짜 추출
+// Extract date from deadline
 function getDeadlineDate(deadline?: string): string | undefined {
   if (!deadline) return undefined;
   return deadline.split('T')[0];
@@ -57,7 +57,7 @@ const SearchModal: React.FC<SearchModalProps> = ({
     }
   }, [isOpen]);
 
-  // 키보드 단축키 처리
+  // Handle keyboard shortcuts
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.key === 'Escape') {
@@ -77,10 +77,10 @@ const SearchModal: React.FC<SearchModalProps> = ({
     const results: SearchResult[] = [];
     const lowerQuery = query.toLowerCase();
 
-    // 일정 검색
+    // Search Events
     if (filter === 'all' || filter === 'event') {
       events.forEach((event) => {
-        if (!event.id) return; // id가 없는 항목은 건너뜀
+        if (!event.id) return; // Skip items without ID
 
         const matchTitle = event.title.toLowerCase().includes(lowerQuery);
         const matchDescription = event.description?.toLowerCase().includes(lowerQuery);
@@ -101,10 +101,10 @@ const SearchModal: React.FC<SearchModalProps> = ({
       });
     }
 
-    // TODO 검색
+    // Search Todos
     if (filter === 'all' || filter === 'todo') {
       todos.forEach((todo) => {
-        if (!todo.id) return; // id가 없는 항목은 건너뜀
+        if (!todo.id) return; // Skip items without ID
 
         const matchTitle = todo.title.toLowerCase().includes(lowerQuery);
         const matchDescription = todo.description?.toLowerCase().includes(lowerQuery);
@@ -115,7 +115,7 @@ const SearchModal: React.FC<SearchModalProps> = ({
             type: 'todo',
             id: todo.id,
             title: todo.title,
-            subtitle: deadlineDate ? `마감: ${formatDate(deadlineDate)}` : '마감일 없음',
+            subtitle: deadlineDate ? `Due: ${formatDate(deadlineDate)}` : 'No Deadline',
             date: deadlineDate,
             item: todo,
           });
@@ -123,10 +123,10 @@ const SearchModal: React.FC<SearchModalProps> = ({
       });
     }
 
-    // Goal 검색
+    // Search Goals
     if (filter === 'all' || filter === 'goal') {
       goals.forEach((goal) => {
-        if (!goal.id) return; // id가 없는 항목은 건너뜀
+        if (!goal.id) return; // Skip items without ID
 
         const matchTitle = goal.title.toLowerCase().includes(lowerQuery);
         const matchDescription = goal.description?.toLowerCase().includes(lowerQuery);
@@ -136,14 +136,14 @@ const SearchModal: React.FC<SearchModalProps> = ({
             type: 'goal',
             id: goal.id,
             title: goal.title,
-            subtitle: `진행률 ${calculateGoalProgress(goal)}%`,
+            subtitle: `Progress ${calculateGoalProgress(goal)}%`,
             item: goal,
           });
         }
       });
     }
 
-    // 날짜순 정렬 (최신순)
+    // Sort by date (newest first)
     return results.sort((a, b) => {
       if (!a.date && !b.date) return 0;
       if (!a.date) return 1;

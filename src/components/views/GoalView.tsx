@@ -5,7 +5,7 @@ import { useTodoStore } from '../../store/todoStore';
 import { DEFAULT_CATEGORY_COLOR, type Goal } from '../../types';
 import GoalDecomposition from '../GoalDecomposition';
 
-// Goal이 활성 상태인지 확인
+// Check if goal is active
 function isGoalActive(goal: Goal): boolean {
   return !['completed', 'failed'].includes(goal.status);
 }
@@ -67,7 +67,7 @@ const GoalView: React.FC<GoalViewProps> = ({ onGoalClick, onAddGoal }) => {
     return { text: `${diff} days left`, isOverdue: false };
   };
 
-  // 진행률은 Todo 완료에 따라 자동 계산됨 - 수동 변경 제거
+  // Progress is automatically calculated based on Todo completion - manual update removed
 
   const handleFileUpload = () => {
     fileInputRef.current?.click();
@@ -168,7 +168,7 @@ const GoalView: React.FC<GoalViewProps> = ({ onGoalClick, onAddGoal }) => {
                     <span className="goal-progress-text">{calculateGoalProgress(goal)}%</span>
                   </div>
 
-                  {/* 연결된 Todo 표시 */}
+                  {/* Display Linked Todos */}
                   {linkedTodos.length > 0 && (
                     <div className="goal-card-todos">
                       <span className="todo-count">
@@ -283,7 +283,7 @@ const GoalView: React.FC<GoalViewProps> = ({ onGoalClick, onAddGoal }) => {
         )}
       </div>
 
-      {/* Goal 분해 모달 */}
+      {/* Goal Decomposition Modal */}
       {decomposeGoal && (
         <GoalDecomposition
           goal={decomposeGoal}

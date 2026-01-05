@@ -816,7 +816,7 @@ const AssistantView: React.FC = () => {
             }}
             disabled={isCreatingCategory}
           />
-          {/* 색상 선택 버튼 */}
+          {/* Color selection button */}
           <button
             type="button"
             style={{
@@ -846,7 +846,7 @@ const AssistantView: React.FC = () => {
               display: 'block'
             }} />
           </button>
-          {/* 확인 버튼 */}
+          {/* Confirm Button */}
           <button
             style={{
               width: '36px',
@@ -869,7 +869,7 @@ const AssistantView: React.FC = () => {
           >
             {isCreatingCategory ? '·' : '✓'}
           </button>
-          {/* 취소 버튼 */}
+          {/* Cancel Button */}
           <button
             style={{
               width: '36px',
@@ -1516,7 +1516,7 @@ const AssistantView: React.FC = () => {
           </div>
         )}
 
-        {/* 뉴스 */}
+        {/* News */}
         {hasNews && (
           <div className="mcp-section news-section">
             <h4 className="mcp-section-title">📰 News</h4>

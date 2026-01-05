@@ -25,7 +25,7 @@ export const Dashboard: React.FC<DashboardProps> = ({
   const { getTodayTodos, getOverdueTodos, toggleComplete } = useTodoStore();
   const { getCategoryById, getCategoryByName, getDefaultCategory } = useCategoryStore();
 
-  // 채팅 상태
+  // Chat state
   const [messages, setMessages] = useState<AgentMessage[]>([]);
   const [input, setInput] = useState('');
   const [isLoading, setIsLoading] = useState(false);
@@ -70,7 +70,7 @@ export const Dashboard: React.FC<DashboardProps> = ({
     return defaultCat?.id;
   };
 
-  // 채팅 전송
+  // Send chat
   const handleSend = async () => {
     if (!input.trim() || isLoading) return;
 
@@ -133,7 +133,7 @@ export const Dashboard: React.FC<DashboardProps> = ({
     }
   };
 
-  // 일정 추가
+  // Add Schedule
   const handleAddSuggestedEvent = async (event: SuggestedEvent, messageId: string, eventIndex: number) => {
     if (!user) return;
 
@@ -198,7 +198,7 @@ export const Dashboard: React.FC<DashboardProps> = ({
     return { name: categoryName, color: DEFAULT_CATEGORY_COLOR };
   };
 
-  // 일정 카드 렌더링
+  // Render Schedule Cards
   const renderScheduleCards = (msg: AgentMessage) => {
     const suggestedEvents = msg.metadata?.suggested_events;
     if (!suggestedEvents || suggestedEvents.length === 0) return null;
@@ -244,14 +244,14 @@ export const Dashboard: React.FC<DashboardProps> = ({
 
   return (
     <div className="dashboard-chat-layout">
-      {/* 왼쪽: 오늘 요약 사이드바 */}
+      {/* Left: Today Summary Sidebar */}
       <aside className="dashboard-sidebar">
         <div className="dashboard-greeting-compact">
           <h2>{getGreeting()}!</h2>
           <p>{formatDate(today)}</p>
         </div>
 
-        {/* 오늘 일정 */}
+        {/* Today's Schedule */}
         <div className="sidebar-section">
           <div className="sidebar-section-header">
             <span>Today's Schedule</span>
@@ -277,7 +277,7 @@ export const Dashboard: React.FC<DashboardProps> = ({
           )}
         </div>
 
-        {/* 오늘 할 일 */}
+        {/* Today's Todos */}
         <div className="sidebar-section">
           <div className="sidebar-section-header">
             <span>Today's Todos</span>
@@ -300,7 +300,7 @@ export const Dashboard: React.FC<DashboardProps> = ({
           )}
         </div>
 
-        {/* 진행 중인 목표 */}
+        {/* Active Goals */}
         <div className="sidebar-section">
           <div className="sidebar-section-header">
             <span>Goals</span>
@@ -347,7 +347,7 @@ export const Dashboard: React.FC<DashboardProps> = ({
         </div>
       </aside>
 
-      {/* 오른쪽: 메인 채팅 영역 */}
+      {/* Right: Main Chat Area */}
       <main className="dashboard-chat-main">
         <div className="chat-container">
           <div className="chat-messages">

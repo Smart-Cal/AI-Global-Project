@@ -1,18 +1,18 @@
 /**
  * Tool Confirmation Components
  *
- * MCP-style 도구 실행 확인 UI
- * - InlineConfirmation: medium 위험도용 인라인 확인
- * - ModalConfirmation: high 위험도용 모달 확인
+ * Tool Execution Confirmation UI
+ * - InlineConfirmation: Inline confirmation for medium risk
+ * - ModalConfirmation: Modal confirmation for high risk
  */
 
 import React, { useState } from 'react';
 import { CheckCircleIcon, XCircleIcon, ClockIcon } from './Icons';
 
-// 위험도 레벨
+// Risk Levels
 type RiskLevel = 'low' | 'medium' | 'high';
 
-// 도구 실행 정보
+// Tool Execution Info
 interface ToolExecutionInfo {
   id: string;
   toolName: string;
@@ -26,14 +26,14 @@ interface ToolExecutionInfo {
   expiresAt?: Date;
 }
 
-// 위험도별 스타일
+// Styles by Risk Level
 const riskStyles: Record<RiskLevel, { bg: string; border: string; text: string; icon: string }> = {
   low: { bg: '#F0FDF4', border: '#86EFAC', text: '#15803D', icon: '✓' },
   medium: { bg: '#FEF3C7', border: '#FCD34D', text: '#B45309', icon: '⚡' },
   high: { bg: '#FEE2E2', border: '#FCA5A5', text: '#DC2626', icon: '⚠️' },
 };
 
-// 위험도 라벨
+// Risk Labels
 const riskLabels: Record<RiskLevel, string> = {
   low: 'Low',
   medium: 'Medium',
@@ -48,8 +48,8 @@ interface InlineConfirmationProps {
 }
 
 /**
- * InlineConfirmation - 채팅 메시지 내 인라인 확인 UI
- * medium 위험도 도구에 사용
+ * InlineConfirmation - Inline confirmation UI within chat messages
+ * Used for medium risk tools
  */
 export const InlineConfirmation: React.FC<InlineConfirmationProps> = ({
   execution,
@@ -217,8 +217,8 @@ interface ModalConfirmationProps {
 }
 
 /**
- * ModalConfirmation - high 위험도 도구용 모달 확인 UI
- * 삭제, 외부 서비스 연동 등에 사용
+ * ModalConfirmation - Modal confirmation UI for high risk tools
+ * Used for deletions, external service integrations, etc.
  */
 export const ModalConfirmation: React.FC<ModalConfirmationProps> = ({
   execution,
@@ -403,7 +403,7 @@ export const ModalConfirmation: React.FC<ModalConfirmationProps> = ({
 };
 
 /**
- * 남은 시간 포맷
+ * Format Remaining Time
  */
 function formatTimeRemaining(expiresAt: Date): string {
   const now = new Date();
@@ -421,7 +421,7 @@ function formatTimeRemaining(expiresAt: Date): string {
 }
 
 /**
- * 도구 실행 목록 컴포넌트
+ * Tool Execution List Component
  */
 interface PendingExecutionsListProps {
   executions: ToolExecutionInfo[];

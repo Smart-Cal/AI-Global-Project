@@ -5,7 +5,7 @@ import { useCategoryStore } from '../../store/categoryStore';
 import { useToast } from '../Toast';
 import { DEFAULT_CATEGORY_COLOR, type CalendarEvent } from '../../types';
 
-// deadline에서 날짜와 시간 추출
+// Extract date and time from deadline
 function getDeadlineDate(deadline?: string): string | undefined {
   if (!deadline) return undefined;
   return deadline.split('T')[0];
@@ -94,7 +94,7 @@ const ScheduleView: React.FC<ScheduleViewProps> = ({ onEventClick, onAddEvent, o
       try {
         await deleteCategory(categoryId);
         showToast(`Category "${categoryName}" deleted`, 'success');
-        // 삭제된 카테고리가 선택된 상태였다면 전체로 변경
+        // If deleted category was selected, switch to all
         if (selectedCategory === categoryId) {
           setSelectedCategory(null);
         }

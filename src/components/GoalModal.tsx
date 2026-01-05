@@ -24,7 +24,7 @@ export const GoalModal: React.FC<GoalModalProps> = ({ isOpen, onClose, editingGo
   const [targetDate, setTargetDate] = useState('');
   const [isLoading, setIsLoading] = useState(false);
 
-  // 새 카테고리 추가용 상태
+  // State for adding new category
   const [showNewCategory, setShowNewCategory] = useState(false);
   const [newCategoryName, setNewCategoryName] = useState('');
   const [newCategoryColor, setNewCategoryColor] = useState(CATEGORY_COLORS[0]);
