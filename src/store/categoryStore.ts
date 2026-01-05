@@ -39,7 +39,13 @@ export const useCategoryStore = create<CategoryState>()((set, get) => ({
       // Fetch categories via backend API (Default category is also auto-created)
       const response = await api.getCategories();
       console.log('[CategoryStore] API response:', response);
-      const categories = response.categories.sort((a, b) => {
+
+      // Remove duplicates by id
+      const uniqueCategories = response.categories.filter((cat, index, self) =>
+        index === self.findIndex(c => c.id === cat.id)
+      );
+
+      const categories = uniqueCategories.sort((a, b) => {
         if (a.is_default !== b.is_default) return a.is_default ? -1 : 1;
         return a.name.localeCompare(b.name);
       });

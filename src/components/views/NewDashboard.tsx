@@ -93,6 +93,7 @@ export const NewDashboard: React.FC<NewDashboardProps> = ({ onNavigate }) => {
 
   const [isLoading, setIsLoading] = useState(true);
   const [weatherData, setWeatherData] = useState<WeatherData | null>(null);
+  const [weatherLoaded, setWeatherLoaded] = useState(false);
   const [userCoords, setUserCoords] = useState<{ lat: number; lon: number } | null>(null);
   const [locationReady, setLocationReady] = useState(false);
 
@@ -161,23 +162,28 @@ export const NewDashboard: React.FC<NewDashboardProps> = ({ onNavigate }) => {
     loadData();
   }, []);
 
-  // Load weather only
+  // Load weather only once
   useEffect(() => {
     const loadWeather = async () => {
+      // Don't reload if already loaded
+      if (weatherLoaded) return;
+
       try {
         const coords = userCoords || undefined;
         const data = await api.getMorningBriefing(coords);
         setWeatherData({ weather: data.weather });
+        setWeatherLoaded(true);
       } catch (error) {
         console.error('Failed to load weather:', error);
         setWeatherData(null);
+        setWeatherLoaded(true); // Mark as loaded even on error to prevent retries
       }
     };
 
-    if (!isLoading && locationReady) {
+    if (!isLoading && locationReady && !weatherLoaded) {
       loadWeather();
     }
-  }, [isLoading, locationReady, userCoords]);
+  }, [isLoading, locationReady, weatherLoaded]);
 
   // Today's events
   const todayEvents = getEventsByDate(today).sort((a, b) => {

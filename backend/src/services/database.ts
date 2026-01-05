@@ -487,15 +487,45 @@ export async function deleteCategory(id: string): Promise<void> {
 }
 
 export async function getOrCreateDefaultCategory(userId: string): Promise<Category> {
-  const { data } = await supabase
+  // First check for any existing Default category (by name or is_default flag)
+  const { data: existingDefaults } = await supabase
     .from('categories')
     .select('*')
     .eq('user_id', userId)
-    .eq('is_default', true)
-    .single();
+    .or('is_default.eq.true,name.eq.Default');
 
-  if (data) return data;
+  if (existingDefaults && existingDefaults.length > 0) {
+    // If there are duplicates, keep the first one with is_default=true (or first one)
+    const defaultCat = existingDefaults.find(c => c.is_default) || existingDefaults[0];
 
+    // Delete duplicates
+    if (existingDefaults.length > 1) {
+      const duplicateIds = existingDefaults
+        .filter(c => c.id !== defaultCat.id)
+        .map(c => c.id);
+
+      if (duplicateIds.length > 0) {
+        await supabase
+          .from('categories')
+          .delete()
+          .in('id', duplicateIds);
+        console.log(`[DB] Deleted ${duplicateIds.length} duplicate Default categories for user ${userId}`);
+      }
+    }
+
+    // Ensure the kept one has is_default=true
+    if (!defaultCat.is_default) {
+      await supabase
+        .from('categories')
+        .update({ is_default: true })
+        .eq('id', defaultCat.id);
+      defaultCat.is_default = true;
+    }
+
+    return defaultCat;
+  }
+
+  // No default category exists, create one
   return createCategory({
     user_id: userId,
     name: 'Default',
