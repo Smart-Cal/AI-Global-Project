@@ -29,10 +29,12 @@ export const EventModal: React.FC<EventModalProps> = ({
 
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
-  const [eventDate, setEventDate] = useState('');
+  const [startDate, setStartDate] = useState('');
+  const [endDate, setEndDate] = useState('');
   const [startTime, setStartTime] = useState('');
   const [endTime, setEndTime] = useState('');
   const [isAllDay, setIsAllDay] = useState(false);
+  const [isMultiDay, setIsMultiDay] = useState(false);
   const [categoryId, setCategoryId] = useState('');
   const [location, setLocation] = useState('');
   const [isLoading, setIsLoading] = useState(false);
@@ -48,19 +50,24 @@ export const EventModal: React.FC<EventModalProps> = ({
     if (event) {
       setTitle(event.title);
       setDescription(event.description || '');
-      setEventDate(event.event_date);
+      setStartDate(event.event_date);
+      setEndDate(event.end_date || event.event_date);
       setStartTime(event.start_time || '');
       setEndTime(event.end_time || '');
       setIsAllDay(event.is_all_day);
+      setIsMultiDay(!!event.end_date && event.end_date !== event.event_date);
       setCategoryId(event.category_id || '');
       setLocation(event.location || '');
     } else {
       setTitle('');
       setDescription('');
-      setEventDate(defaultDate || new Date().toISOString().split('T')[0]);
+      const today = defaultDate || new Date().toISOString().split('T')[0];
+      setStartDate(today);
+      setEndDate(today);
       setStartTime('');
       setEndTime('');
       setIsAllDay(false);
+      setIsMultiDay(false);
       // Select default category
       const defaultCat = getDefaultCategory();
       setCategoryId(defaultCat?.id || '');
@@ -74,7 +81,13 @@ export const EventModal: React.FC<EventModalProps> = ({
   if (!isOpen) return null;
 
   const handleSubmit = async () => {
-    if (!title.trim() || !eventDate || !user) return;
+    if (!title.trim() || !startDate || !user) return;
+
+    // Validate end date is not before start date
+    if (isMultiDay && endDate < startDate) {
+      showToast('End date cannot be before start date', 'error');
+      return;
+    }
 
     setIsLoading(true);
     try {
@@ -82,7 +95,8 @@ export const EventModal: React.FC<EventModalProps> = ({
         user_id: user.id,
         title: title.trim(),
         description: description.trim() || undefined,
-        event_date: eventDate,
+        event_date: startDate,
+        end_date: isMultiDay ? endDate : undefined,
         start_time: isAllDay ? undefined : startTime || undefined,
         end_time: isAllDay ? undefined : endTime || undefined,
         is_all_day: isAllDay,
@@ -160,16 +174,56 @@ export const EventModal: React.FC<EventModalProps> = ({
             />
           </div>
 
-          <div className="form-group">
-            <DatePicker
-              label="Date *"
-              value={eventDate}
-              onChange={setEventDate}
-              placeholder="Select date"
-            />
+          {/* Date section */}
+          <div className="form-row">
+            <div className="form-group">
+              <DatePicker
+                label="Start Date *"
+                value={startDate}
+                onChange={(date) => {
+                  setStartDate(date);
+                  // If end date is before new start date, update it
+                  if (!isMultiDay || endDate < date) {
+                    setEndDate(date);
+                  }
+                }}
+                placeholder="Select start date"
+              />
+            </div>
+            {isMultiDay && (
+              <div className="form-group">
+                <DatePicker
+                  label="End Date *"
+                  value={endDate}
+                  onChange={setEndDate}
+                  placeholder="Select end date"
+                />
+              </div>
+            )}
           </div>
 
-          <div className="form-group">
+          {/* Options row */}
+          <div className="form-group" style={{ display: 'flex', gap: '24px' }}>
+            <label
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: '12px',
+                cursor: 'pointer',
+                padding: '8px 0',
+              }}
+            >
+              <div
+                className={`todo-checkbox ${isMultiDay ? 'checked' : ''}`}
+                onClick={() => {
+                  setIsMultiDay(!isMultiDay);
+                  if (!isMultiDay) {
+                    setEndDate(startDate);
+                  }
+                }}
+              />
+              <span>Multi-day</span>
+            </label>
             <label
               style={{
                 display: 'flex',
@@ -187,6 +241,7 @@ export const EventModal: React.FC<EventModalProps> = ({
             </label>
           </div>
 
+          {/* Time section - only show if not all day */}
           {!isAllDay && (
             <div className="form-row">
               <div className="form-group">
@@ -308,7 +363,7 @@ export const EventModal: React.FC<EventModalProps> = ({
           <button
             className={`btn btn-primary ${isLoading ? 'loading' : ''}`}
             onClick={handleSubmit}
-            disabled={!title.trim() || !eventDate || isLoading}
+            disabled={!title.trim() || !startDate || isLoading}
           >
             {isEditing ? 'Save' : 'Add'}
           </button>
