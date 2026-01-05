@@ -196,6 +196,13 @@ export class ShoppingMCP {
     const response = await axios.get('https://serpapi.com/search', { params });
 
     console.log('[ShoppingMCP] SerpAPI response status:', response.status);
+
+    // Check for API errors (quota exceeded, etc.)
+    if (response.data.error) {
+      console.error('[ShoppingMCP] SerpAPI error:', response.data.error);
+      throw new Error(`SerpAPI: ${response.data.error}`);
+    }
+
     console.log('[ShoppingMCP] SerpAPI has shopping_results:', !!response.data.shopping_results);
     console.log('[ShoppingMCP] SerpAPI shopping_results count:', response.data.shopping_results?.length || 0);
 

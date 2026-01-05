@@ -546,9 +546,23 @@ IMPORTANT:
 
     const result = await this.mcpOrchestrator.executeTool(toolCall);
 
-    if (!result.success || !result.data?.products?.length) {
+    if (!result.success) {
+      // Check for quota exceeded error
+      if (result.error?.includes('run out of searches') || result.error?.includes('quota')) {
+        return {
+          message: `⚠️ The product search API quota has been exceeded. Please try again later or contact the administrator.`,
+          needs_user_input: false
+        };
+      }
       return {
         message: `I couldn't find any products. Shall we try a different search term?`,
+        needs_user_input: true
+      };
+    }
+
+    if (!result.data?.products?.length) {
+      return {
+        message: `I couldn't find any products matching "${info.searchQuery || info.title}". Would you like to try a different search term?`,
         needs_user_input: true
       };
     }
@@ -581,7 +595,21 @@ IMPORTANT:
 
     const result = await this.mcpOrchestrator.executeTool(toolCall);
 
-    if (!result.success || !result.data?.gifts?.length) {
+    if (!result.success) {
+      // Check for quota exceeded error
+      if (result.error?.includes('run out of searches') || result.error?.includes('quota')) {
+        return {
+          message: `⚠️ The product search API quota has been exceeded. Please try again later or contact the administrator.`,
+          needs_user_input: false
+        };
+      }
+      return {
+        message: `It's hard to recommend a gift. Could you give me more details? (Recipient, Occasion, Budget, etc.)`,
+        needs_user_input: true
+      };
+    }
+
+    if (!result.data?.gifts?.length) {
       return {
         message: `It's hard to recommend a gift. Could you give me more details? (Recipient, Occasion, Budget, etc.)`,
         needs_user_input: true
