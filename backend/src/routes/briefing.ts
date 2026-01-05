@@ -14,6 +14,7 @@ import {
   getActivityRecommendation,
   checkPrecipitationForecast,
   checkPrecipitationByCoords,
+  getWeatherForDate,
   WeatherData
 } from '../services/weather.js';
 import { AuthRequest, authenticate } from '../middleware/auth.js';
@@ -154,18 +155,18 @@ router.get('/evening', authenticate, async (req: AuthRequest, res: Response) => 
     let tomorrowPrecipitation: { willRain: boolean; willSnow: boolean; time?: string } | null = null;
 
     if (hasCoords) {
+      // For tomorrow weather, we should use forecast, not current weather
+      // But for simplicity, let's use current weather as placeholder
       const coordsResult = await getWeatherByCoords(lat, lon);
       if (coordsResult) {
-        tomorrowWeather = coordsResult.weather; // Note: Currently this fetches current weather, but for evening briefing "tomorrow_weather" usually implies forecast
-        // Let's verify if tomorrowWeather is actually forecast or current.
-        // The original code uses getCurrentWeather/getWeatherByCoords which is CURRENT.
-        // We should fix this logically if we want tomorrow's weather.
-        // But for now, let's just add the precipitation check for TOMORROW.
         city = coordsResult.city;
       }
+      // Get tomorrow's actual forecast
+      tomorrowWeather = await getWeatherForDate(city, tomorrowStr);
       tomorrowPrecipitation = await checkPrecipitationByCoords(lat, lon, tomorrowStr);
     } else {
-      tomorrowWeather = await getCurrentWeather(city); // Logic might need improvement to fetch actual forecast
+      // Get tomorrow's actual forecast instead of current weather
+      tomorrowWeather = await getWeatherForDate(city, tomorrowStr);
       tomorrowPrecipitation = await checkPrecipitationForecast(city, tomorrowStr);
     }
 
