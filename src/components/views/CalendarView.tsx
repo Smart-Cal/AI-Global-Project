@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useEventStore } from '../../store/eventStore';
 import { useCategoryStore } from '../../store/categoryStore';
-import { DEFAULT_CATEGORY_COLOR, type CalendarEvent } from '../../types';
+import { DEFAULT_CATEGORY_COLOR, type CalendarEvent, isMultiDayEvent } from '../../types';
 
 type ViewMode = 'month' | 'week';
 
@@ -209,11 +209,68 @@ const CalendarView: React.FC<CalendarViewProps> = ({
     return hours * 60 + minutes;
   };
 
+  // Get all-day and multi-day events for a week
+  const getAllDayEvents = (weekDays: Date[]) => {
+    const weekStartStr = formatDateStr(weekDays[0]);
+    const weekEndStr = formatDateStr(weekDays[6]);
+
+    return events.filter(e => {
+      // Check if it's an all-day event or has no specific time
+      const isAllDay = e.is_all_day || (!e.start_time && !e.end_time);
+      if (!isAllDay) return false;
+
+      // Category filter
+      if (filtersInitialized) {
+        const categoryId = e.category_id || getDefaultCategoryId();
+        if (categoryId && !categoryFilters.has(categoryId)) return false;
+      }
+
+      // Check if event overlaps with the week
+      const eventStart = e.event_date;
+      const eventEnd = e.end_date || e.event_date;
+
+      return eventStart <= weekEndStr && eventEnd >= weekStartStr;
+    });
+  };
+
+  // Calculate position of all-day event bar
+  const getAllDayEventPosition = (event: CalendarEvent, weekDays: Date[]) => {
+    const weekStartStr = formatDateStr(weekDays[0]);
+    const weekEndStr = formatDateStr(weekDays[6]);
+    const eventStart = event.event_date;
+    const eventEnd = event.end_date || event.event_date;
+
+    // Calculate start column (0-6)
+    let startCol = 0;
+    for (let i = 0; i < 7; i++) {
+      if (formatDateStr(weekDays[i]) >= eventStart) {
+        startCol = i;
+        break;
+      }
+    }
+
+    // Calculate end column (0-6)
+    let endCol = 6;
+    for (let i = 6; i >= 0; i--) {
+      if (formatDateStr(weekDays[i]) <= eventEnd) {
+        endCol = i;
+        break;
+      }
+    }
+
+    // Clamp to week boundaries
+    if (eventStart < weekStartStr) startCol = 0;
+    if (eventEnd > weekEndStr) endCol = 6;
+
+    return { startCol, endCol, span: endCol - startCol + 1 };
+  };
+
   const renderWeekView = () => {
     const weekStart = selectedWeekStart || currentDate;
     const weekDays = getWeekDays(weekStart);
     const today = formatDateStr(new Date());
     const hours = Array.from({ length: 24 }, (_, i) => i);
+    const allDayEvents = getAllDayEvents(weekDays);
 
     return (
       <div className="calendar-week">
@@ -227,80 +284,130 @@ const CalendarView: React.FC<CalendarViewProps> = ({
         </div>
 
         <div className="calendar-week-grid">
-          <div className="calendar-time-column">
-            <div className="calendar-time-header" />
-            {hours.map(hour => (
-              <div key={hour} className="calendar-time-slot">
-                {hour.toString().padStart(2, '0')}:00
-              </div>
-            ))}
-          </div>
-
-          {weekDays.map((date, dayIdx) => {
-            const dateStr = formatDateStr(date);
-            const dayEvents = getEventsForDate(dateStr);
-            const isToday = dateStr === today;
-
-            return (
-              <div
-                key={dayIdx}
-                className={`calendar-day-column ${isToday ? 'today' : ''}`}
-                onClick={() => handleDateClick(date)}
-              >
-                <div className="calendar-day-header">
+          {/* Fixed header section */}
+          <div className="calendar-week-header-row">
+            <div className="calendar-time-header-cell" />
+            {weekDays.map((date, dayIdx) => {
+              const dateStr = formatDateStr(date);
+              const isToday = dateStr === today;
+              return (
+                <div
+                  key={dayIdx}
+                  className={`calendar-day-header-cell ${isToday ? 'today' : ''}`}
+                  onClick={() => handleDateClick(date)}
+                >
                   <span className="calendar-day-name">{weekdays[dayIdx]}</span>
                   <span className={`calendar-day-date ${isToday ? 'today' : ''}`}>
                     {date.getDate()}
                   </span>
                 </div>
+              );
+            })}
+          </div>
 
-                <div className="calendar-day-slots">
-                  {hours.map(hour => (
-                    <div key={hour} className="calendar-hour-slot" />
-                  ))}
+          {/* All-day events section */}
+          {allDayEvents.length > 0 && (
+            <div className="calendar-allday-row">
+              <div className="calendar-allday-label">All-day</div>
+              <div className="calendar-allday-events">
+                {allDayEvents.map((event, idx) => {
+                  const category = event.category_id ? getCategoryById(event.category_id) : null;
+                  const { startCol, span } = getAllDayEventPosition(event, weekDays);
 
-                  {dayEvents.map((event, eventIdx) => {
-                    const category = event.category_id ? getCategoryById(event.category_id) : null;
-
-                    // Calculate position and height precisely in 10-minute units
-                    const startMinutes = event.start_time
-                      ? timeToMinutes(event.start_time)
-                      : 9 * 60; // Default 9am
-                    const endMinutes = event.end_time
-                      ? timeToMinutes(event.end_time)
-                      : startMinutes + 60; // Default 1 hour
-                    const durationMinutes = endMinutes - startMinutes;
-
-                    // Ensure minimum height of 20px (about 20 minutes)
-                    const height = Math.max(durationMinutes, 20);
-
-                    return (
-                      <div
-                        key={eventIdx}
-                        className="calendar-week-event"
-                        style={{
-                          top: `${startMinutes}px`,
-                          height: `${height}px`,
-                          backgroundColor: category?.color || DEFAULT_CATEGORY_COLOR,
-                        }}
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          onEventClick(event);
-                        }}
-                      >
-                        <div className="calendar-week-event-title">{event.title}</div>
-                        {height >= 40 && (
-                          <div className="calendar-week-event-time">
-                            {event.start_time?.slice(0, 5)} - {event.end_time?.slice(0, 5)}
-                          </div>
-                        )}
-                      </div>
-                    );
-                  })}
-                </div>
+                  return (
+                    <div
+                      key={event.id || idx}
+                      className="calendar-allday-event"
+                      style={{
+                        left: `calc(${(startCol / 7) * 100}% + 2px)`,
+                        width: `calc(${(span / 7) * 100}% - 4px)`,
+                        backgroundColor: category?.color || DEFAULT_CATEGORY_COLOR,
+                        top: `${idx * 26}px`,
+                      }}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        onEventClick(event);
+                      }}
+                    >
+                      {event.title}
+                    </div>
+                  );
+                })}
               </div>
-            );
-          })}
+            </div>
+          )}
+
+          {/* Scrollable time grid */}
+          <div className="calendar-week-body">
+            <div className="calendar-time-column">
+              {hours.map(hour => (
+                <div key={hour} className="calendar-time-slot">
+                  {hour.toString().padStart(2, '0')}:00
+                </div>
+              ))}
+            </div>
+
+            {weekDays.map((date, dayIdx) => {
+              const dateStr = formatDateStr(date);
+              const dayEvents = getEventsForDate(dateStr).filter(e =>
+                !e.is_all_day && (e.start_time || e.end_time)
+              );
+              const isToday = dateStr === today;
+
+              return (
+                <div
+                  key={dayIdx}
+                  className={`calendar-day-column ${isToday ? 'today' : ''}`}
+                  onClick={() => handleDateClick(date)}
+                >
+                  <div className="calendar-day-slots">
+                    {hours.map(hour => (
+                      <div key={hour} className="calendar-hour-slot" />
+                    ))}
+
+                    {dayEvents.map((event, eventIdx) => {
+                      const category = event.category_id ? getCategoryById(event.category_id) : null;
+
+                      // Calculate position and height precisely in 10-minute units
+                      const startMinutes = event.start_time
+                        ? timeToMinutes(event.start_time)
+                        : 9 * 60; // Default 9am
+                      const endMinutes = event.end_time
+                        ? timeToMinutes(event.end_time)
+                        : startMinutes + 60; // Default 1 hour
+                      const durationMinutes = endMinutes - startMinutes;
+
+                      // Ensure minimum height of 20px (about 20 minutes)
+                      const height = Math.max(durationMinutes, 20);
+
+                      return (
+                        <div
+                          key={eventIdx}
+                          className="calendar-week-event"
+                          style={{
+                            top: `${startMinutes}px`,
+                            height: `${height}px`,
+                            backgroundColor: category?.color || DEFAULT_CATEGORY_COLOR,
+                          }}
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            onEventClick(event);
+                          }}
+                        >
+                          <div className="calendar-week-event-title">{event.title}</div>
+                          {height >= 40 && (
+                            <div className="calendar-week-event-time">
+                              {event.start_time?.slice(0, 5)} - {event.end_time?.slice(0, 5)}
+                            </div>
+                          )}
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              );
+            })}
+          </div>
         </div>
       </div>
     );
