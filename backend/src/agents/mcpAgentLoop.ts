@@ -425,7 +425,7 @@ IMPORTANT:
         area: info.area || info.location || '강남',
         cuisine: info.cuisine,
         minRating: 4.0,
-        limit: 5
+        limit: 6
       }
     };
 
@@ -433,7 +433,7 @@ IMPORTANT:
 
     if (!result.success) {
       return {
-        message: `I encountered an issue while searching for places. Please try again.`,
+        message: `Place search failed. Please try again.`,
         needs_user_input: true
       };
     }
@@ -442,19 +442,15 @@ IMPORTANT:
 
     if (restaurants.length === 0) {
       return {
-        message: `I couldn't find any places in ${info.area || 'that area'}. Please try another location.`,
+        message: `No places found. Try another location.`,
         needs_user_input: true
       };
     }
 
     const area = info.area || info.location || 'the area';
-    const cuisine = info.cuisine ? `${info.cuisine} ` : '';
-
-    // Simple, clean response - details are shown in cards below
-    const message = `Here are some ${cuisine}restaurant recommendations for ${area}! 🍽️`;
 
     return {
-      message,
+      message: `🍽️ ${area} recommendations`,
       mcp_data: { restaurants }
     };
   }

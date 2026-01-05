@@ -321,13 +321,30 @@ export class MCPOrchestrator {
           cuisine: args.cuisine,
           minRating: args.minRating || 4.0,
           priceLevel: args.priceLevel,
-          limit: args.limit || 5
+          limit: args.limit || 6
         });
+
+        // Transform to frontend-friendly format with photos and category
+        const transformedRestaurants = restaurants.map((r: PlaceSearchResult) => ({
+          id: r.placeId,
+          name: r.name,
+          address: r.address,
+          rating: r.rating,
+          reviewCount: r.userRatingsTotal,
+          priceLevel: r.priceLevel !== undefined ? '$'.repeat(r.priceLevel + 1) : undefined,
+          openNow: r.openNow,
+          types: r.types,
+          category: this.formatPlaceTypes(r.types),
+          photos: r.photoReference ? [
+            `https://maps.googleapis.com/maps/api/place/photo?maxwidth=400&photo_reference=${r.photoReference}&key=${process.env.GOOGLE_MAPS_API_KEY}`
+          ] : undefined
+        }));
+
         return {
           success: true,
           data: {
-            restaurants,
-            count: restaurants.length
+            restaurants: transformedRestaurants,
+            count: transformedRestaurants.length
           },
           toolName: name
         };
@@ -560,6 +577,66 @@ export class MCPOrchestrator {
         toolName: 'prepare_special_day'
       };
     }
+  }
+
+  // ====================================================
+  // 유틸리티
+  // ====================================================
+
+  /**
+   * Google Places types를 사용자 친화적인 카테고리로 변환
+   */
+  private formatPlaceTypes(types: string[]): string {
+    const typeMap: Record<string, string> = {
+      'korean_restaurant': 'Korean',
+      'japanese_restaurant': 'Japanese',
+      'chinese_restaurant': 'Chinese',
+      'italian_restaurant': 'Italian',
+      'french_restaurant': 'French',
+      'thai_restaurant': 'Thai',
+      'vietnamese_restaurant': 'Vietnamese',
+      'indian_restaurant': 'Indian',
+      'mexican_restaurant': 'Mexican',
+      'american_restaurant': 'American',
+      'seafood_restaurant': 'Seafood',
+      'steak_house': 'Steakhouse',
+      'sushi_restaurant': 'Sushi',
+      'ramen_restaurant': 'Ramen',
+      'pizza_restaurant': 'Pizza',
+      'hamburger_restaurant': 'Burger',
+      'bbq_restaurant': 'BBQ',
+      'vegetarian_restaurant': 'Vegetarian',
+      'cafe': 'Cafe',
+      'coffee_shop': 'Coffee',
+      'bakery': 'Bakery',
+      'bar': 'Bar',
+      'pub': 'Pub',
+      'restaurant': 'Restaurant',
+      'food': 'Food',
+      'meal_takeaway': 'Takeout',
+      'meal_delivery': 'Delivery'
+    };
+
+    for (const type of types) {
+      if (typeMap[type]) {
+        return typeMap[type];
+      }
+    }
+
+    // Filter out generic types
+    const filtered = types.filter(t =>
+      !['point_of_interest', 'establishment', 'food'].includes(t)
+    );
+
+    if (filtered.length > 0) {
+      // Convert snake_case to Title Case
+      return filtered[0]
+        .split('_')
+        .map(w => w.charAt(0).toUpperCase() + w.slice(1))
+        .join(' ');
+    }
+
+    return 'Restaurant';
   }
 
   // ====================================================

@@ -1406,10 +1406,14 @@ const AssistantView: React.FC = () => {
   const CARDS_PER_PAGE = 3;
   const MAX_PAGES = 3; // 3 pages x 3 cards = 9 items max
 
+  // Place cards: 2 per page, 3 pages max = 6 items
+  const PLACE_CARDS_PER_PAGE = 2;
+  const PLACE_MAX_PAGES = 3;
+
   const getCarouselIndex = (key: string) => carouselIndices[key] || 0;
 
-  const handleCarouselNav = (key: string, direction: 'prev' | 'next', totalItems: number) => {
-    const maxPages = Math.min(Math.ceil(totalItems / CARDS_PER_PAGE), MAX_PAGES);
+  const handleCarouselNav = (key: string, direction: 'prev' | 'next', totalItems: number, cardsPerPage: number = CARDS_PER_PAGE) => {
+    const maxPages = Math.ceil(totalItems / cardsPerPage);
     setCarouselIndices(prev => {
       const current = prev[key] || 0;
       if (direction === 'next') {
@@ -1424,14 +1428,16 @@ const AssistantView: React.FC = () => {
   const renderCarousel = (
     key: string,
     items: any[],
-    renderCard: (item: any, idx: number, globalIdx: number) => React.ReactNode
+    renderCard: (item: any, idx: number, globalIdx: number) => React.ReactNode,
+    cardsPerPage: number = CARDS_PER_PAGE,
+    maxPages: number = MAX_PAGES
   ) => {
     const currentPage = getCarouselIndex(key);
-    const maxItems = CARDS_PER_PAGE * MAX_PAGES; // 9 items max
+    const maxItems = cardsPerPage * maxPages;
     const limitedItems = items.slice(0, maxItems);
-    const totalPages = Math.ceil(limitedItems.length / CARDS_PER_PAGE);
-    const startIdx = currentPage * CARDS_PER_PAGE;
-    const visibleItems = limitedItems.slice(startIdx, startIdx + CARDS_PER_PAGE);
+    const totalPages = Math.ceil(limitedItems.length / cardsPerPage);
+    const startIdx = currentPage * cardsPerPage;
+    const visibleItems = limitedItems.slice(startIdx, startIdx + cardsPerPage);
     const hasPrev = currentPage > 0;
     const hasNext = currentPage < totalPages - 1;
 
@@ -1439,17 +1445,17 @@ const AssistantView: React.FC = () => {
       <div className="mcp-carousel-container">
         <button
           className={`mcp-carousel-btn mcp-carousel-prev ${!hasPrev ? 'disabled' : ''}`}
-          onClick={() => hasPrev && handleCarouselNav(key, 'prev', limitedItems.length)}
+          onClick={() => hasPrev && handleCarouselNav(key, 'prev', limitedItems.length, cardsPerPage)}
           disabled={!hasPrev}
         >
           ‹
         </button>
-        <div className="mcp-carousel-cards">
+        <div className={`mcp-carousel-cards ${cardsPerPage === 2 ? 'two-cards' : ''}`}>
           {visibleItems.map((item, idx) => renderCard(item, idx, startIdx + idx))}
         </div>
         <button
           className={`mcp-carousel-btn mcp-carousel-next ${!hasNext ? 'disabled' : ''}`}
-          onClick={() => hasNext && handleCarouselNav(key, 'next', limitedItems.length)}
+          onClick={() => hasNext && handleCarouselNav(key, 'next', limitedItems.length, cardsPerPage)}
           disabled={!hasNext}
         >
           ›
@@ -1490,9 +1496,6 @@ const AssistantView: React.FC = () => {
         {/* Restaurant/Place recommendations */}
         {(hasRestaurants || hasPlaces) && (
           <div className="mcp-section places-section">
-            <h4 className="mcp-section-title">
-              {hasRestaurants ? '🍽️ Restaurant Recommendations' : '📍 Place Recommendations'}
-            </h4>
             {renderCarousel('places', placeItems, (place: MCPPlaceResult, idx: number, globalIdx: number) => (
               <div key={place.id || globalIdx} className="mcp-card mcp-place-card">
                 <div className="mcp-card-rank">{globalIdx + 1}</div>
@@ -1503,17 +1506,20 @@ const AssistantView: React.FC = () => {
                 )}
                 <div className="mcp-card-content">
                   <div className="mcp-card-title">{place.name}</div>
+                  {(place.types || place.cuisine || place.category) && (
+                    <div className="mcp-card-category">
+                      {place.cuisine || place.category || place.types?.[0] || ''}
+                    </div>
+                  )}
+                  {place.description && (
+                    <div className="mcp-card-description">{place.description}</div>
+                  )}
                   <div className="mcp-card-details">
                     {place.rating && <span className="mcp-rating">⭐ {place.rating}</span>}
                     {place.reviewCount && <span className="mcp-reviews">({place.reviewCount})</span>}
                     {place.priceLevel && <span className="mcp-price-level">{place.priceLevel}</span>}
                   </div>
                   <div className="mcp-card-address">{place.address}</div>
-                  {place.distance && (
-                    <div className="mcp-card-distance">
-                      📍 {place.distance} {place.duration && `(${place.duration})`}
-                    </div>
-                  )}
                   {place.openNow !== undefined && (
                     <span className={`mcp-place-status ${place.openNow ? 'open' : 'closed'}`}>
                       {place.openNow ? 'Open' : 'Closed'}
@@ -1521,7 +1527,7 @@ const AssistantView: React.FC = () => {
                   )}
                 </div>
               </div>
-            ))}
+            ), PLACE_CARDS_PER_PAGE, PLACE_MAX_PAGES)}
           </div>
         )}
 

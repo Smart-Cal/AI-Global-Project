@@ -7449,8 +7449,26 @@ textarea.form-input {
   font-size: 13px;
   font-weight: 600;
   color: var(--text-primary);
-  margin-bottom: 6px;
+  margin-bottom: 4px;
   line-height: 1.3;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.mcp-card-category {
+  font-size: 11px;
+  color: var(--primary);
+  font-weight: 500;
+  margin-bottom: 4px;
+}
+
+.mcp-card-description {
+  font-size: 11px;
+  color: var(--text-secondary);
+  line-height: 1.4;
+  margin-bottom: 6px;
   display: -webkit-box;
   -webkit-line-clamp: 2;
   -webkit-box-orient: vertical;
@@ -7671,6 +7689,11 @@ textarea.form-input {
   max-width: calc((100% - 24px) / 3);
   display: flex;
   flex-direction: column;
+}
+
+/* 2 cards per page layout for places */
+.mcp-carousel-cards.two-cards .mcp-card {
+  max-width: calc((100% - 12px) / 2);
 }
 
 .mcp-carousel-cards .mcp-card-image {

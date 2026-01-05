@@ -138,6 +138,9 @@ export interface MCPPlaceResult {
   photos?: string[];
   openNow?: boolean;
   types?: string[];
+  cuisine?: string;
+  category?: string;
+  description?: string;
 }
 
 export interface MCPProductResult {
