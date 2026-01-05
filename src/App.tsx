@@ -53,6 +53,7 @@ const MainLayout: React.FC = () => {
   const [calendarView, setCalendarView] = useState<CalendarViewType>('month');
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [selectedGroupId, setSelectedGroupId] = useState<string | null>(null);
+  const [initialAssistantMessage, setInitialAssistantMessage] = useState<string | null>(null);
 
   // Modal states
   const [eventModalOpen, setEventModalOpen] = useState(false);
@@ -80,7 +81,10 @@ const MainLayout: React.FC = () => {
   const [editingGoal, setEditingGoal] = useState<Goal | null>(null);
   const [selectedDate, setSelectedDate] = useState<string | null>(null);
 
-  const handleViewChange = (view: AppView) => {
+  const handleViewChange = (view: AppView, message?: string) => {
+    if (view === 'assistant' && message) {
+      setInitialAssistantMessage(message);
+    }
     setCurrentView(view);
   };
 
@@ -163,7 +167,12 @@ const MainLayout: React.FC = () => {
           />
         );
       case 'assistant':
-        return <AssistantView />;
+        return (
+          <AssistantView
+            initialMessage={initialAssistantMessage}
+            onInitialMessageConsumed={() => setInitialAssistantMessage(null)}
+          />
+        );
       case 'calendar':
         return (
           <CalendarView

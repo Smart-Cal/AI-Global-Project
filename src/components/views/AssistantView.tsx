@@ -50,7 +50,12 @@ interface DecisionState {
 type EventDecision = ItemDecision;
 type EventDecisionState = DecisionState;
 
-const AssistantView: React.FC = () => {
+interface AssistantViewProps {
+  initialMessage?: string | null;
+  onInitialMessageConsumed?: () => void;
+}
+
+const AssistantView: React.FC<AssistantViewProps> = ({ initialMessage, onInitialMessageConsumed }) => {
   const { user } = useAuthStore();
   const { getActiveGoals } = useGoalStore();
   const { loadEvents, events } = useEventStore();
@@ -130,6 +135,21 @@ const AssistantView: React.FC = () => {
     loadConversations();
     fetchCategories();
   }, []);
+
+  // Handle initial message from dashboard
+  useEffect(() => {
+    if (initialMessage && !isLoading) {
+      setInput(initialMessage);
+      onInitialMessageConsumed?.();
+      // Auto-send after a short delay to ensure input is set
+      setTimeout(() => {
+        const sendButton = document.querySelector('.chat-send-button') as HTMLButtonElement;
+        if (sendButton) {
+          sendButton.click();
+        }
+      }, 100);
+    }
+  }, [initialMessage]);
 
   // Debugging: Check category state
   useEffect(() => {

@@ -7949,3 +7949,8 @@ textarea.form-input {
     max-width: calc((100% - 16px) / 2);
   }
 }
+
+/* Dashboard AI Assistant Input */
+.dashboard-ai-input::placeholder {
+  color: rgba(255, 255, 255, 0.6);
+}

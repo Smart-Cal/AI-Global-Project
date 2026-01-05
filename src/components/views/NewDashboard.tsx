@@ -16,7 +16,7 @@ import {
 import * as api from '../../services/api';
 
 interface NewDashboardProps {
-  onNavigate: (view: 'assistant' | 'calendar' | 'schedule' | 'goal') => void;
+  onNavigate: (view: 'assistant' | 'calendar' | 'schedule' | 'goal', message?: string) => void;
 }
 
 interface WeatherData {
@@ -96,6 +96,7 @@ export const NewDashboard: React.FC<NewDashboardProps> = ({ onNavigate }) => {
   const [weatherLoaded, setWeatherLoaded] = useState(false);
   const [userCoords, setUserCoords] = useState<{ lat: number; lon: number } | null>(null);
   const [locationReady, setLocationReady] = useState(false);
+  const [assistantInput, setAssistantInput] = useState('');
 
   const today = new Date().toISOString().split('T')[0];
   const now = new Date();
@@ -494,23 +495,72 @@ export const NewDashboard: React.FC<NewDashboardProps> = ({ onNavigate }) => {
             minHeight: '200px',
             background: 'linear-gradient(135deg, #6366F1 0%, #8B5CF6 100%)',
             color: 'white',
-            cursor: 'pointer',
             display: 'flex',
             flexDirection: 'column',
-            justifyContent: 'center',
-            alignItems: 'center',
-            textAlign: 'center',
+            justifyContent: 'space-between',
             padding: '24px',
           }}
-          onClick={() => onNavigate('assistant')}
         >
-          <div style={{ padding: '16px', background: 'rgba(255,255,255,0.2)', borderRadius: '50%', marginBottom: '16px' }}>
-            <SparkleIcon size={32} />
+          <div
+            style={{ cursor: 'pointer', textAlign: 'center' }}
+            onClick={() => onNavigate('assistant')}
+          >
+            <div style={{ display: 'inline-block', padding: '16px', background: 'rgba(255,255,255,0.2)', borderRadius: '50%', marginBottom: '12px' }}>
+              <SparkleIcon size={28} />
+            </div>
+            <h3 style={{ margin: '0 0 6px 0', fontSize: '17px', fontWeight: 600 }}>AI Assistant</h3>
+            <p style={{ margin: 0, opacity: 0.85, fontSize: '13px', lineHeight: 1.4 }}>
+              Schedule, todos, recommendations
+            </p>
           </div>
-          <h3 style={{ margin: '0 0 8px 0', fontSize: '18px', fontWeight: 600 }}>AI Assistant</h3>
-          <p style={{ margin: 0, opacity: 0.85, fontSize: '14px', lineHeight: 1.5 }}>
-            Schedule management, todo recommendations<br />Ask me anything
-          </p>
+          <div style={{ marginTop: '16px' }}>
+            <div style={{ display: 'flex', gap: '8px' }}>
+              <input
+                type="text"
+                value={assistantInput}
+                onChange={(e) => setAssistantInput(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter' && assistantInput.trim()) {
+                    onNavigate('assistant', assistantInput.trim());
+                    setAssistantInput('');
+                  }
+                }}
+                placeholder="Ask anything..."
+                style={{
+                  flex: 1,
+                  padding: '10px 14px',
+                  borderRadius: '20px',
+                  border: 'none',
+                  background: 'rgba(255,255,255,0.2)',
+                  color: 'white',
+                  fontSize: '13px',
+                  outline: 'none',
+                }}
+                onClick={(e) => e.stopPropagation()}
+              />
+              <button
+                onClick={(e) => {
+                  e.stopPropagation();
+                  if (assistantInput.trim()) {
+                    onNavigate('assistant', assistantInput.trim());
+                    setAssistantInput('');
+                  }
+                }}
+                style={{
+                  padding: '10px 16px',
+                  borderRadius: '20px',
+                  border: 'none',
+                  background: 'rgba(255,255,255,0.3)',
+                  color: 'white',
+                  fontSize: '13px',
+                  fontWeight: 500,
+                  cursor: 'pointer',
+                }}
+              >
+                Send
+              </button>
+            </div>
+          </div>
         </div>
       </div>
     </div>
