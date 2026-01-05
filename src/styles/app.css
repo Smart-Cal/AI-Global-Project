@@ -2084,14 +2084,15 @@ body {
   font-weight: 500;
 }
 
-.confirm-modal-footer .btn-secondary {
-  background: #FEE2E2;
-  color: #DC2626;
-  border: 1px solid #FECACA;
+.confirm-modal-footer .btn-danger {
+  background: #DC2626;
+  color: white;
+  border: none;
+  box-shadow: 0 2px 4px rgba(220, 38, 38, 0.3);
 }
 
-.confirm-modal-footer .btn-secondary:hover {
-  background: #FECACA;
+.confirm-modal-footer .btn-danger:hover {
+  background: #B91C1C;
 }
 
 /* Event Detail Modal */
