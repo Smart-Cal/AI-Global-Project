@@ -1,5 +1,6 @@
 import { Router, Response } from 'express';
-import { createAgentLoop, createMCPAgentLoop } from '../agents/index.js';
+import OpenAI from 'openai';
+import { createAgentLoop, createMCPAgentLoop, getMCPOrchestrator } from '../agents/index.js';
 import {
   getEventsByUser,
   getTodosByUser,
@@ -17,6 +18,10 @@ import {
   createMessage,
   getExternalServiceConfig
 } from '../services/database.js';
+
+const openai = new OpenAI({
+  apiKey: process.env.OPENAI_API_KEY
+});
 import { AuthRequest, authenticate } from '../middleware/auth.js';
 import {
   ChatMessage,
@@ -253,6 +258,135 @@ router.post('/save-result', authenticate, async (req: AuthRequest, res: Response
 });
 
 /**
+ * Generate contextual follow-up suggestions based on confirmed events
+ */
+async function generateFollowUpSuggestions(
+  events: any[],
+  userId: string
+): Promise<{ message: string; mcp_data?: any } | null> {
+  if (events.length === 0) return null;
+
+  // Analyze event context for potential recommendations
+  const eventInfo = events[0]; // Use first event for context
+  const eventTime = eventInfo.start_time || eventInfo.datetime?.split('T')[1]?.slice(0, 5);
+  const eventDate = eventInfo.datetime?.split('T')[0] || eventInfo.event_date;
+  const eventTitle = eventInfo.title?.toLowerCase() || '';
+  const eventLocation = eventInfo.location || '';
+  const eventCategory = eventInfo.category?.toLowerCase() || '';
+
+  // Determine event type and time of day
+  const hour = eventTime ? parseInt(eventTime.split(':')[0]) : 12;
+  const isMealTime = (hour >= 11 && hour <= 14) || (hour >= 17 && hour <= 21);
+  const isEvening = hour >= 17;
+  const isSocialEvent = ['약속', 'appointment', 'dinner', 'lunch', 'meeting', '미팅', '모임', '저녁', '점심', 'date', '데이트']
+    .some(keyword => eventTitle.includes(keyword) || eventCategory.includes(keyword));
+
+  // If no location and it's a social/meal event, suggest place recommendations
+  if (isSocialEvent && !eventLocation) {
+    try {
+      // Use AI to generate contextual suggestions
+      const suggestionPrompt = `An event was just confirmed:
+- Title: ${eventInfo.title}
+- Date: ${eventDate}
+- Time: ${eventTime || 'not specified'}
+- Category: ${eventInfo.category || 'General'}
+
+Based on this event, generate a brief, helpful follow-up suggestion. Consider:
+1. If it's a meal-related appointment without a location, suggest finding a restaurant
+2. If it's an evening social event, suggest activities after
+3. If it's a meeting, suggest preparation tips
+
+Respond in a friendly, concise manner (1-2 sentences). Language should match the event title (Korean if Korean, English if English).
+If you have a location-based suggestion, include the area/neighborhood if mentioned in the title.
+
+Format: Just the suggestion message, no JSON.`;
+
+      const response = await openai.chat.completions.create({
+        model: 'gpt-4o-mini',
+        messages: [{ role: 'user', content: suggestionPrompt }],
+        temperature: 0.7,
+        max_tokens: 150
+      });
+
+      const suggestion = response.choices[0]?.message?.content;
+
+      if (suggestion) {
+        // If it seems like a place recommendation is needed, try to get places
+        const needsPlaceRecommendation = suggestion.includes('restaurant') || suggestion.includes('맛집') ||
+          suggestion.includes('장소') || suggestion.includes('place') || suggestion.includes('카페') ||
+          isMealTime;
+
+        if (needsPlaceRecommendation) {
+          // Extract area from event title if possible
+          const areaMatch = eventTitle.match(/(강남|홍대|이태원|신촌|명동|종로|압구정|청담|한남|성수|연남|망원|합정|건대|잠실|여의도|판교)/);
+          const area = areaMatch ? areaMatch[1] : '강남'; // Default to 강남 if no area found
+
+          try {
+            const mcpOrchestrator = getMCPOrchestrator(userId);
+            const placeResult = await mcpOrchestrator.executeTool({
+              name: 'maps_recommend_restaurants',
+              arguments: {
+                area: area,
+                cuisine: isEvening ? undefined : undefined,
+                minRating: 4.0,
+                limit: 6
+              }
+            });
+
+            if (placeResult.success && placeResult.data?.restaurants?.length > 0) {
+              return {
+                message: `✅ Event saved!\n\n💡 ${suggestion}\n\n🍽️ Here are some recommendations near ${area}:`,
+                mcp_data: { restaurants: placeResult.data.restaurants }
+              };
+            }
+          } catch (mcpError) {
+            console.log('[confirm-events] MCP place recommendation failed:', mcpError);
+          }
+        }
+
+        return {
+          message: `✅ Event saved!\n\n💡 ${suggestion}`
+        };
+      }
+    } catch (error) {
+      console.log('[confirm-events] Follow-up suggestion generation failed:', error);
+    }
+  }
+
+  // If location exists or not a social event, check for post-event suggestions
+  if (isEvening && isSocialEvent) {
+    try {
+      const afterEventPrompt = `An evening social event was confirmed:
+- Title: ${eventInfo.title}
+- Date: ${eventDate}
+- Time: ${eventTime}
+- Location: ${eventLocation || 'Not specified'}
+
+Suggest a brief follow-up activity (dessert, cafe, entertainment) in 1 sentence.
+Match the language of the event title (Korean if Korean, English if English).`;
+
+      const response = await openai.chat.completions.create({
+        model: 'gpt-4o-mini',
+        messages: [{ role: 'user', content: afterEventPrompt }],
+        temperature: 0.7,
+        max_tokens: 100
+      });
+
+      const suggestion = response.choices[0]?.message?.content;
+      if (suggestion) {
+        return {
+          message: `✅ Event saved!\n\n💡 ${suggestion}`
+        };
+      }
+    } catch (error) {
+      console.log('[confirm-events] After-event suggestion failed:', error);
+    }
+  }
+
+  return null;
+}
+
+/**
  * POST /api/chat/confirm-events
  * Save confirmed events
  */
@@ -290,9 +424,15 @@ router.post('/confirm-events', authenticate, async (req: AuthRequest, res: Respo
       createdEvents.push(dbEventToEvent(created));
     }
 
+    // Generate contextual follow-up suggestions
+    const followUp = await generateFollowUpSuggestions(events, userId);
+
     res.json({
-      message: `${createdEvents.length} event(s) saved successfully.`,
-      events: createdEvents
+      message: followUp?.message || `${createdEvents.length} event(s) saved successfully.`,
+      events: createdEvents,
+      // Include MCP data if place recommendations were generated
+      mcp_data: followUp?.mcp_data || null,
+      has_follow_up: !!followUp
     });
   } catch (error) {
     console.error('Confirm events error:', error);

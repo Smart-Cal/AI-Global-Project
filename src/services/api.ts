@@ -261,7 +261,14 @@ export async function sendChatMessage(
   });
 }
 
-export async function confirmEvents(events: PendingEvent[]): Promise<{ message: string; events: Event[] }> {
+export interface ConfirmEventsResponse {
+  message: string;
+  events: Event[];
+  mcp_data?: MCPResponseData;
+  has_follow_up?: boolean;
+}
+
+export async function confirmEvents(events: PendingEvent[]): Promise<ConfirmEventsResponse> {
   return apiRequest('/chat/confirm-events', {
     method: 'POST',
     body: JSON.stringify({ events }),

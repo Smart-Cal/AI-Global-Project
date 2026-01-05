@@ -411,15 +411,27 @@ const AssistantView: React.FC = () => {
     console.log('[handleFinalConfirmEvents] confirmedEvents to save:', confirmedEvents);
 
     try {
+      let followUpMessage = '';
+      let followUpMcpData: any = null;
+
       if (confirmedEvents.length > 0) {
-        await confirmEvents(confirmedEvents);
+        const result = await confirmEvents(confirmedEvents);
         loadEvents();
+
+        // Check for follow-up recommendations from the API
+        if (result.has_follow_up && result.message) {
+          followUpMessage = result.message;
+          followUpMcpData = result.mcp_data;
+        }
       }
 
       // Generate result message
       let resultContent = '';
-      if (confirmedEvents.length > 0) {
-        resultContent = `${confirmedEvents.length} event${confirmedEvents.length > 1 ? 's' : ''} added`;
+      if (followUpMessage) {
+        // Use the AI-generated follow-up message
+        resultContent = followUpMessage;
+      } else if (confirmedEvents.length > 0) {
+        resultContent = `✅ ${confirmedEvents.length} event${confirmedEvents.length > 1 ? 's' : ''} added`;
         if (rejectedCount > 0) {
           resultContent += ` (${rejectedCount} rejected)`;
         }
@@ -434,12 +446,13 @@ const AssistantView: React.FC = () => {
       if (currentConversationId) {
         const savedResult = await saveResultMessage(currentConversationId, resultContent);
 
-        // Add result message to local message list
+        // Add result message to local message list (with MCP data if available)
         const resultMessage: LocalMessage = {
           id: savedResult.message_id,
           role: 'assistant',
           content: resultContent,
           created_at: new Date().toISOString(),
+          mcp_data: followUpMcpData,
         };
         setMessages(prev => [...prev, resultMessage]);
       }
