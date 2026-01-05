@@ -395,7 +395,7 @@ export const NewDashboard: React.FC<NewDashboardProps> = ({ onNavigate }) => {
             {/* 2-Block Layout */}
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
 
-              {/* Block 1: Weather */}
+              {/* Block 1: Weather - Simple */}
               <div style={{
                 background: 'rgba(255,255,255,0.6)',
                 backdropFilter: 'blur(4px)',
@@ -403,34 +403,29 @@ export const NewDashboard: React.FC<NewDashboardProps> = ({ onNavigate }) => {
                 padding: '16px',
                 display: 'flex',
                 alignItems: 'center',
+                justifyContent: 'center',
                 gap: '12px'
               }}>
                 {briefing.weather ? (
                   <>
-                    <div style={{ transform: 'scale(1.2)' }}>
+                    <div style={{ transform: 'scale(1.3)' }}>
                       {getWeatherIcon(briefing.weather.condition)}
                     </div>
-                    <div>
-                      <div style={{ fontSize: '20px', fontWeight: 700, color: '#1F2937' }}>
+                    <div style={{ textAlign: 'center' }}>
+                      <div style={{ fontSize: '24px', fontWeight: 700, color: '#1F2937' }}>
                         {briefing.weather.temperature}°C
                       </div>
-                      <div style={{ fontSize: '13px', color: '#4B5563', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                      <div style={{ fontSize: '14px', color: '#6B7280', marginTop: '2px' }}>
                         {briefing.weather.condition}
-                        {briefing.weather.city && <span style={{ opacity: 0.6 }}>• {briefing.weather.city}</span>}
                       </div>
-                      {briefing.weather.recommendation && (
-                        <div style={{ fontSize: '11px', color: '#EA580C', marginTop: '4px', fontWeight: 500 }}>
-                          {briefing.weather.recommendation}
-                        </div>
-                      )}
                     </div>
                   </>
                 ) : (
-                  <div style={{ fontSize: '13px', color: '#6B7280' }}>Weather unavailable</div>
+                  <div style={{ fontSize: '13px', color: '#9CA3AF' }}>Weather unavailable</div>
                 )}
               </div>
 
-              {/* Block 2: Precipitation Check */}
+              {/* Block 2: Rain Check - Ultra Simple */}
               <div style={{
                 background: 'rgba(255,255,255,0.6)',
                 backdropFilter: 'blur(4px)',
@@ -443,41 +438,29 @@ export const NewDashboard: React.FC<NewDashboardProps> = ({ onNavigate }) => {
                 gap: '8px',
                 border: briefing.precipitation?.willRain || briefing.precipitation?.willSnow ? '2px solid #60A5FA' : 'none'
               }}>
-                <div style={{ fontSize: '13px', color: '#4B5563', fontWeight: 500 }}>
-                  {briefing.type === 'evening' ? 'Precipitation Tomorrow' : 'Rain/Snow Check'}
-                </div>
-
                 {briefing.precipitation ? (
                   briefing.precipitation.willRain || briefing.precipitation.willSnow ? (
                     <>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                        <CloudIcon size={24} style={{ color: '#3B82F6' }} />
-                        <span style={{ fontSize: '16px', fontWeight: 700, color: '#1F2937' }}>
-                          {briefing.precipitation.willSnow ? 'Snow Expected' : 'Rain Expected'}
-                        </span>
+                      <CloudIcon size={28} style={{ color: '#3B82F6' }} />
+                      <div style={{ fontSize: '15px', fontWeight: 700, color: '#1F2937', textAlign: 'center' }}>
+                        {briefing.precipitation.willSnow ? '눈 예상' : '비 예상'}
                       </div>
                       {briefing.precipitation.time && (
-                        <div style={{ fontSize: '13px', color: '#EF4444', fontWeight: 600 }}>
-                          Around {briefing.precipitation.time}
+                        <div style={{ fontSize: '13px', color: '#6B7280' }}>
+                          {briefing.type === 'evening' ? '내일 ' : ''}{briefing.precipitation.time}경
                         </div>
                       )}
-                      <div style={{ fontSize: '12px', color: '#6B7280' }}>
-                        Don't forget your umbrella!
-                      </div>
                     </>
                   ) : (
                     <>
-                      <SunIcon size={24} style={{ color: '#F59E0B' }} />
-                      <div style={{ fontSize: '16px', fontWeight: 600, color: '#1F2937' }}>
-                        No Rain Expected
-                      </div>
-                      <div style={{ fontSize: '12px', color: '#6B7280' }}>
-                        {briefing.type === 'evening' ? 'Tomorrow looks clear.' : 'Enjoy your day!'}
+                      <SunIcon size={28} style={{ color: '#F59E0B' }} />
+                      <div style={{ fontSize: '15px', fontWeight: 600, color: '#1F2937' }}>
+                        맑음
                       </div>
                     </>
                   )
                 ) : (
-                  <div style={{ fontSize: '13px', color: '#9CA3AF' }}>Checking forecast...</div>
+                  <div style={{ fontSize: '13px', color: '#9CA3AF' }}>확인 중...</div>
                 )}
               </div>
 
