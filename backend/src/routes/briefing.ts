@@ -149,23 +149,25 @@ router.get('/evening', authenticate, async (req: AuthRequest, res: Response) => 
     const lon = parseFloat(req.query.lon as string);
     const hasCoords = !isNaN(lat) && !isNaN(lon);
 
+    let currentWeather: WeatherData | null = null; // For left block display
     let tomorrowWeather: WeatherData | null = null;
     let city = user.location || 'Seoul';
 
     let tomorrowPrecipitation: { willRain: boolean; willSnow: boolean; time?: string } | null = null;
 
     if (hasCoords) {
-      // For tomorrow weather, we should use forecast, not current weather
-      // But for simplicity, let's use current weather as placeholder
       const coordsResult = await getWeatherByCoords(lat, lon);
       if (coordsResult) {
+        currentWeather = coordsResult.weather; // Current weather for display
         city = coordsResult.city;
       }
-      // Get tomorrow's actual forecast
+      // Get tomorrow's forecast for precipitation check
       tomorrowWeather = await getWeatherForDate(city, tomorrowStr);
       tomorrowPrecipitation = await checkPrecipitationByCoords(lat, lon, tomorrowStr);
     } else {
-      // Get tomorrow's actual forecast instead of current weather
+      // Get current weather for display
+      currentWeather = await getCurrentWeather(city);
+      // Get tomorrow's forecast for precipitation check
       tomorrowWeather = await getWeatherForDate(city, tomorrowStr);
       tomorrowPrecipitation = await checkPrecipitationForecast(city, tomorrowStr);
     }
@@ -217,6 +219,13 @@ router.get('/evening', authenticate, async (req: AuthRequest, res: Response) => 
     );
 
     const briefing: EveningBriefing = {
+      weather: currentWeather ? {
+        temperature: currentWeather.temperature,
+        condition: currentWeather.condition,
+        icon: currentWeather.icon,
+        recommendation: currentWeather.recommendation,
+        city
+      } : undefined,
       completed_events: completedEvents,
       completed_todos: completedTodos,
       completion_rate: completionRate,

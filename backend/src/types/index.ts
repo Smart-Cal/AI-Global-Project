@@ -361,6 +361,13 @@ export interface MorningBriefing {
 }
 
 export interface EveningBriefing {
+  weather?: {                     // 현재 날씨 (왼쪽 블록 표시용)
+    temperature: number;
+    condition: string;
+    icon: string;
+    recommendation: string;
+    city: string;
+  };
   completed_events: Event[];
   completed_todos: Todo[];
   completion_rate: number;        // 오늘 달성률 (%)

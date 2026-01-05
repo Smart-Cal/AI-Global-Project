@@ -639,6 +639,7 @@ export interface MorningBriefing {
 }
 
 export interface EveningBriefing {
+  weather?: WeatherInfo;
   completed_events: Event[];
   completed_todos: Todo[];
   completion_rate: number;
