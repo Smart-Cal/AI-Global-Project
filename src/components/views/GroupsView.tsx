@@ -185,7 +185,11 @@ const GroupsView: React.FC<GroupsViewProps> = ({ onGroupClick }) => {
                 </div>
                 <div className="group-info">
                   <span className="group-name">{group.name}</span>
-                  <span className="group-date">Created: {formatDate(group.created_at)}</span>
+                  <span className="group-meta">
+                    <span className="group-members">{group.member_count || 1} {(group.member_count || 1) === 1 ? 'member' : 'members'}</span>
+                    <span className="group-separator">·</span>
+                    <span className="group-date">Created {formatDate(group.created_at)}</span>
+                  </span>
                 </div>
                 <button
                   className="btn btn-icon btn-danger-ghost"
@@ -522,8 +526,24 @@ const GroupsView: React.FC<GroupsViewProps> = ({ onGroupClick }) => {
           color: #333;
         }
 
-        .group-date {
+        .group-meta {
+          display: flex;
+          align-items: center;
+          gap: 6px;
           font-size: 13px;
+          color: #888;
+        }
+
+        .group-members {
+          color: #4A90A4;
+          font-weight: 500;
+        }
+
+        .group-separator {
+          color: #ccc;
+        }
+
+        .group-date {
           color: #888;
         }
 

@@ -42,7 +42,19 @@ router.get('/', authenticate, async (req: AuthRequest, res: Response) => {
   try {
     const userId = req.userId!;
     const groups = await getGroupsByUser(userId);
-    res.json({ groups });
+
+    // Add member count for each group
+    const groupsWithCount = await Promise.all(
+      groups.map(async (group) => {
+        const members = await getGroupMembers(group.id);
+        return {
+          ...group,
+          member_count: members.length
+        };
+      })
+    );
+
+    res.json({ groups: groupsWithCount });
   } catch (error) {
     console.error('Get groups error:', error);
     res.status(500).json({ error: 'Failed to get groups' });

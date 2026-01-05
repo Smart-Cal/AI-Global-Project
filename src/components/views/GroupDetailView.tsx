@@ -329,9 +329,9 @@ const GroupDetailView: React.FC<GroupDetailViewProps> = ({ groupId, onBack }) =>
                 <div className="member-info">
                   <span className="member-name">
                     {member.user_name || member.user_email}
-                    {member.role === 'owner' && <span className="badge badge-owner">Owner</span>}
+                    {member.role === 'owner' && <span className="badge badge-owner">Leader</span>}
                   </span>
-                  <span className="member-email">{member.user_email}</span>
+                  <span className="member-joined">Joined {formatDate(member.joined_at)}</span>
                 </div>
                 {isOwner && member.role !== 'owner' && (
                   <button
@@ -910,7 +910,7 @@ const GroupDetailView: React.FC<GroupDetailViewProps> = ({ groupId, onBack }) =>
           gap: 8px;
         }
 
-        .member-email {
+        .member-joined {
           font-size: 13px;
           color: #888;
         }

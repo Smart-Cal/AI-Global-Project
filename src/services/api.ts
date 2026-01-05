@@ -709,6 +709,7 @@ export interface Group {
   owner_id: string;
   created_at: string;
   updated_at: string;
+  member_count?: number;  // Number of members in the group
 }
 
 export interface GroupMember {

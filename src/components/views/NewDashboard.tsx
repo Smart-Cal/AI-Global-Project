@@ -325,11 +325,33 @@ export const NewDashboard: React.FC<NewDashboardProps> = ({ onNavigate }) => {
 
   return (
     <div style={{ padding: '24px', maxWidth: '900px', margin: '0 auto' }}>
-      {/* Header - Greeting */}
+      {/* Header - Greeting with Weather */}
       <div style={{ marginBottom: '24px' }}>
-        <h1 style={{ fontSize: '24px', fontWeight: 'bold', margin: 0 }}>
-          {getGreeting()}, {user?.nickname || user?.name}!
-        </h1>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+          <h1 style={{ fontSize: '24px', fontWeight: 'bold', margin: 0 }}>
+            {getGreeting()}, {user?.nickname || user?.name}!
+          </h1>
+          {briefing?.weather && (
+            <div style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: '8px',
+              padding: '6px 12px',
+              background: '#F3F4F6',
+              borderRadius: '20px'
+            }}>
+              {getWeatherIcon(briefing.weather.condition)}
+              <span style={{ fontSize: '15px', fontWeight: 600, color: '#374151' }}>
+                {briefing.weather.temperature}°C
+              </span>
+              {briefing.weather.city && (
+                <span style={{ fontSize: '13px', color: '#6B7280' }}>
+                  {briefing.weather.city}
+                </span>
+              )}
+            </div>
+          )}
+        </div>
         <p style={{ color: '#6B7280', marginTop: '4px' }}>
           {new Date().toLocaleDateString('en-US', {
             year: 'numeric',
@@ -393,81 +415,44 @@ export const NewDashboard: React.FC<NewDashboardProps> = ({ onNavigate }) => {
               </h3>
             </div>
 
-            {/* 2-Block Layout */}
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
-
-              {/* Block 1: Current Weather */}
-              <div style={{
-                background: 'rgba(255,255,255,0.6)',
-                backdropFilter: 'blur(4px)',
-                borderRadius: '12px',
-                padding: '16px',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                gap: '12px'
-              }}>
-                {briefing.weather ? (
+            {/* Precipitation Alert */}
+            <div style={{
+              background: 'rgba(255,255,255,0.6)',
+              backdropFilter: 'blur(4px)',
+              borderRadius: '12px',
+              padding: '14px 16px',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '12px',
+              border: briefing.precipitation?.willRain || briefing.precipitation?.willSnow ? '2px solid #60A5FA' : 'none'
+            }}>
+              {briefing.precipitation ? (
+                briefing.precipitation.willRain || briefing.precipitation.willSnow ? (
                   <>
-                    <div style={{ transform: 'scale(1.3)' }}>
-                      {getWeatherIcon(briefing.weather.condition)}
-                    </div>
-                    <div style={{ textAlign: 'center' }}>
-                      <div style={{ fontSize: '24px', fontWeight: 700, color: '#1F2937' }}>
-                        {briefing.weather.temperature}°C
-                      </div>
-                      <div style={{ fontSize: '12px', color: '#6B7280', marginTop: '2px' }}>
-                        {briefing.weather.city || briefing.weather.condition}
-                      </div>
-                    </div>
-                  </>
-                ) : (
-                  <div style={{ fontSize: '13px', color: '#9CA3AF' }}>Loading weather...</div>
-                )}
-              </div>
-
-              {/* Block 2: Today's Weather - Rain/Snow Check */}
-              <div style={{
-                background: 'rgba(255,255,255,0.6)',
-                backdropFilter: 'blur(4px)',
-                borderRadius: '12px',
-                padding: '16px',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                flexDirection: 'column',
-                gap: '6px',
-                border: briefing.precipitation?.willRain || briefing.precipitation?.willSnow ? '2px solid #60A5FA' : 'none'
-              }}>
-                <div style={{ fontSize: '11px', color: '#6B7280', fontWeight: 500 }}>
-                  {briefing.type === 'evening' ? "Tomorrow's Weather" : "Today's Weather"}
-                </div>
-                {briefing.precipitation ? (
-                  briefing.precipitation.willRain || briefing.precipitation.willSnow ? (
-                    <>
-                      <CloudIcon size={24} style={{ color: '#3B82F6' }} />
-                      <div style={{ fontSize: '15px', fontWeight: 700, color: '#1F2937', textAlign: 'center' }}>
-                        {briefing.precipitation.willSnow ? 'Snow' : 'Rain'}
+                    <CloudIcon size={24} style={{ color: '#3B82F6' }} />
+                    <div>
+                      <div style={{ fontSize: '14px', fontWeight: 600, color: '#1F2937' }}>
+                        {briefing.precipitation.willSnow ? 'Snow expected' : 'Rain expected'}
+                        {briefing.type === 'evening' ? ' tomorrow' : ' today'}
                       </div>
                       {briefing.precipitation.time && (
                         <div style={{ fontSize: '12px', color: '#6B7280' }}>
                           Around {briefing.precipitation.time}
                         </div>
                       )}
-                    </>
-                  ) : (
-                    <>
-                      <SunIcon size={24} style={{ color: '#F59E0B' }} />
-                      <div style={{ fontSize: '15px', fontWeight: 600, color: '#1F2937' }}>
-                        No Rain
-                      </div>
-                    </>
-                  )
+                    </div>
+                  </>
                 ) : (
-                  <div style={{ fontSize: '13px', color: '#9CA3AF' }}>Checking...</div>
-                )}
-              </div>
-
+                  <>
+                    <SunIcon size={24} style={{ color: '#F59E0B' }} />
+                    <div style={{ fontSize: '14px', fontWeight: 500, color: '#1F2937' }}>
+                      No rain expected {briefing.type === 'evening' ? 'tomorrow' : 'today'}
+                    </div>
+                  </>
+                )
+              ) : (
+                <div style={{ fontSize: '13px', color: '#9CA3AF' }}>Checking weather...</div>
+              )}
             </div>
           </div>
         </div>
