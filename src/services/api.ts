@@ -631,6 +631,11 @@ export interface MorningBriefing {
   today_events: Event[];
   incomplete_todos: Todo[];
   message: string;
+  precipitation?: {
+    willRain: boolean;
+    willSnow: boolean;
+    time?: string;
+  };
 }
 
 export interface EveningBriefing {
@@ -640,6 +645,11 @@ export interface EveningBriefing {
   tomorrow_first_event?: Event;
   tomorrow_weather?: WeatherInfo;
   message: string;
+  precipitation?: {
+    willRain: boolean;
+    willSnow: boolean;
+    time?: string;
+  };
 }
 
 export interface WeeklyBriefing {

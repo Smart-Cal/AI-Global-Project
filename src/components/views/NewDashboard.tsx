@@ -35,6 +35,11 @@ interface BriefingData {
   completionRate?: number;
   tomorrowFirstEvent?: api.Event;
   tomorrowWeather?: api.WeatherInfo;
+  precipitation?: {
+    willRain: boolean;
+    willSnow: boolean;
+    time?: string;
+  };
 }
 
 // Time formatting helper
@@ -217,6 +222,7 @@ export const NewDashboard: React.FC<NewDashboardProps> = ({ onNavigate }) => {
             weather: data.weather,
             todayEvents: data.today_events,
             incompleteTodos: data.incomplete_todos,
+            precipitation: data.precipitation,
           });
         } else if (briefingType === 'afternoon') {
           // Afternoon: Use morning briefing data but with different message
@@ -227,6 +233,7 @@ export const NewDashboard: React.FC<NewDashboardProps> = ({ onNavigate }) => {
             weather: data.weather,
             todayEvents: data.today_events,
             incompleteTodos: data.incomplete_todos,
+            precipitation: data.precipitation,
           });
         } else {
           // Evening: Today's summary + tomorrow preview + tomorrow weather
@@ -239,6 +246,7 @@ export const NewDashboard: React.FC<NewDashboardProps> = ({ onNavigate }) => {
             completionRate: data.completion_rate,
             tomorrowFirstEvent: data.tomorrow_first_event,
             tomorrowWeather: data.tomorrow_weather,
+            precipitation: data.precipitation,
           });
         }
       } catch (error) {
@@ -422,46 +430,54 @@ export const NewDashboard: React.FC<NewDashboardProps> = ({ onNavigate }) => {
                 )}
               </div>
 
-              {/* Block 2: Schedule Summary */}
+              {/* Block 2: Precipitation Check */}
               <div style={{
                 background: 'rgba(255,255,255,0.6)',
                 backdropFilter: 'blur(4px)',
                 borderRadius: '12px',
                 padding: '16px',
                 display: 'flex',
-                flexDirection: 'column',
+                alignItems: 'center',
                 justifyContent: 'center',
-                gap: '8px'
+                flexDirection: 'column',
+                gap: '8px',
+                border: briefing.precipitation?.willRain || briefing.precipitation?.willSnow ? '2px solid #60A5FA' : 'none'
               }}>
-                {(briefing.type === 'morning' || briefing.type === 'afternoon') ? (
-                  <>
-                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                      <span style={{ fontSize: '13px', color: '#4B5563' }}>Events</span>
-                      <span style={{ fontSize: '15px', fontWeight: 600, color: '#1F2937' }}>
-                        {briefing.todayEvents?.length || 0}
-                      </span>
-                    </div>
-                    <div style={{ width: '100%', height: '1px', background: 'rgba(0,0,0,0.05)' }} />
-                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                      <span style={{ fontSize: '13px', color: '#4B5563' }}>Tasks</span>
-                      <span style={{ fontSize: '15px', fontWeight: 600, color: '#1F2937' }}>
-                        {briefing.incompleteTodos?.length || 0}
-                      </span>
-                    </div>
-                  </>
+                <div style={{ fontSize: '13px', color: '#4B5563', fontWeight: 500 }}>
+                  {briefing.type === 'evening' ? 'Precipitation Tomorrow' : 'Rain/Snow Check'}
+                </div>
+
+                {briefing.precipitation ? (
+                  briefing.precipitation.willRain || briefing.precipitation.willSnow ? (
+                    <>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                        <CloudIcon size={24} style={{ color: '#3B82F6' }} />
+                        <span style={{ fontSize: '16px', fontWeight: 700, color: '#1F2937' }}>
+                          {briefing.precipitation.willSnow ? 'Snow Expected' : 'Rain Expected'}
+                        </span>
+                      </div>
+                      {briefing.precipitation.time && (
+                        <div style={{ fontSize: '13px', color: '#EF4444', fontWeight: 600 }}>
+                          Around {briefing.precipitation.time}
+                        </div>
+                      )}
+                      <div style={{ fontSize: '12px', color: '#6B7280' }}>
+                        Don't forget your umbrella!
+                      </div>
+                    </>
+                  ) : (
+                    <>
+                      <SunIcon size={24} style={{ color: '#F59E0B' }} />
+                      <div style={{ fontSize: '16px', fontWeight: 600, color: '#1F2937' }}>
+                        No Rain Expected
+                      </div>
+                      <div style={{ fontSize: '12px', color: '#6B7280' }}>
+                        {briefing.type === 'evening' ? 'Tomorrow looks clear.' : 'Enjoy your day!'}
+                      </div>
+                    </>
+                  )
                 ) : (
-                  <>
-                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                      <span style={{ fontSize: '13px', color: '#4B5563' }}>Completion</span>
-                      <span style={{ fontSize: '15px', fontWeight: 700, color: '#059669' }}>
-                        {briefing.completionRate}%
-                      </span>
-                    </div>
-                    <div style={{ width: '100%', height: '1px', background: 'rgba(0,0,0,0.05)' }} />
-                    <div style={{ fontSize: '12px', color: '#4B5563' }}>
-                      Next: {briefing.tomorrowFirstEvent ? formatTime(briefing.tomorrowFirstEvent.start_time) : 'No plans'}
-                    </div>
-                  </>
+                  <div style={{ fontSize: '13px', color: '#9CA3AF' }}>Checking forecast...</div>
                 )}
               </div>
 

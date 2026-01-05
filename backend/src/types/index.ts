@@ -353,6 +353,11 @@ export interface MorningBriefing {
   today_events: Event[];
   incomplete_todos: Todo[];
   message: string;                // AI 생성 브리핑 메시지
+  precipitation?: {               // 강수 예보
+    willRain: boolean;
+    willSnow: boolean;
+    time?: string;
+  };
 }
 
 export interface EveningBriefing {
@@ -368,6 +373,11 @@ export interface EveningBriefing {
     city: string;                 // 도시명
   };
   message: string;                // AI 생성 브리핑 메시지
+  precipitation?: {               // 내일 강수 예보
+    willRain: boolean;
+    willSnow: boolean;
+    time?: string;
+  };
 }
 
 // ==============================================

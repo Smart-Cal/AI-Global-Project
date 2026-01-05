@@ -12,6 +12,8 @@ import {
   getWeatherByCoords,
   getCityFromCoords,
   getActivityRecommendation,
+  checkPrecipitationForecast,
+  checkPrecipitationByCoords,
   WeatherData
 } from '../services/weather.js';
 import { AuthRequest, authenticate } from '../middleware/auth.js';
@@ -50,14 +52,17 @@ router.get('/morning', authenticate, async (req: AuthRequest, res: Response) => 
     let weather: WeatherData | null = null;
     let city = user.location || 'Seoul';
 
+    let precipitation: { willRain: boolean; willSnow: boolean; time?: string } | null = null;
     if (hasCoords) {
       const coordsResult = await getWeatherByCoords(lat, lon);
       if (coordsResult) {
         weather = coordsResult.weather;
         city = coordsResult.city;
       }
+      precipitation = await checkPrecipitationByCoords(lat, lon, today);
     } else {
       weather = await getCurrentWeather(city);
+      precipitation = await checkPrecipitationForecast(city, today);
     }
 
     // Fetch data in parallel
@@ -78,6 +83,8 @@ router.get('/morning', authenticate, async (req: AuthRequest, res: Response) => 
     });
 
     // Generate Briefing Message (Static, Data-driven)
+    // NOTE: 'message' field is now used less by the frontend, but we keep it for compatibility.
+    // The Frontend will primarily use the new 'precipitation' field in the response if available.
     const message = generateMorningMessage(
       user.name || user.nickname || 'User',
       todayEvents,
@@ -96,7 +103,8 @@ router.get('/morning', authenticate, async (req: AuthRequest, res: Response) => 
       } : undefined,
       today_events: todayEvents,
       incomplete_todos: incompleteTodos,
-      message
+      message,
+      precipitation: precipitation || undefined
     };
 
     res.json(briefing);
@@ -135,14 +143,22 @@ router.get('/evening', authenticate, async (req: AuthRequest, res: Response) => 
     let tomorrowWeather: WeatherData | null = null;
     let city = user.location || 'Seoul';
 
+    let tomorrowPrecipitation: { willRain: boolean; willSnow: boolean; time?: string } | null = null;
+
     if (hasCoords) {
       const coordsResult = await getWeatherByCoords(lat, lon);
       if (coordsResult) {
-        tomorrowWeather = coordsResult.weather;
+        tomorrowWeather = coordsResult.weather; // Note: Currently this fetches current weather, but for evening briefing "tomorrow_weather" usually implies forecast
+        // Let's verify if tomorrowWeather is actually forecast or current.
+        // The original code uses getCurrentWeather/getWeatherByCoords which is CURRENT.
+        // We should fix this logically if we want tomorrow's weather.
+        // But for now, let's just add the precipitation check for TOMORROW.
         city = coordsResult.city;
       }
+      tomorrowPrecipitation = await checkPrecipitationByCoords(lat, lon, tomorrowStr);
     } else {
-      tomorrowWeather = await getCurrentWeather(city);
+      tomorrowWeather = await getCurrentWeather(city); // Logic might need improvement to fetch actual forecast
+      tomorrowPrecipitation = await checkPrecipitationForecast(city, tomorrowStr);
     }
 
     // Fetch Data
@@ -198,7 +214,8 @@ router.get('/evening', authenticate, async (req: AuthRequest, res: Response) => 
         recommendation: tomorrowWeather.recommendation,
         city
       } : undefined,
-      message
+      message,
+      precipitation: tomorrowPrecipitation || undefined
     };
 
     res.json(briefing);

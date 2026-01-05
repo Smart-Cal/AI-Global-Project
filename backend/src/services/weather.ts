@@ -268,6 +268,109 @@ export async function getWeatherForecast(city: string, days: number = 5): Promis
   }
 }
 
+}
+
+/**
+ * Check specifically for rain or snow in the forecast for the rest of the day (or tomorrow)
+ * @param city City name
+ * @param date Target date (YYYY-MM-DD)
+ */
+export async function checkPrecipitationForecast(city: string, date: string): Promise<{ willRain: boolean; willSnow: boolean; time?: string } | null> {
+  const apiKey = process.env.OPENWEATHER_API_KEY;
+
+  if (!apiKey) {
+    // Mock random chance
+    const willRain = Math.random() > 0.7;
+    return { willRain, willSnow: false, time: willRain ? '15:00' : undefined };
+  }
+
+  try {
+    const url = `https://api.openweathermap.org/data/2.5/forecast?q=${encodeURIComponent(city)}&appid=${apiKey}&units=metric`;
+    const response = await fetch(url);
+
+    if (!response.ok) return null;
+
+    const data = await response.json() as {
+      list: Array<{
+        dt_txt: string;
+        weather: Array<{ main: string; description: string; id: number }>;
+      }>;
+    };
+
+    // Filter for the specific date
+    // Note: dt_txt is "YYYY-MM-DD HH:mm:ss" UTC usually, but simple comparison works for broad check
+    const targetForecasts = data.list.filter(item => item.dt_txt.startsWith(date));
+
+    // Check for precipitation codes
+    // Rain: 5xx, Snow: 6xx, Drizzle: 3xx, Thunderstorm: 2xx
+    for (const item of targetForecasts) {
+      const weatherId = item.weather[0].id;
+      const hours = item.dt_txt.split(' ')[1].substring(0, 5); // HH:mm
+
+      if (weatherId >= 600 && weatherId < 700) {
+        return { willRain: false, willSnow: true, time: hours };
+      }
+      if ((weatherId >= 200 && weatherId < 600) || (weatherId === 804)) { // 804 is overcast, but let's stick to rain codes for strictness -> 5xx, 3xx, 2xx
+        if (weatherId >= 200 && weatherId < 600) {
+          return { willRain: true, willSnow: false, time: hours };
+        }
+      }
+    }
+
+    return { willRain: false, willSnow: false };
+
+  } catch (error) {
+    console.error('Precipitation check error:', error);
+    return null;
+  }
+}
+
+/**
+ * Check precipitation by coordinates
+ */
+export async function checkPrecipitationByCoords(lat: number, lon: number, date: string): Promise<{ willRain: boolean; willSnow: boolean; time?: string } | null> {
+  const apiKey = process.env.OPENWEATHER_API_KEY;
+
+  if (!apiKey) {
+    const willRain = Math.random() > 0.7;
+    return { willRain, willSnow: false, time: willRain ? '15:00' : undefined };
+  }
+
+  try {
+    const url = `https://api.openweathermap.org/data/2.5/forecast?lat=${lat}&lon=${lon}&appid=${apiKey}&units=metric`;
+    const response = await fetch(url);
+
+    if (!response.ok) return null;
+
+    const data = await response.json() as {
+      list: Array<{
+        dt_txt: string;
+        weather: Array<{ main: string; description: string; id: number }>;
+      }>;
+    };
+
+    const targetForecasts = data.list.filter(item => item.dt_txt.startsWith(date));
+
+    for (const item of targetForecasts) {
+      const weatherId = item.weather[0].id;
+      const hours = item.dt_txt.split(' ')[1].substring(0, 5);
+
+      if (weatherId >= 600 && weatherId < 700) {
+        return { willRain: false, willSnow: true, time: hours };
+      }
+      if (weatherId >= 200 && weatherId < 600) {
+        return { willRain: true, willSnow: false, time: hours };
+      }
+    }
+
+    return { willRain: false, willSnow: false };
+
+  } catch (error) {
+    console.error('Precipitation check error:', error);
+    return null;
+  }
+}
+
 /**
  * 특정 날짜의 날씨 조회
  */
