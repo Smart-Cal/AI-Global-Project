@@ -84,7 +84,9 @@ export async function getCurrentWeather(city: string): Promise<WeatherData | nul
     const response = await fetch(url);
 
     if (!response.ok) {
-      console.error(`Weather API error: ${response.status}`);
+      console.error(`[Weather API Error] Status: ${response.status}, City: ${city}`);
+      const errorBody = await response.text();
+      console.error(`[Weather API Error] Response: ${errorBody}`);
       return getMockWeather(city);
     }
 
@@ -96,7 +98,7 @@ export async function getCurrentWeather(city: string): Promise<WeatherData | nul
     const conditionCode = data.weather[0].icon;
     const condition = WEATHER_CONDITIONS[conditionCode] || data.weather[0].main;
 
-    return {
+    const weatherData = {
       temperature: Math.round(data.main.temp),
       feels_like: Math.round(data.main.feels_like),
       condition,
@@ -107,6 +109,9 @@ export async function getCurrentWeather(city: string): Promise<WeatherData | nul
       description: data.weather[0].description,
       recommendation: getClothingRecommendation(data.main.temp, condition)
     };
+
+    console.log(`[Weather API Success] ${city}: ${weatherData.temperature}°C, ${weatherData.condition}`);
+    return weatherData;
   } catch (error) {
     console.error('Weather API fetch error:', error);
     return getMockWeather(city);
