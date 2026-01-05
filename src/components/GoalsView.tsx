@@ -9,7 +9,7 @@ interface GoalsViewProps {
   onAddGoal: () => void;
 }
 
-// Goal이 활성 상태인지 확인 (completed, failed가 아닌 경우)
+// Check if Goal is active (not completed or failed)
 function isGoalActive(goal: Goal): boolean {
   return !['completed', 'failed'].includes(goal.status);
 }
@@ -34,7 +34,7 @@ export const GoalsView: React.FC<GoalsViewProps> = ({ onAddGoal }) => {
   };
 
   const handleDeleteGoal = (goalId: string) => {
-    if (confirm('이 목표를 삭제하시겠습니까?')) {
+    if (confirm('Are you sure you want to delete this goal?')) {
       deleteGoal(goalId);
       setSelectedGoal(null);
     }
@@ -43,20 +43,20 @@ export const GoalsView: React.FC<GoalsViewProps> = ({ onAddGoal }) => {
   return (
     <div className="goals-container">
       <div className="goals-header">
-        <h1 className="goals-title">내 목표</h1>
+        <h1 className="goals-title">My Goals</h1>
         <button className="btn btn-primary" onClick={onAddGoal}>
-          + 새 목표
+          + New Goal
         </button>
       </div>
 
       {activeGoals.length === 0 ? (
         <div className="empty-state">
-          <div className="empty-state-title">아직 목표가 없어요</div>
+          <div className="empty-state-title">No goals yet</div>
           <div className="empty-state-text">
-            목표를 설정하면 AI가 맞춤형 일정과 실천 방법을 추천해 드려요
+            Set a goal and AI will recommend personalized schedules and action plans
           </div>
           <button className="btn btn-primary" onClick={onAddGoal}>
-            첫 목표 설정하기
+            Set your first goal
           </button>
         </div>
       ) : (
@@ -64,7 +64,7 @@ export const GoalsView: React.FC<GoalsViewProps> = ({ onAddGoal }) => {
           <div className="todo-section">
             <div className="todo-section-header">
               <div className="todo-section-title">
-                <span>진행 중</span>
+                <span>In Progress</span>
                 <span className="todo-count">{activeGoals.length}</span>
               </div>
             </div>
@@ -72,7 +72,7 @@ export const GoalsView: React.FC<GoalsViewProps> = ({ onAddGoal }) => {
             {activeGoals.map((goal) => {
               const category = goal.category_id ? getCategoryById(goal.category_id) : null;
               const categoryColor = category?.color || DEFAULT_CATEGORY_COLOR;
-              const categoryName = category?.name || '기본';
+              const categoryName = category?.name || 'Default';
               const goalTodos = getGoalTodos(goal.id!);
               const completedTodos = goalTodos.filter((t) => t.is_completed).length;
 
@@ -99,9 +99,9 @@ export const GoalsView: React.FC<GoalsViewProps> = ({ onAddGoal }) => {
                       <div className="goal-card-title">{goal.title}</div>
                     </div>
                     <div className={`goal-card-priority ${goal.priority}`}>
-                      {goal.priority === 'high' && '높음'}
-                      {goal.priority === 'medium' && '보통'}
-                      {goal.priority === 'low' && '낮음'}
+                      {goal.priority === 'high' && 'High'}
+                      {goal.priority === 'medium' && 'Medium'}
+                      {goal.priority === 'low' && 'Low'}
                     </div>
                   </div>
 
@@ -122,12 +122,12 @@ export const GoalsView: React.FC<GoalsViewProps> = ({ onAddGoal }) => {
                   </div>
 
                   <div className="goal-progress-text">
-                    <span>{calculateGoalProgress(goal)}% 완료</span>
+                    <span>{calculateGoalProgress(goal)}% Completed</span>
                     <div style={{ display: 'flex', gap: '16px' }}>
                       {goalTodos.length > 0 && (
-                        <span>할 일: {completedTodos}/{goalTodos.length}</span>
+                        <span>Todos: {completedTodos}/{goalTodos.length}</span>
                       )}
-                      {goal.target_date && <span>목표일: {goal.target_date}</span>}
+                      {goal.target_date && <span>Target Date: {goal.target_date}</span>}
                     </div>
                   </div>
                 </div>
@@ -139,7 +139,7 @@ export const GoalsView: React.FC<GoalsViewProps> = ({ onAddGoal }) => {
             <div className="todo-section">
               <div className="todo-section-header">
                 <div className="todo-section-title">
-                  <span>완료됨</span>
+                  <span>Completed</span>
                   <span className="todo-count">{completedGoals.length}</span>
                 </div>
               </div>
@@ -147,7 +147,7 @@ export const GoalsView: React.FC<GoalsViewProps> = ({ onAddGoal }) => {
               {completedGoals.map((goal) => {
                 const category = goal.category_id ? getCategoryById(goal.category_id) : null;
                 const categoryColor = category?.color || DEFAULT_CATEGORY_COLOR;
-                const categoryName = category?.name || '기본';
+                const categoryName = category?.name || 'Default';
                 return (
                   <div
                     key={goal.id}
@@ -205,7 +205,7 @@ export const GoalsView: React.FC<GoalsViewProps> = ({ onAddGoal }) => {
                           marginRight: '8px',
                         }}
                       >
-                        {cat?.name || '기본'}
+                        {cat?.name || 'Default'}
                       </span>
                       {selectedGoal.title}
                     </>
@@ -224,7 +224,7 @@ export const GoalsView: React.FC<GoalsViewProps> = ({ onAddGoal }) => {
               )}
 
               <div className="form-group">
-                <label className="form-label">진행률</label>
+                <label className="form-label">Progress</label>
                 <div className="goal-progress-bar" style={{ marginTop: '8px' }}>
                   <div
                     className="goal-progress-fill"
@@ -240,16 +240,16 @@ export const GoalsView: React.FC<GoalsViewProps> = ({ onAddGoal }) => {
                     className="btn btn-sm btn-secondary"
                     onClick={() => handleProgressRecalculate(selectedGoal.id!)}
                   >
-                    진행률 재계산
+                    Recalculate Progress
                   </button>
                 </div>
               </div>
 
               <div style={{ marginTop: '20px' }}>
-                <div className="form-label">관련 할 일</div>
+                <div className="form-label">Related Todos</div>
                 {getGoalTodos(selectedGoal.id!).length === 0 ? (
                   <div className="empty-state" style={{ padding: '20px' }}>
-                    <div className="empty-state-text">이 목표와 연결된 할 일이 없어요</div>
+                    <div className="empty-state-text">No todos linked to this goal</div>
                   </div>
                 ) : (
                   <div className="todo-list">
@@ -260,7 +260,7 @@ export const GoalsView: React.FC<GoalsViewProps> = ({ onAddGoal }) => {
                           <div className="todo-title">{todo.title}</div>
                           {todo.deadline && (
                             <div className="todo-meta">
-                              <span>기한: {todo.deadline.split('T')[0]}</span>
+                              <span>Due: {todo.deadline.split('T')[0]}</span>
                             </div>
                           )}
                         </div>
@@ -275,13 +275,13 @@ export const GoalsView: React.FC<GoalsViewProps> = ({ onAddGoal }) => {
                 className="btn btn-danger"
                 onClick={() => handleDeleteGoal(selectedGoal.id!)}
               >
-                삭제
+                Delete
               </button>
               <button
                 className="btn btn-secondary"
                 onClick={() => setSelectedGoal(null)}
               >
-                닫기
+                Close
               </button>
             </div>
           </div>

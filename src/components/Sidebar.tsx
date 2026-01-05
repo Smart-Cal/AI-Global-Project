@@ -7,12 +7,12 @@ import { useSettingsStore } from '../store/settingsStore';
 import type { SidebarView, Goal } from '../types';
 import { getIcon, PlusIcon, CalendarIcon, ClockIcon } from './Icons';
 
-// Goal이 활성 상태인지 확인
+// Check if goal is active
 function isGoalActive(goal: Goal): boolean {
   return !['completed', 'failed'].includes(goal.status);
 }
 
-// deadline에서 날짜 추출
+// Extract date from deadline
 function getDeadlineDate(deadline?: string): string | undefined {
   if (!deadline) return undefined;
   return deadline.split('T')[0];
@@ -50,18 +50,18 @@ export const Sidebar: React.FC<SidebarProps> = ({
   });
 
   const handleLogout = () => {
-    if (confirm('로그아웃 하시겠습니까?')) {
+    if (confirm('Are you sure you want to log out?')) {
       logout();
     }
   };
 
   const navItems = [
-    { id: 'dashboard' as SidebarView, icon: 'home', label: '대시보드' },
-    { id: 'assistant' as SidebarView, icon: 'sparkle', label: 'AI 비서' },
-    { id: 'calendar' as SidebarView, icon: 'calendar', label: '캘린더' },
-    { id: 'goals' as SidebarView, icon: 'target', label: '목표', badge: activeGoals.length || undefined },
-    { id: 'todos' as SidebarView, icon: 'check', label: '할 일', badge: pendingTodos.length || undefined },
-    { id: 'groups' as SidebarView, icon: 'users', label: '그룹' },
+    { id: 'dashboard' as SidebarView, icon: 'home', label: 'Dashboard' },
+    { id: 'assistant' as SidebarView, icon: 'sparkle', label: 'AI Assistant' },
+    { id: 'calendar' as SidebarView, icon: 'calendar', label: 'Calendar' },
+    { id: 'goals' as SidebarView, icon: 'target', label: 'Goals', badge: activeGoals.length || undefined },
+    { id: 'todos' as SidebarView, icon: 'check', label: 'Todos', badge: pendingTodos.length || undefined },
+    { id: 'groups' as SidebarView, icon: 'users', label: 'Groups' },
   ];
 
   return (
@@ -80,7 +80,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
 
         <nav className="sidebar-nav">
           <div className="nav-section">
-            <div className="nav-section-title">메뉴</div>
+            <div className="nav-section-title">Menu</div>
             {navItems.map((item) => (
               <div
                 key={item.id}
@@ -100,14 +100,14 @@ export const Sidebar: React.FC<SidebarProps> = ({
           {overdueTodos.length > 0 && (
             <div className="nav-section">
               <div className="nav-section-title" style={{ color: '#E03E3E' }}>
-                지연된 할 일 ({overdueTodos.length})
+                Overdue Todos ({overdueTodos.length})
               </div>
             </div>
           )}
         </nav>
 
         <div className="sidebar-goals">
-          <div className="nav-section-title">내 목표</div>
+          <div className="nav-section-title">My Goals</div>
           {activeGoals.slice(0, 5).map((goal) => {
             const category = goal.category_id ? getCategoryById(goal.category_id) : null;
             return (
@@ -135,11 +135,11 @@ export const Sidebar: React.FC<SidebarProps> = ({
           })}
           <button className="add-goal-btn" onClick={onAddGoal}>
             <PlusIcon size={14} />
-            <span>새 목표 추가</span>
+            <span>Add New Goal</span>
           </button>
         </div>
 
-        {/* Chronotype 설정 버튼 */}
+        {/* Chronotype settings button */}
         {onOpenChronotype && (
           <div className="sidebar-settings">
             <button className="chronotype-btn" onClick={onOpenChronotype}>

@@ -35,7 +35,7 @@ export const EventModal: React.FC<EventModalProps> = ({
   const [location, setLocation] = useState('');
   const [isLoading, setIsLoading] = useState(false);
 
-  // 새 카테고리 추가용 상태
+  // New category addition state
   const [showNewCategory, setShowNewCategory] = useState(false);
   const [newCategoryName, setNewCategoryName] = useState('');
   const [newCategoryColor, setNewCategoryColor] = useState(CATEGORY_COLORS[0]);
@@ -59,7 +59,7 @@ export const EventModal: React.FC<EventModalProps> = ({
       setStartTime('');
       setEndTime('');
       setIsAllDay(false);
-      // 기본 카테고리 선택
+      // Select default category
       const defaultCat = getDefaultCategory();
       setCategoryId(defaultCat?.id || '');
       setLocation('');
@@ -93,15 +93,15 @@ export const EventModal: React.FC<EventModalProps> = ({
 
       if (isEditing && event?.id) {
         await editEvent(event.id, eventData);
-        showToast('일정이 수정되었습니다', 'success');
+        showToast('Event updated', 'success');
       } else {
         await addEvent(eventData);
-        showToast('일정이 추가되었습니다', 'success');
+        showToast('Event added', 'success');
       }
       onClose();
     } catch (error) {
       console.error('Failed to save event:', error);
-      showToast('일정 저장에 실패했습니다', 'error');
+      showToast('Failed to save event', 'error');
     } finally {
       setIsLoading(false);
     }
@@ -109,9 +109,9 @@ export const EventModal: React.FC<EventModalProps> = ({
 
   const handleDelete = async () => {
     if (!event?.id) return;
-    if (confirm('이 일정을 삭제하시겠습니까?')) {
+    if (confirm('Are you sure you want to delete this event?')) {
       await removeEvent(event.id);
-      showToast('일정이 삭제되었습니다', 'success');
+      showToast('Event deleted', 'success');
       onClose();
     }
   };
@@ -126,7 +126,7 @@ export const EventModal: React.FC<EventModalProps> = ({
       setNewCategoryColor(CATEGORY_COLORS[0]);
     } catch (error) {
       console.error('Failed to add category:', error);
-      alert('카테고리 추가에 실패했습니다.');
+      alert('Failed to add category');
     }
   };
 
@@ -136,17 +136,17 @@ export const EventModal: React.FC<EventModalProps> = ({
     <div className="modal-overlay" onClick={onClose}>
       <div className="modal large" onClick={(e) => e.stopPropagation()}>
         <div className="modal-header">
-          <div className="modal-title">{isEditing ? '일정 수정' : '새 일정'}</div>
+          <div className="modal-title">{isEditing ? 'Edit Event' : 'New Event'}</div>
           <button className="modal-close" onClick={onClose}>×</button>
         </div>
 
         <div className="modal-body">
           <div className="form-group">
-            <label className="form-label">일정 제목 *</label>
+            <label className="form-label">Event Title *</label>
             <input
               type="text"
               className="form-input"
-              placeholder="일정 제목을 입력하세요"
+              placeholder="Enter event title"
               value={title}
               onChange={(e) => setTitle(e.target.value)}
             />
@@ -154,10 +154,10 @@ export const EventModal: React.FC<EventModalProps> = ({
 
           <div className="form-group">
             <DatePicker
-              label="날짜 *"
+              label="Date *"
               value={eventDate}
               onChange={setEventDate}
-              placeholder="날짜 선택"
+              placeholder="Select date"
             />
           </div>
 
@@ -175,7 +175,7 @@ export const EventModal: React.FC<EventModalProps> = ({
                 className={`todo-checkbox ${isAllDay ? 'checked' : ''}`}
                 onClick={() => setIsAllDay(!isAllDay)}
               />
-              <span>종일</span>
+              <span>All day</span>
             </label>
           </div>
 
@@ -183,25 +183,25 @@ export const EventModal: React.FC<EventModalProps> = ({
             <div className="form-row">
               <div className="form-group">
                 <TimePicker
-                  label="시작 시간"
+                  label="Start Time"
                   value={startTime}
                   onChange={setStartTime}
-                  placeholder="시작 시간 선택"
+                  placeholder="Select start time"
                 />
               </div>
               <div className="form-group">
                 <TimePicker
-                  label="종료 시간"
+                  label="End Time"
                   value={endTime}
                   onChange={setEndTime}
-                  placeholder="종료 시간 선택"
+                  placeholder="Select end time"
                 />
               </div>
             </div>
           )}
 
           <div className="form-group">
-            <label className="form-label">카테고리</label>
+            <label className="form-label">Category</label>
             <div className="category-select">
               {categories.map((cat) => (
                 <div
@@ -225,7 +225,7 @@ export const EventModal: React.FC<EventModalProps> = ({
                 onClick={() => setShowNewCategory(true)}
                 style={{ borderStyle: 'dashed' }}
               >
-                <span>+ 추가</span>
+                <span>+ Add</span>
               </div>
             </div>
 
@@ -235,7 +235,7 @@ export const EventModal: React.FC<EventModalProps> = ({
                   <input
                     type="text"
                     className="form-input"
-                    placeholder="새 카테고리 이름"
+                    placeholder="New category name"
                     value={newCategoryName}
                     onChange={(e) => setNewCategoryName(e.target.value)}
                   />
@@ -252,10 +252,10 @@ export const EventModal: React.FC<EventModalProps> = ({
                 </div>
                 <div style={{ display: 'flex', gap: '8px' }}>
                   <button className="btn btn-sm btn-primary" onClick={handleAddCategory}>
-                    추가
+                    Add
                   </button>
                   <button className="btn btn-sm btn-secondary" onClick={() => setShowNewCategory(false)}>
-                    취소
+                    Cancel
                   </button>
                 </div>
               </div>
@@ -263,21 +263,21 @@ export const EventModal: React.FC<EventModalProps> = ({
           </div>
 
           <div className="form-group">
-            <label className="form-label">장소</label>
+            <label className="form-label">Location</label>
             <input
               type="text"
               className="form-input"
-              placeholder="장소를 입력하세요"
+              placeholder="Enter location"
               value={location}
               onChange={(e) => setLocation(e.target.value)}
             />
           </div>
 
           <div className="form-group">
-            <label className="form-label">메모</label>
+            <label className="form-label">Notes</label>
             <textarea
               className="form-input"
-              placeholder="메모를 입력하세요"
+              placeholder="Enter notes"
               value={description}
               onChange={(e) => setDescription(e.target.value)}
             />
@@ -291,18 +291,18 @@ export const EventModal: React.FC<EventModalProps> = ({
               onClick={handleDelete}
               style={{ marginRight: 'auto' }}
             >
-              삭제
+              Delete
             </button>
           )}
           <button className="btn btn-secondary" onClick={onClose}>
-            취소
+            Cancel
           </button>
           <button
             className={`btn btn-primary ${isLoading ? 'loading' : ''}`}
             onClick={handleSubmit}
             disabled={!title.trim() || !eventDate || isLoading}
           >
-            {isEditing ? '수정' : '추가'}
+            {isEditing ? 'Save' : 'Add'}
           </button>
         </div>
       </div>

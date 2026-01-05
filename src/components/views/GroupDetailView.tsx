@@ -29,16 +29,16 @@ const GroupDetailView: React.FC<GroupDetailViewProps> = ({ groupId, onBack }) =>
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState<TabType>('members');
 
-  // 초대 코드 관련
+  // Invite code related
   const [isCopied, setIsCopied] = useState(false);
   const [isRegenerating, setIsRegenerating] = useState(false);
 
-  // 일정 매칭 관련
+  // Schedule matching related
   const [availableSlots, setAvailableSlots] = useState<AvailableSlot[]>([]);
   const [isLoadingSlots, setIsLoadingSlots] = useState(false);
   const [dateRange, setDateRange] = useState({ start: '', end: '' });
 
-  // 미팅 생성 관련
+  // Meeting creation related
   const [showMeetingModal, setShowMeetingModal] = useState(false);
   const [meetingForm, setMeetingForm] = useState({
     title: '',
@@ -50,7 +50,7 @@ const GroupDetailView: React.FC<GroupDetailViewProps> = ({ groupId, onBack }) =>
   const [isCreatingMeeting, setIsCreatingMeeting] = useState(false);
   const [recommendations, setRecommendations] = useState<any[]>([]);
 
-  // AI 채팅 관련
+  // AI chat related
   const [chatMessages, setChatMessages] = useState<{ role: 'user' | 'assistant'; content: string }[]>([]);
   const [chatInput, setChatInput] = useState('');
   const [isSendingChat, setIsSendingChat] = useState(false);
@@ -69,13 +69,13 @@ const GroupDetailView: React.FC<GroupDetailViewProps> = ({ groupId, onBack }) =>
       setMembers(groupRes.members);
       setIsOwner(groupRes.is_owner);
     } catch (err) {
-      setError(err instanceof Error ? err.message : '데이터를 불러오는데 실패했습니다.');
+      setError(err instanceof Error ? err.message : 'Failed to load data.');
     } finally {
       setIsLoading(false);
     }
   };
 
-  // 초대 코드 복사
+  // Copy invite code
   const handleCopyInviteCode = async () => {
     if (!group?.invite_code) return;
 
@@ -96,42 +96,42 @@ const GroupDetailView: React.FC<GroupDetailViewProps> = ({ groupId, onBack }) =>
     }
   };
 
-  // 초대 코드 재생성 (owner만)
+  // Regenerate invite code (owner only)
   const handleRegenerateCode = async () => {
-    if (!confirm('새 초대 코드를 생성하면 기존 코드는 사용할 수 없게 됩니다. 계속하시겠습니까?')) return;
+    if (!confirm('Generating a new invite code will invalidate the current one. Continue?')) return;
 
     setIsRegenerating(true);
     try {
       const { invite_code } = await regenerateInviteCode(groupId);
       setGroup(prev => prev ? { ...prev, invite_code } : null);
-      setSuccessMessage('새 초대 코드가 생성되었습니다.');
+      setSuccessMessage('New invite code generated.');
       setTimeout(() => setSuccessMessage(null), 3000);
     } catch (err) {
-      setError(err instanceof Error ? err.message : '초대 코드 재생성에 실패했습니다.');
+      setError(err instanceof Error ? err.message : 'Failed to regenerate invite code.');
     } finally {
       setIsRegenerating(false);
     }
   };
 
   const handleRemoveMember = async (memberId: string) => {
-    if (!confirm('정말 이 멤버를 내보내시겠습니까?')) return;
+    if (!confirm('Are you sure you want to remove this member?')) return;
 
     try {
       await removeGroupMember(groupId, memberId);
       setMembers(members.filter(m => m.user_id !== memberId));
     } catch (err) {
-      setError(err instanceof Error ? err.message : '멤버 제거에 실패했습니다.');
+      setError(err instanceof Error ? err.message : 'Failed to remove member.');
     }
   };
 
   const handleLeaveGroup = async () => {
-    if (!confirm('정말 이 그룹을 나가시겠습니까?')) return;
+    if (!confirm('Are you sure you want to leave this group?')) return;
 
     try {
       await leaveGroup(groupId);
       onBack();
     } catch (err) {
-      setError(err instanceof Error ? err.message : '그룹 나가기에 실패했습니다.');
+      setError(err instanceof Error ? err.message : 'Failed to leave group.');
     }
   };
 
@@ -142,7 +142,7 @@ const GroupDetailView: React.FC<GroupDetailViewProps> = ({ groupId, onBack }) =>
       setAvailableSlots(result.slots);
       setDateRange(result.date_range);
     } catch (err) {
-      setError(err instanceof Error ? err.message : '가용 시간 조회에 실패했습니다.');
+      setError(err instanceof Error ? err.message : 'Failed to load available times.');
     } finally {
       setIsLoadingSlots(false);
     }
@@ -175,15 +175,15 @@ const GroupDetailView: React.FC<GroupDetailViewProps> = ({ groupId, onBack }) =>
       await createGroupMeeting(groupId, meetingForm);
       setShowMeetingModal(false);
       setMeetingForm({ title: '', date: '', start_time: '', end_time: '', location: '' });
-      alert('모든 멤버의 캘린더에 일정이 추가되었습니다!');
+      alert('Event added to all members\' calendars!');
     } catch (err) {
-      setError(err instanceof Error ? err.message : '미팅 생성에 실패했습니다.');
+      setError(err instanceof Error ? err.message : 'Failed to create meeting.');
     } finally {
       setIsCreatingMeeting(false);
     }
   };
 
-  // AI 채팅
+  // AI chat
   const scrollToBottom = () => {
     chatEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   };
@@ -204,7 +204,7 @@ const GroupDetailView: React.FC<GroupDetailViewProps> = ({ groupId, onBack }) =>
       const response = await sendGroupChatMessage(groupId, userMessage);
       setChatMessages(prev => [...prev, { role: 'assistant', content: response.message }]);
     } catch (err) {
-      setChatMessages(prev => [...prev, { role: 'assistant', content: '죄송합니다. 오류가 발생했습니다.' }]);
+      setChatMessages(prev => [...prev, { role: 'assistant', content: 'Sorry, an error occurred.' }]);
     } finally {
       setIsSendingChat(false);
     }
@@ -219,7 +219,7 @@ const GroupDetailView: React.FC<GroupDetailViewProps> = ({ groupId, onBack }) =>
 
   const formatDate = (dateStr: string) => {
     const date = new Date(dateStr);
-    const days = ['일', '월', '화', '수', '목', '금', '토'];
+    const days = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
     return `${date.getMonth() + 1}/${date.getDate()} (${days[date.getDay()]})`;
   };
 
@@ -228,7 +228,7 @@ const GroupDetailView: React.FC<GroupDetailViewProps> = ({ groupId, onBack }) =>
       <div className="group-detail-view">
         <div className="loading-container">
           <div className="spinner"></div>
-          <p>로딩 중...</p>
+          <p>Loading...</p>
         </div>
       </div>
     );
@@ -238,8 +238,8 @@ const GroupDetailView: React.FC<GroupDetailViewProps> = ({ groupId, onBack }) =>
     return (
       <div className="group-detail-view">
         <div className="error-container">
-          <p>그룹을 찾을 수 없습니다.</p>
-          <button className="btn btn-primary" onClick={onBack}>돌아가기</button>
+          <p>Group not found.</p>
+          <button className="btn btn-primary" onClick={onBack}>Go Back</button>
         </div>
       </div>
     );
@@ -258,7 +258,7 @@ const GroupDetailView: React.FC<GroupDetailViewProps> = ({ groupId, onBack }) =>
         <div className="header-actions">
           {!isOwner && (
             <button className="btn btn-danger-ghost btn-sm" onClick={handleLeaveGroup}>
-              나가기
+              Leave
             </button>
           )}
         </div>
@@ -277,30 +277,30 @@ const GroupDetailView: React.FC<GroupDetailViewProps> = ({ groupId, onBack }) =>
           className={`tab ${activeTab === 'members' ? 'active' : ''}`}
           onClick={() => setActiveTab('members')}
         >
-          멤버 ({members.length})
+          Members ({members.length})
         </button>
         <button
           className={`tab ${activeTab === 'schedule' ? 'active' : ''}`}
           onClick={() => setActiveTab('schedule')}
         >
-          일정 조율
+          Schedule
         </button>
       </div>
 
       {/* Members Tab */}
       {activeTab === 'members' && (
         <div className="tab-content">
-          {/* 초대 코드 섹션 */}
+          {/* Invite Code Section */}
           <div className="invite-code-section">
             <div className="invite-code-header">
-              <h3>초대 코드</h3>
+              <h3>Invite Code</h3>
               {isOwner && (
                 <button
                   className="btn btn-secondary btn-sm"
                   onClick={handleRegenerateCode}
                   disabled={isRegenerating}
                 >
-                  {isRegenerating ? '생성 중...' : '새 코드 생성'}
+                  {isRegenerating ? 'Generating...' : 'New Code'}
                 </button>
               )}
             </div>
@@ -310,14 +310,14 @@ const GroupDetailView: React.FC<GroupDetailViewProps> = ({ groupId, onBack }) =>
                 className="btn btn-primary btn-sm"
                 onClick={handleCopyInviteCode}
               >
-                {isCopied ? '복사됨!' : '복사'}
+                {isCopied ? 'Copied!' : 'Copy'}
               </button>
             </div>
-            <p className="invite-code-hint">이 코드를 공유하여 친구를 그룹에 초대하세요</p>
+            <p className="invite-code-hint">Share this code to invite friends to your group</p>
           </div>
 
           <div className="section-header">
-            <h3>멤버 ({members.length}명)</h3>
+            <h3>Members ({members.length})</h3>
           </div>
 
           <div className="member-list">
@@ -329,7 +329,7 @@ const GroupDetailView: React.FC<GroupDetailViewProps> = ({ groupId, onBack }) =>
                 <div className="member-info">
                   <span className="member-name">
                     {member.user_name || member.user_email}
-                    {member.role === 'owner' && <span className="badge badge-owner">관리자</span>}
+                    {member.role === 'owner' && <span className="badge badge-owner">Owner</span>}
                   </span>
                   <span className="member-email">{member.user_email}</span>
                 </div>
@@ -337,7 +337,7 @@ const GroupDetailView: React.FC<GroupDetailViewProps> = ({ groupId, onBack }) =>
                   <button
                     className="btn btn-icon btn-danger-ghost"
                     onClick={() => handleRemoveMember(member.user_id)}
-                    title="멤버 내보내기"
+                    title="Remove member"
                   >
                     <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
                       <path d="M6 19C6 20.1 6.9 21 8 21H16C17.1 21 18 20.1 18 19V7H6V19ZM19 4H15.5L14.5 3H9.5L8.5 4H5V6H19V4Z" fill="currentColor"/>
@@ -353,21 +353,21 @@ const GroupDetailView: React.FC<GroupDetailViewProps> = ({ groupId, onBack }) =>
       {/* Schedule Tab */}
       {activeTab === 'schedule' && (
         <div className="tab-content">
-          {/* AI 비서 채팅 */}
+          {/* AI Assistant Chat */}
           <div className="ai-chat-section">
             <div className="ai-chat-header">
               <div className="ai-avatar">🤖</div>
               <div className="ai-info">
-                <span className="ai-name">일정 조율 AI</span>
-                <span className="ai-desc">모임 시간을 물어보세요</span>
+                <span className="ai-name">Schedule AI</span>
+                <span className="ai-desc">Ask about meeting times</span>
               </div>
             </div>
             <div className="chat-messages">
               {chatMessages.length === 0 && (
                 <div className="chat-welcome">
-                  <p>안녕하세요! 그룹 일정 조율을 도와드릴게요.</p>
+                  <p>Hi! I can help you find the best meeting times.</p>
                   <p className="chat-examples">
-                    예시: "이번 주 모임 가능한 시간 알려줘", "금요일 저녁 괜찮아?", "2시간 정도 모임할 시간 찾아줘"
+                    Try: "When can we meet this week?", "Is Friday evening available?", "Find a 2-hour slot"
                   </p>
                 </div>
               )}
@@ -389,7 +389,7 @@ const GroupDetailView: React.FC<GroupDetailViewProps> = ({ groupId, onBack }) =>
               <input
                 type="text"
                 className="chat-input"
-                placeholder="모임 시간을 물어보세요..."
+                placeholder="Ask about meeting times..."
                 value={chatInput}
                 onChange={(e) => setChatInput(e.target.value)}
                 onKeyDown={(e) => e.key === 'Enter' && handleSendChat()}
@@ -400,32 +400,32 @@ const GroupDetailView: React.FC<GroupDetailViewProps> = ({ groupId, onBack }) =>
                 onClick={handleSendChat}
                 disabled={isSendingChat || !chatInput.trim()}
               >
-                전송
+                Send
               </button>
             </div>
           </div>
 
           <div className="section-header">
-            <h3>공통 가용 시간</h3>
+            <h3>Available Times</h3>
             <button
               className="btn btn-secondary btn-sm"
               onClick={loadAvailableSlots}
               disabled={isLoadingSlots}
             >
-              {isLoadingSlots ? '로딩...' : '새로고침'}
+              {isLoadingSlots ? 'Loading...' : 'Refresh'}
             </button>
           </div>
 
           {dateRange.start && (
             <p className="date-range-info">
-              {formatDate(dateRange.start)} ~ {formatDate(dateRange.end)} 범위
+              {formatDate(dateRange.start)} ~ {formatDate(dateRange.end)}
             </p>
           )}
 
-          {/* 추천 시간 */}
+          {/* Recommended Times */}
           {recommendations.length > 0 && (
             <div className="recommendations-section">
-              <h4>추천 시간</h4>
+              <h4>Recommended Times</h4>
               {recommendations.slice(0, 3).map((rec, idx) => (
                 <div
                   key={idx}
@@ -445,15 +445,15 @@ const GroupDetailView: React.FC<GroupDetailViewProps> = ({ groupId, onBack }) =>
             </div>
           )}
 
-          {/* 전체 가용 시간 */}
+          {/* All Available Times */}
           {isLoadingSlots ? (
             <div className="loading-container">
               <div className="spinner"></div>
             </div>
           ) : availableSlots.length === 0 ? (
             <div className="empty-state">
-              <p>공통으로 비어있는 시간이 없습니다.</p>
-              <p>각 멤버의 일정을 확인해보세요.</p>
+              <p>No times when everyone is available.</p>
+              <p>Check each member's schedule for details.</p>
             </div>
           ) : (
             <div className="slots-list">
@@ -469,10 +469,10 @@ const GroupDetailView: React.FC<GroupDetailViewProps> = ({ groupId, onBack }) =>
                   </div>
                   <div className="slot-status">
                     {slot.type === 'available' ? (
-                      <span className="status-available">모두 가능</span>
+                      <span className="status-available">All Available</span>
                     ) : (
                       <span className="status-negotiable">
-                        {slot.conflicting_members?.length || 0}명 유동 일정
+                        {slot.conflicting_members?.length || 0} flexible
                       </span>
                     )}
                   </div>
@@ -488,23 +488,23 @@ const GroupDetailView: React.FC<GroupDetailViewProps> = ({ groupId, onBack }) =>
         <div className="modal-overlay" onClick={() => setShowMeetingModal(false)}>
           <div className="modal-content" onClick={e => e.stopPropagation()}>
             <div className="modal-header">
-              <h3>미팅 생성</h3>
+              <h3>Create Meeting</h3>
               <button className="btn btn-icon" onClick={() => setShowMeetingModal(false)}>×</button>
             </div>
             <div className="modal-body">
               <div className="form-group">
-                <label>미팅 제목</label>
+                <label>Meeting Title</label>
                 <input
                   type="text"
                   className="form-input"
-                  placeholder="예: 정기 모임"
+                  placeholder="e.g., Team Sync"
                   value={meetingForm.title}
                   onChange={(e) => setMeetingForm({ ...meetingForm, title: e.target.value })}
                 />
               </div>
               <div className="form-row">
                 <div className="form-group">
-                  <label>날짜</label>
+                  <label>Date</label>
                   <input
                     type="date"
                     className="form-input"
@@ -515,7 +515,7 @@ const GroupDetailView: React.FC<GroupDetailViewProps> = ({ groupId, onBack }) =>
               </div>
               <div className="form-row">
                 <div className="form-group">
-                  <label>시작 시간</label>
+                  <label>Start Time</label>
                   <input
                     type="time"
                     className="form-input"
@@ -524,7 +524,7 @@ const GroupDetailView: React.FC<GroupDetailViewProps> = ({ groupId, onBack }) =>
                   />
                 </div>
                 <div className="form-group">
-                  <label>종료 시간</label>
+                  <label>End Time</label>
                   <input
                     type="time"
                     className="form-input"
@@ -534,11 +534,11 @@ const GroupDetailView: React.FC<GroupDetailViewProps> = ({ groupId, onBack }) =>
                 </div>
               </div>
               <div className="form-group">
-                <label>장소 (선택)</label>
+                <label>Location (optional)</label>
                 <input
                   type="text"
                   className="form-input"
-                  placeholder="예: 강남역 스타벅스"
+                  placeholder="e.g., Conference Room A"
                   value={meetingForm.location}
                   onChange={(e) => setMeetingForm({ ...meetingForm, location: e.target.value })}
                 />
@@ -546,14 +546,14 @@ const GroupDetailView: React.FC<GroupDetailViewProps> = ({ groupId, onBack }) =>
             </div>
             <div className="modal-footer">
               <button className="btn btn-secondary" onClick={() => setShowMeetingModal(false)}>
-                취소
+                Cancel
               </button>
               <button
                 className="btn btn-primary"
                 onClick={handleCreateMeeting}
                 disabled={!meetingForm.title || !meetingForm.date || !meetingForm.start_time || isCreatingMeeting}
               >
-                {isCreatingMeeting ? '생성 중...' : '미팅 만들기'}
+                {isCreatingMeeting ? 'Creating...' : 'Create Meeting'}
               </button>
             </div>
           </div>
@@ -620,7 +620,7 @@ const GroupDetailView: React.FC<GroupDetailViewProps> = ({ groupId, onBack }) =>
           cursor: pointer;
         }
 
-        /* 초대 코드 섹션 */
+        /* Invite Code Section */
         .invite-code-section {
           background: linear-gradient(135deg, #4A90A4 0%, #357ABD 100%);
           border-radius: 12px;
@@ -668,7 +668,7 @@ const GroupDetailView: React.FC<GroupDetailViewProps> = ({ groupId, onBack }) =>
           margin-bottom: 0;
         }
 
-        /* AI 채팅 섹션 */
+        /* AI Chat Section */
         .ai-chat-section {
           background: white;
           border: 1px solid #e0e0e0;
@@ -1061,7 +1061,7 @@ const GroupDetailView: React.FC<GroupDetailViewProps> = ({ groupId, onBack }) =>
           color: #888;
         }
 
-        /* Modal & Form styles (same as GroupsView) */
+        /* Modal & Form styles */
         .modal-overlay {
           position: fixed;
           top: 0;

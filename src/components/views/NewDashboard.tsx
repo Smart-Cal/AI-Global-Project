@@ -21,7 +21,7 @@ interface NewDashboardProps {
   onNavigate: (view: 'assistant' | 'calendar' | 'schedule' | 'goal') => void;
 }
 
-// 브리핑 타입 정의
+// Briefing type definition
 type BriefingType = 'morning' | 'afternoon' | 'evening' | null;
 
 interface BriefingData {
@@ -37,17 +37,17 @@ interface BriefingData {
   tomorrowWeather?: api.WeatherInfo;
 }
 
-// 시간 포맷팅 헬퍼
+// Time formatting helper
 function formatTime(time?: string): string {
   if (!time) return '';
   const [h, m] = time.split(':');
   const hour = parseInt(h, 10);
-  const ampm = hour >= 12 ? '오후' : '오전';
+  const ampm = hour >= 12 ? 'PM' : 'AM';
   const hour12 = hour % 12 || 12;
-  return `${ampm} ${hour12}:${m}`;
+  return `${hour12}:${m} ${ampm}`;
 }
 
-// 날짜 포맷팅 헬퍼
+// Date formatting helper
 function formatDate(dateStr: string): string {
   const date = new Date(dateStr);
   const today = new Date();
@@ -55,16 +55,16 @@ function formatDate(dateStr: string): string {
   tomorrow.setDate(tomorrow.getDate() + 1);
 
   if (dateStr === today.toISOString().split('T')[0]) {
-    return '오늘';
+    return 'Today';
   } else if (dateStr === tomorrow.toISOString().split('T')[0]) {
-    return '내일';
+    return 'Tomorrow';
   }
 
-  const weekdays = ['일', '월', '화', '수', '목', '금', '토'];
+  const weekdays = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
   return `${date.getMonth() + 1}/${date.getDate()} (${weekdays[date.getDay()]})`;
 }
 
-// 우선순위 색상
+// Priority color
 function getPriorityColor(priority: 'high' | 'medium' | 'low'): string {
   switch (priority) {
     case 'high':
@@ -78,7 +78,7 @@ function getPriorityColor(priority: 'high' | 'medium' | 'low'): string {
   }
 }
 
-// 진행률 색상
+// Progress color
 function getProgressColor(progress: number): string {
   if (progress >= 80) return '#10B981';
   if (progress >= 50) return '#3B82F6';
@@ -86,25 +86,25 @@ function getProgressColor(progress: number): string {
   return '#9CA3AF';
 }
 
-// 날씨 아이콘 선택 헬퍼
+// Weather icon selection helper
 function getWeatherIcon(condition: string): React.ReactNode {
   const lowerCondition = condition.toLowerCase();
-  if (lowerCondition.includes('rain') || lowerCondition.includes('비')) {
+  if (lowerCondition.includes('rain')) {
     return <CloudIcon size={24} style={{ color: '#60A5FA' }} />;
   }
-  if (lowerCondition.includes('cloud') || lowerCondition.includes('구름') || lowerCondition.includes('흐림')) {
+  if (lowerCondition.includes('cloud')) {
     return <CloudIcon size={24} style={{ color: '#9CA3AF' }} />;
   }
   return <SunIcon size={24} style={{ color: '#FBBF24' }} />;
 }
 
-// 브리핑 타입 결정 함수 (첫 접속 기반)
+// Determine briefing type based on initial access time
 function determineBriefingType(hour: number): BriefingType {
-  // 5시~12시: 아침 브리핑 (오늘 일정 + 날씨)
+  // 5am~12pm: Morning briefing (today's schedule + weather)
   if (hour >= 5 && hour < 12) return 'morning';
-  // 12시~18시: 오후 브리핑 (남은 일정 + 진행상황)
+  // 12pm~6pm: Afternoon briefing (remaining schedule + progress)
   if (hour >= 12 && hour < 18) return 'afternoon';
-  // 18시~5시: 저녁 브리핑 (오늘 정리 + 내일 미리보기)
+  // 6pm~5am: Evening briefing (today's summary + tomorrow preview)
   return 'evening';
 }
 
@@ -120,32 +120,32 @@ export const NewDashboard: React.FC<NewDashboardProps> = ({ onNavigate }) => {
   const [briefingLoading, setBriefingLoading] = useState(false);
   const [briefingDismissed, setBriefingDismissed] = useState(false);
   const [userCoords, setUserCoords] = useState<{ lat: number; lon: number } | null>(null);
-  const [locationReady, setLocationReady] = useState(false); // 위치 확인 완료 여부
+  const [locationReady, setLocationReady] = useState(false); // Location verification complete status
 
   const today = new Date().toISOString().split('T')[0];
   const now = new Date();
   const currentHour = now.getHours();
 
-  // 이번주 마지막 날 계산
+  // Calculate last day of the week
   const getEndOfWeek = () => {
     const date = new Date();
     const day = date.getDay();
-    const diff = 7 - day; // 일요일까지 남은 일수
+    const diff = 7 - day; // Days remaining until Sunday
     date.setDate(date.getDate() + diff);
     return date.toISOString().split('T')[0];
   };
 
   const endOfWeek = getEndOfWeek();
 
-  // 인사말 생성
+  // Generate greeting
   const getGreeting = () => {
-    if (currentHour < 6) return '좋은 새벽이에요';
-    if (currentHour < 12) return '좋은 아침이에요';
-    if (currentHour < 18) return '좋은 오후예요';
-    return '좋은 저녁이에요';
+    if (currentHour < 6) return 'Good early morning';
+    if (currentHour < 12) return 'Good morning';
+    if (currentHour < 18) return 'Good afternoon';
+    return 'Good evening';
   };
 
-  // 사용자 위치 가져오기
+  // Get user location
   useEffect(() => {
     if ('geolocation' in navigator) {
       navigator.geolocation.getCurrentPosition(
@@ -159,10 +159,10 @@ export const NewDashboard: React.FC<NewDashboardProps> = ({ onNavigate }) => {
         },
         (error) => {
           console.log('Geolocation error:', error.code, error.message);
-          // 위치 권한 거부해도 기본 도시로 진행
+          // Continue with default city even if location permission is denied
           setLocationReady(true);
         },
-        { timeout: 10000, maximumAge: 300000 } // 10초 타임아웃, 5분 캐시
+        { timeout: 10000, maximumAge: 300000 } // 10 second timeout, 5 minute cache
       );
     } else {
       console.log('Geolocation not supported');
@@ -170,7 +170,7 @@ export const NewDashboard: React.FC<NewDashboardProps> = ({ onNavigate }) => {
     }
   }, []);
 
-  // 데이터 로드
+  // Load data
   useEffect(() => {
     const loadData = async () => {
       setIsLoading(true);
@@ -187,7 +187,7 @@ export const NewDashboard: React.FC<NewDashboardProps> = ({ onNavigate }) => {
     loadData();
   }, []);
 
-  // 브리핑 로드
+  // Load briefing
   useEffect(() => {
     const loadBriefing = async () => {
       const briefingType = determineBriefingType(currentHour);
@@ -196,7 +196,7 @@ export const NewDashboard: React.FC<NewDashboardProps> = ({ onNavigate }) => {
         return;
       }
 
-      // 세션 스토리지에서 이미 본 브리핑인지 확인
+      // Check if briefing has already been viewed from session storage
       const dismissedKey = `briefing_dismissed_${briefingType}_${today}`;
       if (sessionStorage.getItem(dismissedKey)) {
         setBriefingDismissed(true);
@@ -205,11 +205,11 @@ export const NewDashboard: React.FC<NewDashboardProps> = ({ onNavigate }) => {
 
       setBriefingLoading(true);
       try {
-        // 좌표가 있으면 전달, 없으면 undefined (서버에서 기본 도시 사용)
+        // Pass coordinates if available, otherwise undefined (server uses default city)
         const coords = userCoords || undefined;
 
         if (briefingType === 'morning') {
-          // 아침: 오늘 일정 + 날씨
+          // Morning: Today's schedule + weather
           const data = await api.getMorningBriefing(coords);
           setBriefing({
             type: 'morning',
@@ -219,7 +219,7 @@ export const NewDashboard: React.FC<NewDashboardProps> = ({ onNavigate }) => {
             incompleteTodos: data.incomplete_todos,
           });
         } else if (briefingType === 'afternoon') {
-          // 오후: 아침 브리핑 데이터 사용하되 메시지만 다르게
+          // Afternoon: Use morning briefing data but with different message
           const data = await api.getMorningBriefing(coords);
           setBriefing({
             type: 'afternoon',
@@ -229,7 +229,7 @@ export const NewDashboard: React.FC<NewDashboardProps> = ({ onNavigate }) => {
             incompleteTodos: data.incomplete_todos,
           });
         } else {
-          // 저녁: 오늘 정리 + 내일 미리보기 + 내일 날씨
+          // Evening: Today's summary + tomorrow preview + tomorrow weather
           const data = await api.getEveningBriefing(coords);
           setBriefing({
             type: 'evening',
@@ -249,13 +249,13 @@ export const NewDashboard: React.FC<NewDashboardProps> = ({ onNavigate }) => {
       }
     };
 
-    // 데이터 로딩 완료 && 위치 확인 완료 후 브리핑 로드
+    // Load briefing after data loading and location verification are complete
     if (!isLoading && locationReady) {
       loadBriefing();
     }
   }, [isLoading, locationReady, currentHour, today, userCoords]);
 
-  // 브리핑 닫기
+  // Dismiss briefing
   const dismissBriefing = () => {
     if (briefing?.type) {
       const dismissedKey = `briefing_dismissed_${briefing.type}_${today}`;
@@ -264,14 +264,14 @@ export const NewDashboard: React.FC<NewDashboardProps> = ({ onNavigate }) => {
     setBriefingDismissed(true);
   };
 
-  // 오늘 일정
+  // Today's events
   const todayEvents = getEventsByDate(today).sort((a, b) => {
     if (!a.start_time) return 1;
     if (!b.start_time) return -1;
     return a.start_time.localeCompare(b.start_time);
   });
 
-  // 이번주 일정 (오늘 이후 ~ 이번주 끝)
+  // This week's events (after today ~ end of week)
   const thisWeekEvents = events
     .filter((e) => e.event_date > today && e.event_date <= endOfWeek)
     .sort((a, b) => {
@@ -279,7 +279,7 @@ export const NewDashboard: React.FC<NewDashboardProps> = ({ onNavigate }) => {
       return (a.start_time || '').localeCompare(b.start_time || '');
     });
 
-  // 오늘 할 일 (마감이 오늘이거나 마감 없는 것)
+  // Today's todos (due today or no deadline)
   const todayTodos = todos
     .filter((t) => {
       if (t.is_completed) return false;
@@ -293,13 +293,13 @@ export const NewDashboard: React.FC<NewDashboardProps> = ({ onNavigate }) => {
     })
     .slice(0, 5);
 
-  // 활성 목표 (진행 중인 것들)
+  // Active goals (in progress)
   const activeGoals = goals
     .filter((g) => !['completed', 'failed'].includes(g.status))
     .sort((a, b) => new Date(a.target_date).getTime() - new Date(b.target_date).getTime())
     .slice(0, 3);
 
-  // 카테고리 색상 가져오기
+  // Get category color
   const getCategoryColor = (categoryId?: string) => {
     if (!categoryId) return '#9CA3AF';
     const category = categories.find((c) => c.id === categoryId);
@@ -316,13 +316,13 @@ export const NewDashboard: React.FC<NewDashboardProps> = ({ onNavigate }) => {
 
   return (
     <div style={{ padding: '24px', maxWidth: '900px', margin: '0 auto' }}>
-      {/* 헤더 - 인사말 */}
+      {/* Header - Greeting */}
       <div style={{ marginBottom: '24px' }}>
         <h1 style={{ fontSize: '24px', fontWeight: 'bold', margin: 0 }}>
-          {getGreeting()}, {user?.nickname || user?.name}님!
+          {getGreeting()}, {user?.nickname || user?.name}!
         </h1>
         <p style={{ color: '#6B7280', marginTop: '4px' }}>
-          {new Date().toLocaleDateString('ko-KR', {
+          {new Date().toLocaleDateString('en-US', {
             year: 'numeric',
             month: 'long',
             day: 'numeric',
@@ -331,7 +331,7 @@ export const NewDashboard: React.FC<NewDashboardProps> = ({ onNavigate }) => {
         </p>
       </div>
 
-      {/* 브리핑 카드 */}
+      {/* Briefing card */}
       {briefing && !briefingDismissed && (
         <div
           className="card"
@@ -346,7 +346,7 @@ export const NewDashboard: React.FC<NewDashboardProps> = ({ onNavigate }) => {
             position: 'relative',
           }}
         >
-          {/* 닫기 버튼 */}
+          {/* Close button */}
           <button
             onClick={dismissBriefing}
             style={{
@@ -370,7 +370,7 @@ export const NewDashboard: React.FC<NewDashboardProps> = ({ onNavigate }) => {
           </button>
 
           <div style={{ padding: '20px' }}>
-            {/* 헤더 */}
+            {/* Header */}
             <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '16px' }}>
               <div
                 style={{
@@ -393,15 +393,15 @@ export const NewDashboard: React.FC<NewDashboardProps> = ({ onNavigate }) => {
               </div>
               <div>
                 <h3 style={{ margin: 0, fontSize: '18px', fontWeight: 600, color: '#1F2937' }}>
-                  {briefing.type === 'morning' ? '아침 브리핑' : briefing.type === 'afternoon' ? '오후 브리핑' : '저녁 브리핑'}
+                  {briefing.type === 'morning' ? 'Morning Briefing' : briefing.type === 'afternoon' ? 'Afternoon Briefing' : 'Evening Briefing'}
                 </h3>
                 <p style={{ margin: 0, fontSize: '13px', color: '#6B7280' }}>
-                  {briefing.type === 'morning' ? '오늘 하루를 준비해요' : briefing.type === 'afternoon' ? '남은 일정을 확인해요' : '오늘 하루를 정리해요'}
+                  {briefing.type === 'morning' ? 'Prepare for your day' : briefing.type === 'afternoon' ? 'Check remaining schedule' : 'Wrap up your day'}
                 </p>
               </div>
             </div>
 
-            {/* AI 메시지 */}
+            {/* AI message */}
             <div
               style={{
                 background: 'rgba(255,255,255,0.7)',
@@ -415,7 +415,7 @@ export const NewDashboard: React.FC<NewDashboardProps> = ({ onNavigate }) => {
               </p>
             </div>
 
-            {/* 아침/오후 브리핑: 날씨 정보 */}
+            {/* Morning/Afternoon briefing: Weather info */}
             {(briefing.type === 'morning' || briefing.type === 'afternoon') && briefing.weather && (
               <div
                 style={{
@@ -451,7 +451,7 @@ export const NewDashboard: React.FC<NewDashboardProps> = ({ onNavigate }) => {
               </div>
             )}
 
-            {/* 저녁 브리핑: 달성률 */}
+            {/* Evening briefing: Completion rate */}
             {briefing.type === 'evening' && briefing.completionRate !== undefined && (
               <div
                 style={{
@@ -493,16 +493,16 @@ export const NewDashboard: React.FC<NewDashboardProps> = ({ onNavigate }) => {
                 </div>
                 <div>
                   <div style={{ fontSize: '14px', fontWeight: 500, color: '#1F2937' }}>
-                    오늘 달성률
+                    Today's Completion Rate
                   </div>
                   <div style={{ fontSize: '13px', color: '#6B7280' }}>
-                    일정 {briefing.completedEvents?.length || 0}개, 할일 {briefing.completedTodos?.length || 0}개 완료
+                    {briefing.completedEvents?.length || 0} events, {briefing.completedTodos?.length || 0} todos completed
                   </div>
                 </div>
               </div>
             )}
 
-            {/* 저녁 브리핑: 내일 첫 일정 */}
+            {/* Evening briefing: Tomorrow's first event */}
             {briefing.type === 'evening' && briefing.tomorrowFirstEvent && (
               <div
                 style={{
@@ -517,7 +517,7 @@ export const NewDashboard: React.FC<NewDashboardProps> = ({ onNavigate }) => {
               >
                 <CalendarIcon size={20} style={{ color: '#6366F1' }} />
                 <div>
-                  <div style={{ fontSize: '12px', color: '#6B7280' }}>내일 첫 일정</div>
+                  <div style={{ fontSize: '12px', color: '#6B7280' }}>Tomorrow's first event</div>
                   <div style={{ fontSize: '14px', fontWeight: 500, color: '#1F2937' }}>
                     {briefing.tomorrowFirstEvent.start_time && formatTime(briefing.tomorrowFirstEvent.start_time)} {briefing.tomorrowFirstEvent.title}
                   </div>
@@ -525,7 +525,7 @@ export const NewDashboard: React.FC<NewDashboardProps> = ({ onNavigate }) => {
               </div>
             )}
 
-            {/* 저녁 브리핑: 내일 날씨 */}
+            {/* Evening briefing: Tomorrow's weather */}
             {briefing.type === 'evening' && briefing.tomorrowWeather && (
               <div
                 style={{
@@ -541,7 +541,7 @@ export const NewDashboard: React.FC<NewDashboardProps> = ({ onNavigate }) => {
                 {getWeatherIcon(briefing.tomorrowWeather.condition)}
                 <div style={{ flex: 1 }}>
                   <div style={{ fontSize: '12px', color: '#6B7280', display: 'flex', alignItems: 'center', gap: '6px' }}>
-                    내일 날씨
+                    Tomorrow's weather
                     {briefing.tomorrowWeather.city && (
                       <span style={{ color: '#9CA3AF' }}>📍 {briefing.tomorrowWeather.city}</span>
                     )}
@@ -561,7 +561,7 @@ export const NewDashboard: React.FC<NewDashboardProps> = ({ onNavigate }) => {
         </div>
       )}
 
-      {/* 브리핑 로딩 */}
+      {/* Briefing loading */}
       {briefingLoading && (
         <div
           className="card"
@@ -575,32 +575,32 @@ export const NewDashboard: React.FC<NewDashboardProps> = ({ onNavigate }) => {
           }}
         >
           <div className="spinner" style={{ width: '20px', height: '20px' }} />
-          <span style={{ color: '#6B7280' }}>브리핑을 준비하고 있어요...</span>
+          <span style={{ color: '#6B7280' }}>Preparing your briefing...</span>
         </div>
       )}
 
-      {/* 메인 그리드 - 2x2 */}
+      {/* Main grid - 2x2 */}
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '16px' }}>
 
-        {/* 1. 오늘 일정 */}
+        {/* 1. Today's Schedule */}
         <div className="card" style={{ minHeight: '280px' }}>
           <div style={{ padding: '16px', borderBottom: '1px solid #E5E7EB', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
             <h2 style={{ margin: 0, fontSize: '15px', fontWeight: 600, display: 'flex', alignItems: 'center', gap: '8px' }}>
               <CalendarIcon size={18} style={{ color: 'var(--primary)' }} />
-              오늘 일정
+              Today's Schedule
             </h2>
             <button
               onClick={() => onNavigate('calendar')}
               style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: '13px', color: 'var(--primary)', display: 'flex', alignItems: 'center', gap: '2px' }}
             >
-              더보기 <ChevronRightIcon size={14} />
+              View all <ChevronRightIcon size={14} />
             </button>
           </div>
 
           <div style={{ padding: '12px', maxHeight: '180px', overflowY: 'auto' }}>
             {todayEvents.length === 0 ? (
               <div style={{ textAlign: 'center', padding: '24px 0', color: '#9CA3AF', fontSize: '14px' }}>
-                오늘 일정이 없어요
+                No events today
               </div>
             ) : (
               <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
@@ -630,7 +630,7 @@ export const NewDashboard: React.FC<NewDashboardProps> = ({ onNavigate }) => {
                         {event.title}
                       </div>
                       <div style={{ fontSize: '12px', color: '#6B7280' }}>
-                        {event.start_time ? formatTime(event.start_time) : '종일'}
+                        {event.start_time ? formatTime(event.start_time) : 'All day'}
                       </div>
                     </div>
                   </div>
@@ -639,10 +639,10 @@ export const NewDashboard: React.FC<NewDashboardProps> = ({ onNavigate }) => {
             )}
           </div>
 
-          {/* 이번주 일정 미리보기 */}
+          {/* This week's events preview */}
           {thisWeekEvents.length > 0 && (
             <div style={{ padding: '10px 12px', borderTop: '1px solid #E5E7EB', background: '#F9FAFB' }}>
-              <div style={{ fontSize: '11px', color: '#9CA3AF', marginBottom: '6px' }}>이번 주</div>
+              <div style={{ fontSize: '11px', color: '#9CA3AF', marginBottom: '6px' }}>This week</div>
               {thisWeekEvents.slice(0, 2).map((event) => (
                 <div key={event.id} style={{ fontSize: '12px', color: '#6B7280', marginBottom: '2px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                   <span style={{ color: '#9CA3AF' }}>{formatDate(event.event_date)}</span> {event.title}
@@ -652,25 +652,25 @@ export const NewDashboard: React.FC<NewDashboardProps> = ({ onNavigate }) => {
           )}
         </div>
 
-        {/* 2. 오늘 할 일 */}
+        {/* 2. Today's Todos */}
         <div className="card" style={{ minHeight: '280px' }}>
           <div style={{ padding: '16px', borderBottom: '1px solid #E5E7EB', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
             <h2 style={{ margin: 0, fontSize: '15px', fontWeight: 600, display: 'flex', alignItems: 'center', gap: '8px' }}>
               <CheckIcon size={18} style={{ color: '#10B981' }} />
-              오늘 할 일
+              Today's Todos
             </h2>
             <button
               onClick={() => onNavigate('schedule')}
               style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: '13px', color: '#10B981', display: 'flex', alignItems: 'center', gap: '2px' }}
             >
-              더보기 <ChevronRightIcon size={14} />
+              View all <ChevronRightIcon size={14} />
             </button>
           </div>
 
           <div style={{ padding: '12px', maxHeight: '220px', overflowY: 'auto' }}>
             {todayTodos.length === 0 ? (
               <div style={{ textAlign: 'center', padding: '24px 0', color: '#9CA3AF', fontSize: '14px' }}>
-                할 일이 없어요
+                No todos
               </div>
             ) : (
               <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
@@ -729,9 +729,9 @@ export const NewDashboard: React.FC<NewDashboardProps> = ({ onNavigate }) => {
                         flexShrink: 0,
                       }}
                     >
-                      {todo.priority === 'high' && '높음'}
-                      {todo.priority === 'medium' && '보통'}
-                      {todo.priority === 'low' && '낮음'}
+                      {todo.priority === 'high' && 'High'}
+                      {todo.priority === 'medium' && 'Medium'}
+                      {todo.priority === 'low' && 'Low'}
                     </span>
                   </div>
                 ))}
@@ -740,25 +740,25 @@ export const NewDashboard: React.FC<NewDashboardProps> = ({ onNavigate }) => {
           </div>
         </div>
 
-        {/* 3. 진행 중인 목표 */}
+        {/* 3. Active Goals */}
         <div className="card" style={{ minHeight: '200px' }}>
           <div style={{ padding: '16px', borderBottom: '1px solid #E5E7EB', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
             <h2 style={{ margin: 0, fontSize: '15px', fontWeight: 600, display: 'flex', alignItems: 'center', gap: '8px' }}>
               <TargetIcon size={18} style={{ color: '#8B5CF6' }} />
-              진행 중인 목표
+              Active Goals
             </h2>
             <button
               onClick={() => onNavigate('goal')}
               style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: '13px', color: '#8B5CF6', display: 'flex', alignItems: 'center', gap: '2px' }}
             >
-              더보기 <ChevronRightIcon size={14} />
+              View all <ChevronRightIcon size={14} />
             </button>
           </div>
 
           <div style={{ padding: '12px' }}>
             {activeGoals.length === 0 ? (
               <div style={{ textAlign: 'center', padding: '24px 0', color: '#9CA3AF', fontSize: '14px' }}>
-                진행 중인 목표가 없어요
+                No active goals
               </div>
             ) : (
               <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
@@ -792,7 +792,7 @@ export const NewDashboard: React.FC<NewDashboardProps> = ({ onNavigate }) => {
           </div>
         </div>
 
-        {/* 4. AI 비서 */}
+        {/* 4. AI Assistant */}
         <div
           className="card"
           style={{
@@ -812,9 +812,9 @@ export const NewDashboard: React.FC<NewDashboardProps> = ({ onNavigate }) => {
           <div style={{ padding: '16px', background: 'rgba(255,255,255,0.2)', borderRadius: '50%', marginBottom: '16px' }}>
             <SparkleIcon size={32} />
           </div>
-          <h3 style={{ margin: '0 0 8px 0', fontSize: '18px', fontWeight: 600 }}>AI 비서</h3>
+          <h3 style={{ margin: '0 0 8px 0', fontSize: '18px', fontWeight: 600 }}>AI Assistant</h3>
           <p style={{ margin: 0, opacity: 0.85, fontSize: '14px', lineHeight: 1.5 }}>
-            일정 관리, 할 일 추천<br />무엇이든 물어보세요
+            Schedule management, todo recommendations<br />Ask me anything
           </p>
         </div>
       </div>

@@ -24,7 +24,7 @@ const CalendarView: React.FC<CalendarViewProps> = ({
   const [viewMode, setViewMode] = useState<ViewMode>('month');
   const [currentDate, setCurrentDate] = useState(new Date());
   const [selectedWeekStart, setSelectedWeekStart] = useState<Date | null>(null);
-  // 선택된 카테고리 ID 목록 (체크된 것만 보임)
+  // Selected category IDs (only checked ones are shown)
   const [categoryFilters, setCategoryFilters] = useState<Set<string>>(new Set());
   const [filtersInitialized, setFiltersInitialized] = useState(false);
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
@@ -34,7 +34,7 @@ const CalendarView: React.FC<CalendarViewProps> = ({
     fetchCategories();
   }, []);
 
-  // 카테고리가 로드되면 모든 카테고리를 기본 선택
+  // Select all categories by default when categories are loaded
   useEffect(() => {
     if (categories.length > 0 && !filtersInitialized) {
       setCategoryFilters(new Set(categories.map(c => c.id)));
@@ -80,19 +80,19 @@ const CalendarView: React.FC<CalendarViewProps> = ({
     return date.toISOString().split('T')[0];
   };
 
-  // 기본 카테고리 ID 가져오기
+  // Get default category ID
   const getDefaultCategoryId = () => {
-    const defaultCat = categories.find(c => c.name === '기본');
+    const defaultCat = categories.find(c => c.name === 'Default' || c.name === '기본');
     return defaultCat?.id;
   };
 
   const getEventsForDate = (dateStr: string) => {
     return events.filter(e => {
       const matchesDate = e.event_date === dateStr;
-      // 카테고리 필터 체크:
-      // - 필터가 초기화되지 않았으면 모두 표시
-      // - 카테고리가 없는 일정은 "기본" 카테고리로 취급
-      // - 카테고리가 있으면 필터에 포함된 경우만 표시
+      // Category filter check:
+      // - If filter is not initialized, show all
+      // - Events without category are treated as "Default" category
+      // - If event has category, only show if included in filter
       if (!filtersInitialized) return matchesDate;
 
       const categoryId = e.category_id || getDefaultCategoryId();
@@ -109,7 +109,7 @@ const CalendarView: React.FC<CalendarViewProps> = ({
       setSelectedWeekStart(date);
       setViewMode('week');
     } else if (viewMode === 'week') {
-      // 주간 뷰에서 날짜 클릭 시 해당 날짜로 일정 추가
+      // Add event to the clicked date in week view
       onAddEvent(dateStr);
     }
   };
@@ -137,7 +137,7 @@ const CalendarView: React.FC<CalendarViewProps> = ({
     setCurrentDate(newDate);
   };
 
-  const weekdays = ['월', '화', '수', '목', '금', '토', '일'];
+  const weekdays = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
 
   const renderMonthView = () => {
     const days = getMonthDays();
@@ -147,7 +147,7 @@ const CalendarView: React.FC<CalendarViewProps> = ({
       <div className="calendar-month">
         <div className="calendar-month-header">
           <button onClick={() => navigateMonth(-1)} className="calendar-nav-btn">&lt;</button>
-          <h2>{currentDate.getFullYear()}년 {currentDate.getMonth() + 1}월</h2>
+          <h2>{currentDate.toLocaleDateString('en-US', { year: 'numeric', month: 'long' })}</h2>
           <button onClick={() => navigateMonth(1)} className="calendar-nav-btn">&gt;</button>
         </div>
 
@@ -203,7 +203,7 @@ const CalendarView: React.FC<CalendarViewProps> = ({
     );
   };
 
-  // 시간 문자열(HH:MM)을 분으로 변환
+  // Convert time string (HH:MM) to minutes
   const timeToMinutes = (time: string): number => {
     const [hours, minutes] = time.split(':').map(Number);
     return hours * 60 + minutes;
@@ -219,10 +219,10 @@ const CalendarView: React.FC<CalendarViewProps> = ({
       <div className="calendar-week">
         <div className="calendar-week-header">
           <button onClick={handleBackClick} className="calendar-back-btn">
-            ← 월 보기
+            ← Month View
           </button>
           <h2>
-            {weekDays[0].getMonth() + 1}월 {weekDays[0].getDate()}일 - {weekDays[6].getDate()}일
+            {weekDays[0].toLocaleDateString('en-US', { month: 'short', day: 'numeric' })} - {weekDays[6].toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
           </h2>
         </div>
 
@@ -262,16 +262,16 @@ const CalendarView: React.FC<CalendarViewProps> = ({
                   {dayEvents.map((event, eventIdx) => {
                     const category = event.category_id ? getCategoryById(event.category_id) : null;
 
-                    // 10분 단위로 정밀하게 위치와 높이 계산
+                    // Calculate position and height precisely in 10-minute units
                     const startMinutes = event.start_time
                       ? timeToMinutes(event.start_time)
-                      : 9 * 60; // 기본 9시
+                      : 9 * 60; // Default 9am
                     const endMinutes = event.end_time
                       ? timeToMinutes(event.end_time)
-                      : startMinutes + 60; // 기본 1시간
+                      : startMinutes + 60; // Default 1 hour
                     const durationMinutes = endMinutes - startMinutes;
 
-                    // 최소 높이 20px (약 20분) 보장
+                    // Ensure minimum height of 20px (about 20 minutes)
                     const height = Math.max(durationMinutes, 20);
 
                     return (
