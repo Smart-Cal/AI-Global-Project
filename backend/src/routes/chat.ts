@@ -14,7 +14,8 @@ import {
   updateConversation,
   deleteConversation,
   getMessagesByConversation,
-  createMessage
+  createMessage,
+  getExternalServiceConfig
 } from '../services/database.js';
 import { AuthRequest, authenticate } from '../middleware/auth.js';
 import {
@@ -77,12 +78,13 @@ router.post('/', authenticate, async (req: AuthRequest, res: Response) => {
       content: message
     });
 
-    // Load user data
-    const [dbEvents, todos, goals, categories] = await Promise.all([
+    // Load user data and calendar tokens
+    const [dbEvents, todos, goals, categories, calendarService] = await Promise.all([
       getEventsByUser(userId),
       getTodosByUser(userId),
       getGoalsByUser(userId),
-      getCategoriesByUser(userId)
+      getCategoriesByUser(userId),
+      getExternalServiceConfig(userId, 'google_calendar').catch(() => null)
     ]);
 
     // Convert DBEvent to LegacyEvent
@@ -116,7 +118,18 @@ router.post('/', authenticate, async (req: AuthRequest, res: Response) => {
     if (useMCP) {
       // MCP integrated agent ("Talking AI" → "Acting AI")
       console.log('[Chat API] Using MCP Agent Loop');
-      const mcpAgent = createMCPAgentLoop(context);
+
+      // Prepare MCP config with calendar tokens if available
+      const mcpConfig: { googleCalendarTokens?: { access_token: string; refresh_token?: string } } = {};
+      if (calendarService?.is_enabled && calendarService?.config) {
+        mcpConfig.googleCalendarTokens = {
+          access_token: calendarService.config.access_token,
+          refresh_token: calendarService.config.refresh_token
+        };
+        console.log('[Chat API] Google Calendar tokens loaded for user');
+      }
+
+      const mcpAgent = createMCPAgentLoop(context, undefined, mcpConfig);
       response = await mcpAgent.processMessage(message, mode);
     } else {
       // Legacy agent

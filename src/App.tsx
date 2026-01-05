@@ -20,7 +20,7 @@ import AuthPage from './pages/AuthPage';
 import AuthCallback from './pages/AuthCallback';
 import { ToastProvider } from './components/Toast';
 import SearchModal from './components/SearchModal';
-import ChronotypeSettings from './components/ChronotypeSettings';
+import Settings from './components/Settings';
 import { MenuIcon, PlusIcon, SearchIcon } from './components/Icons';
 import type { CalendarView as CalendarViewType, CalendarEvent, Goal } from './types';
 
@@ -59,7 +59,7 @@ const MainLayout: React.FC = () => {
   const [goalModalOpen, setGoalModalOpen] = useState(false);
   const [todoModalOpen, setTodoModalOpen] = useState(false);
   const [searchModalOpen, setSearchModalOpen] = useState(false);
-  const [chronotypeModalOpen, setChronotypeModalOpen] = useState(false);
+  const [settingsModalOpen, setSettingsModalOpen] = useState(false);
 
   // Keyboard shortcut: Ctrl+K to open search modal
   useEffect(() => {
@@ -243,7 +243,7 @@ const MainLayout: React.FC = () => {
         isOpen={sidebarOpen}
         onClose={() => setSidebarOpen(false)}
         onAddGoal={handleAddGoal}
-        onOpenChronotype={() => setChronotypeModalOpen(true)}
+        onOpenSettings={() => setSettingsModalOpen(true)}
       />
 
       <main className="main-content">
@@ -326,9 +326,9 @@ const MainLayout: React.FC = () => {
         onGoalClick={handleGoalClick}
       />
 
-      <ChronotypeSettings
-        isOpen={chronotypeModalOpen}
-        onClose={() => setChronotypeModalOpen(false)}
+      <Settings
+        isOpen={settingsModalOpen}
+        onClose={() => setSettingsModalOpen(false)}
       />
     </div>
   );

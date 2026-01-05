@@ -3,9 +3,8 @@ import { useAuthStore } from '../store/authStore';
 import { useGoalStore, calculateGoalProgress } from '../store/goalStore';
 import { useTodoStore } from '../store/todoStore';
 import { useCategoryStore } from '../store/categoryStore';
-import { useSettingsStore } from '../store/settingsStore';
 import type { SidebarView, Goal } from '../types';
-import { getIcon, PlusIcon, CalendarIcon, ClockIcon } from './Icons';
+import { getIcon, PlusIcon, CalendarIcon, SettingsIcon } from './Icons';
 
 // Check if goal is active
 function isGoalActive(goal: Goal): boolean {
@@ -24,7 +23,7 @@ interface SidebarProps {
   isOpen: boolean;
   onClose: () => void;
   onAddGoal: () => void;
-  onOpenChronotype?: () => void;
+  onOpenSettings?: () => void;
 }
 
 export const Sidebar: React.FC<SidebarProps> = ({
@@ -33,13 +32,12 @@ export const Sidebar: React.FC<SidebarProps> = ({
   isOpen,
   onClose,
   onAddGoal,
-  onOpenChronotype,
+  onOpenSettings,
 }) => {
   const { user, logout } = useAuthStore();
   const { goals } = useGoalStore();
   const { todos } = useTodoStore();
   const { getCategoryById } = useCategoryStore();
-  const { getChronotypeInfo } = useSettingsStore();
 
   const activeGoals = goals.filter(isGoalActive);
   const pendingTodos = todos.filter((t) => !t.is_completed);
@@ -139,13 +137,12 @@ export const Sidebar: React.FC<SidebarProps> = ({
           </button>
         </div>
 
-        {/* Chronotype settings button */}
-        {onOpenChronotype && (
+        {/* Settings button */}
+        {onOpenSettings && (
           <div className="sidebar-settings">
-            <button className="chronotype-btn" onClick={onOpenChronotype}>
-              <span className="chronotype-icon">{getChronotypeInfo().icon}</span>
-              <span className="chronotype-label">{getChronotypeInfo().label}</span>
-              <ClockIcon size={14} />
+            <button className="settings-btn" onClick={onOpenSettings}>
+              <SettingsIcon size={18} />
+              <span>Settings</span>
             </button>
           </div>
         )}

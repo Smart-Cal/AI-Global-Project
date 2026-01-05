@@ -1,6 +1,7 @@
 import { Router, Request, Response } from 'express';
-import { upsertGoogleUser, updateUserLogin, supabase } from '../services/database.js';
-import { generateToken } from '../middleware/auth.js';
+import { upsertGoogleUser, updateUserLogin, supabase, upsertExternalService, getExternalServiceConfig, deleteExternalService } from '../services/database.js';
+import { generateToken, authenticate } from '../middleware/auth.js';
+import { GoogleCalendarMCP } from '../mcp/googleCalendar.js';
 
 const router = Router();
 
@@ -93,6 +94,130 @@ router.get('/me', async (req: Request, res: Response) => {
     res.json({ message: 'Use authenticate middleware' });
   } catch (error) {
     res.status(500).json({ error: '사용자 정보 조회에 실패했습니다.' });
+  }
+});
+
+// ====================================================
+// Google Calendar OAuth
+// ====================================================
+
+const calendarMCP = new GoogleCalendarMCP();
+
+/**
+ * GET /api/auth/google/calendar/url
+ * Google Calendar OAuth URL 생성
+ */
+router.get('/google/calendar/url', authenticate, async (req: Request, res: Response) => {
+  try {
+    const userId = (req as any).user?.id;
+    if (!userId) {
+      res.status(401).json({ error: 'Authentication required' });
+      return;
+    }
+
+    const authUrl = calendarMCP.getAuthUrl();
+
+    // state에 userId 포함 (콜백에서 사용)
+    const urlWithState = `${authUrl}&state=${userId}`;
+
+    res.json({ url: urlWithState });
+  } catch (error) {
+    console.error('Google Calendar auth URL error:', error);
+    res.status(500).json({ error: 'Failed to generate auth URL' });
+  }
+});
+
+/**
+ * GET /api/auth/google/calendar/callback
+ * Google Calendar OAuth 콜백 처리
+ */
+router.get('/google/calendar/callback', async (req: Request, res: Response) => {
+  try {
+    const { code, state: userId } = req.query;
+
+    if (!code || typeof code !== 'string') {
+      res.status(400).json({ error: 'Authorization code is required' });
+      return;
+    }
+
+    if (!userId || typeof userId !== 'string') {
+      res.status(400).json({ error: 'User ID is required' });
+      return;
+    }
+
+    // 인증 코드로 토큰 교환
+    const tokens = await calendarMCP.getTokenFromCode(code);
+
+    // 토큰을 external_services 테이블에 저장
+    await upsertExternalService({
+      user_id: userId,
+      service_type: 'google_calendar',
+      service_name: 'Google Calendar',
+      config: {
+        access_token: tokens.access_token,
+        refresh_token: tokens.refresh_token,
+        expiry_date: tokens.expiry_date,
+        token_type: tokens.token_type,
+        scope: tokens.scope
+      },
+      is_enabled: true
+    });
+
+    console.log('[Auth] Google Calendar connected for user:', userId);
+
+    // 프론트엔드로 리다이렉트 (성공)
+    const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:5173';
+    res.redirect(`${frontendUrl}/settings?calendar_connected=true`);
+  } catch (error) {
+    console.error('Google Calendar callback error:', error);
+    const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:5173';
+    res.redirect(`${frontendUrl}/settings?calendar_error=true`);
+  }
+});
+
+/**
+ * GET /api/auth/google/calendar/status
+ * Google Calendar 연결 상태 확인
+ */
+router.get('/google/calendar/status', authenticate, async (req: Request, res: Response) => {
+  try {
+    const userId = (req as any).user?.id;
+    if (!userId) {
+      res.status(401).json({ error: 'Authentication required' });
+      return;
+    }
+
+    const service = await getExternalServiceConfig(userId, 'google_calendar');
+
+    res.json({
+      connected: !!service && service.is_enabled,
+      lastSynced: service?.last_synced_at || null
+    });
+  } catch (error) {
+    console.error('Google Calendar status error:', error);
+    res.status(500).json({ error: 'Failed to check calendar status' });
+  }
+});
+
+/**
+ * DELETE /api/auth/google/calendar/disconnect
+ * Google Calendar 연결 해제
+ */
+router.delete('/google/calendar/disconnect', authenticate, async (req: Request, res: Response) => {
+  try {
+    const userId = (req as any).user?.id;
+    if (!userId) {
+      res.status(401).json({ error: 'Authentication required' });
+      return;
+    }
+
+    await deleteExternalService(userId, 'google_calendar');
+
+    console.log('[Auth] Google Calendar disconnected for user:', userId);
+    res.json({ message: 'Google Calendar disconnected' });
+  } catch (error) {
+    console.error('Google Calendar disconnect error:', error);
+    res.status(500).json({ error: 'Failed to disconnect calendar' });
   }
 });
 

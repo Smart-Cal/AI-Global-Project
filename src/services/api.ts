@@ -872,3 +872,26 @@ export async function sendGroupChatMessage(groupId: string, message: string): Pr
     body: JSON.stringify({ message }),
   });
 }
+
+// ==============================================
+// Google Calendar Integration
+// ==============================================
+
+export interface GoogleCalendarStatus {
+  connected: boolean;
+  lastSynced: string | null;
+}
+
+export async function getGoogleCalendarAuthUrl(): Promise<{ url: string }> {
+  return apiRequest<{ url: string }>('/auth/google/calendar/url');
+}
+
+export async function getGoogleCalendarStatus(): Promise<GoogleCalendarStatus> {
+  return apiRequest<GoogleCalendarStatus>('/auth/google/calendar/status');
+}
+
+export async function disconnectGoogleCalendar(): Promise<{ message: string }> {
+  return apiRequest<{ message: string }>('/auth/google/calendar/disconnect', {
+    method: 'DELETE',
+  });
+}
