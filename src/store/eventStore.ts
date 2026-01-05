@@ -25,7 +25,7 @@ interface EventState {
 
 const today = new Date();
 
-// API Event를 CalendarEvent로 변환 (이제 스키마가 동일하므로 단순 매핑)
+// Convert API Event to CalendarEvent (simple mapping as schemas match)
 function apiEventToCalendarEvent(event: api.Event): CalendarEvent {
   return {
     id: event.id,
@@ -48,7 +48,7 @@ function apiEventToCalendarEvent(event: api.Event): CalendarEvent {
   };
 }
 
-// CalendarEvent를 API Event로 변환 (이제 스키마가 동일하므로 단순 매핑)
+// Convert CalendarEvent to API Event (simple mapping as schemas match)
 function calendarEventToApiEvent(event: Partial<CalendarEvent>): Partial<api.Event> {
   return {
     category_id: event.category_id,
@@ -146,7 +146,7 @@ export const useEventStore = create<EventState>((set, get) => ({
 
     const newIsCompleted = !event.is_completed;
 
-    // 낙관적 업데이트: API 호출 전에 먼저 UI 업데이트
+    // Optimistic update: Update UI before API call
     set((s) => ({
       events: s.events.map((e) =>
         e.id === id ? { ...e, is_completed: newIsCompleted } : e
@@ -157,13 +157,13 @@ export const useEventStore = create<EventState>((set, get) => ({
       const response = await api.completeEvent(id, newIsCompleted);
       const updated = apiEventToCalendarEvent(response.event);
 
-      // API 응답으로 정확한 데이터로 동기화
+      // Sync with accurate data from API response
       set((s) => ({
         events: s.events.map((e) => (e.id === id ? updated : e)),
       }));
     } catch (error) {
       console.error('Error in toggleComplete store:', error);
-      // 에러 발생 시 롤백
+      // Rollback on error
       set((s) => ({
         events: s.events.map((e) =>
           e.id === id ? { ...e, is_completed: !newIsCompleted } : e
@@ -172,13 +172,13 @@ export const useEventStore = create<EventState>((set, get) => ({
     }
   },
 
-  // 기간 일정 지원: 해당 날짜가 event_date ~ end_date 범위 내에 있으면 표시
+  // Support date range: Show if date is within event_date ~ end_date
   getEventsByDate: (date) => get().events.filter((e) => {
     if (!e.end_date) {
-      // 단일 일정
+      // Single day event
       return e.event_date === date;
     }
-    // 기간 일정: date가 event_date와 end_date 사이에 있는지 확인
+    // Range event: Check if date is between event_date and end_date
     return date >= e.event_date && date <= e.end_date;
   }),
 

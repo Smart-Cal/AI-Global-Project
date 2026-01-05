@@ -36,7 +36,7 @@ export const useCategoryStore = create<CategoryState>()((set, get) => ({
     console.log('[CategoryStore] fetchCategories called');
     set({ isLoading: true });
     try {
-      // 백엔드 API를 통해 카테고리 조회 (기본 카테고리도 자동 생성됨)
+      // Fetch categories via backend API (Default category is also auto-created)
       const response = await api.getCategories();
       console.log('[CategoryStore] API response:', response);
       const categories = response.categories.sort((a, b) => {
@@ -78,7 +78,7 @@ export const useCategoryStore = create<CategoryState>()((set, get) => ({
   deleteCategory: async (id) => {
     const category = get().categories.find((c) => c.id === id);
     if (category?.is_default) {
-      throw new Error('기본 카테고리는 삭제할 수 없습니다.');
+      throw new Error('Default category cannot be deleted.');
     }
 
     await api.deleteCategory(id);

@@ -11,10 +11,10 @@ const TimePicker: React.FC<TimePickerProps> = ({
   value,
   onChange,
   label,
-  placeholder = '시간 선택'
+  placeholder = 'Select Time'
 }) => {
   const [isOpen, setIsOpen] = useState(false);
-  const [period, setPeriod] = useState<'오전' | '오후'>('오전');
+  const [period, setPeriod] = useState<'AM' | 'PM'>('AM');
   const [selectedHour, setSelectedHour] = useState<number | null>(null);
   const [selectedMinute, setSelectedMinute] = useState<number | null>(null);
   const containerRef = useRef<HTMLDivElement>(null);
@@ -23,11 +23,11 @@ const TimePicker: React.FC<TimePickerProps> = ({
   useEffect(() => {
     if (value) {
       const [h, m] = value.split(':').map(Number);
-      setPeriod(h < 12 ? '오전' : '오후');
+      setPeriod(h < 12 ? 'AM' : 'PM');
       setSelectedHour(h === 0 ? 12 : h > 12 ? h - 12 : h);
       setSelectedMinute(m);
     } else {
-      setPeriod('오전');
+      setPeriod('AM');
       setSelectedHour(null);
       setSelectedMinute(null);
     }
@@ -47,11 +47,11 @@ const TimePicker: React.FC<TimePickerProps> = ({
   const hours = Array.from({ length: 12 }, (_, i) => i + 1); // 1-12
   const minutes = [0, 5, 10, 15, 20, 25, 30, 35, 40, 45, 50, 55];
 
-  const updateTime = (newPeriod: '오전' | '오후', hour: number | null, minute: number | null) => {
+  const updateTime = (newPeriod: 'AM' | 'PM', hour: number | null, minute: number | null) => {
     if (hour === null) return;
 
     let hour24 = hour;
-    if (newPeriod === '오전') {
+    if (newPeriod === 'AM') {
       hour24 = hour === 12 ? 0 : hour;
     } else {
       hour24 = hour === 12 ? 12 : hour + 12;
@@ -62,7 +62,7 @@ const TimePicker: React.FC<TimePickerProps> = ({
     onChange(timeStr);
   };
 
-  const handlePeriodSelect = (p: '오전' | '오후') => {
+  const handlePeriodSelect = (p: 'AM' | 'PM') => {
     setPeriod(p);
     updateTime(p, selectedHour, selectedMinute);
   };
@@ -92,7 +92,7 @@ const TimePicker: React.FC<TimePickerProps> = ({
     e.stopPropagation();
     setSelectedHour(null);
     setSelectedMinute(null);
-    setPeriod('오전');
+    setPeriod('AM');
     onChange('');
   };
 
@@ -119,26 +119,26 @@ const TimePicker: React.FC<TimePickerProps> = ({
           <div className="time-picker-columns three-columns">
             {/* 오전/오후 */}
             <div className="time-picker-column period-column">
-              <div className="time-picker-column-header">오전/오후</div>
+              <div className="time-picker-column-header">AM/PM</div>
               <div className="time-picker-scroll period-scroll">
                 <div
-                  className={`time-picker-option period-option ${period === '오전' ? 'selected' : ''}`}
-                  onClick={() => handlePeriodSelect('오전')}
+                  className={`time-picker-option period-option ${period === 'AM' ? 'selected' : ''}`}
+                  onClick={() => handlePeriodSelect('AM')}
                 >
-                  오전
+                  AM
                 </div>
                 <div
-                  className={`time-picker-option period-option ${period === '오후' ? 'selected' : ''}`}
-                  onClick={() => handlePeriodSelect('오후')}
+                  className={`time-picker-option period-option ${period === 'PM' ? 'selected' : ''}`}
+                  onClick={() => handlePeriodSelect('PM')}
                 >
-                  오후
+                  PM
                 </div>
               </div>
             </div>
 
             {/* Hours (1-12) */}
             <div className="time-picker-column">
-              <div className="time-picker-column-header">시</div>
+              <div className="time-picker-column-header">Hour</div>
               <div className="time-picker-scroll">
                 {hours.map(hour => (
                   <div
@@ -146,7 +146,7 @@ const TimePicker: React.FC<TimePickerProps> = ({
                     className={`time-picker-option ${selectedHour === hour ? 'selected' : ''}`}
                     onClick={() => handleHourSelect(hour)}
                   >
-                    <span className="time-value">{hour}시</span>
+                    <span className="time-value">{hour}</span>
                   </div>
                 ))}
               </div>
@@ -154,7 +154,7 @@ const TimePicker: React.FC<TimePickerProps> = ({
 
             {/* Minutes */}
             <div className="time-picker-column">
-              <div className="time-picker-column-header">분</div>
+              <div className="time-picker-column-header">Min</div>
               <div className="time-picker-scroll">
                 {minutes.map(minute => (
                   <div
@@ -162,7 +162,7 @@ const TimePicker: React.FC<TimePickerProps> = ({
                     className={`time-picker-option ${selectedMinute === minute ? 'selected' : ''}`}
                     onClick={() => handleMinuteSelect(minute)}
                   >
-                    <span className="time-value">{minute.toString().padStart(2, '0')}분</span>
+                    <span className="time-value">{minute.toString().padStart(2, '0')}</span>
                   </div>
                 ))}
               </div>

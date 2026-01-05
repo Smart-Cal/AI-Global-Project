@@ -38,7 +38,7 @@ const AssistantTab: React.FC = () => {
     // Build message with goal context if selected
     let messageContent = input.trim();
     if (selectedGoal) {
-      messageContent = `[목표: ${selectedGoal.title}] ${messageContent}`;
+      messageContent = `[Goal: ${selectedGoal.title}] ${messageContent}`;
     }
 
     const userMessage: AgentMessage = {
@@ -61,7 +61,7 @@ const AssistantTab: React.FC = () => {
         start_time: evt.datetime ? evt.datetime.split('T')[1]?.slice(0, 5) : undefined,
         end_time: undefined,
         location: evt.location,
-        category_name: selectedGoal?.title || '기본',
+        category_name: selectedGoal?.title || 'Default',
         description: evt.description,
         reason: '',
         added: true, // Auto-save enabled
@@ -91,7 +91,7 @@ const AssistantTab: React.FC = () => {
         {
           id: crypto.randomUUID(),
           role: 'assistant',
-          content: '죄송합니다. 오류가 발생했습니다. 다시 시도해주세요.',
+          content: 'Sorry, an error occurred. Please try again.',
           timestamp: new Date(),
         },
       ]);
@@ -131,7 +131,7 @@ const AssistantTab: React.FC = () => {
       <div className="assistant-messages">
         {messages.length === 0 ? (
           <div className="assistant-welcome">
-            <div className="assistant-welcome-text">"내일 오후 3시 미팅"</div>
+            <div className="assistant-welcome-text">"Meeting tomorrow at 3 PM"</div>
           </div>
         ) : (
           messages.map((msg) => (
@@ -150,7 +150,7 @@ const AssistantTab: React.FC = () => {
                           <span>{event.date}</span>
                           {event.start_time && <span>{event.start_time}</span>}
                         </div>
-                        {event.added && <span className="assistant-event-added">추가됨</span>}
+                        {event.added && <span className="assistant-event-added">Added</span>}
                       </div>
                     ))}
                   </div>
@@ -206,10 +206,10 @@ const AssistantTab: React.FC = () => {
             {showAttachMenu && (
               <div className="assistant-attach-menu">
                 <button onClick={handleFileSelect}>
-                  파일 첨부
+                  Attach File
                 </button>
                 <button onClick={() => { setShowGoalSelector(true); setShowAttachMenu(false); }}>
-                  Goal 선택
+                  Select Goal
                 </button>
               </div>
             )}
@@ -219,7 +219,7 @@ const AssistantTab: React.FC = () => {
           <input
             type="text"
             className="assistant-input"
-            placeholder="무엇이든 물어보세요"
+            placeholder="Ask me anything"
             value={input}
             onChange={(e) => setInput(e.target.value)}
             onKeyDown={handleKeyDown}
@@ -263,7 +263,7 @@ const AssistantTab: React.FC = () => {
         <div className="goal-selector-overlay" onClick={() => setShowGoalSelector(false)}>
           <div className="goal-selector-modal" onClick={(e) => e.stopPropagation()}>
             <div className="goal-selector-header">
-              <h3>Goal 선택</h3>
+              <h3>Select Goal</h3>
               <button onClick={() => setShowGoalSelector(false)}>×</button>
             </div>
             <div className="goal-selector-list">
@@ -271,7 +271,7 @@ const AssistantTab: React.FC = () => {
                 className={`goal-selector-item ${!selectedGoal ? 'selected' : ''}`}
                 onClick={() => handleGoalSelect(null)}
               >
-                <span>일반 대화</span>
+                <span>General Chat</span>
               </button>
               {activeGoals.map((goal) => (
                 <button

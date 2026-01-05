@@ -9,7 +9,7 @@ const AuthCallback: React.FC = () => {
   const [processing, setProcessing] = useState(true);
 
   useEffect(() => {
-    // 이미 로그인된 경우 홈으로
+    // Redirect to home if already logged in
     if (user) {
       navigate('/', { replace: true });
       return;
@@ -17,7 +17,7 @@ const AuthCallback: React.FC = () => {
 
     const processCallback = async () => {
       try {
-        // URL에서 에러 파라미터 확인
+        // Check for error parameters in URL
         const urlParams = new URLSearchParams(window.location.search);
         const hashParams = new URLSearchParams(window.location.hash.substring(1));
 
@@ -29,20 +29,20 @@ const AuthCallback: React.FC = () => {
           throw new Error(errorDescription || errorParam);
         }
 
-        // 구글 콜백 처리
+        // Process Google callback
         const success = await handleGoogleCallback();
 
         if (success) {
-          // URL 해시 정리
+          // Clean up URL hash
           window.history.replaceState(null, '', window.location.pathname);
           navigate('/', { replace: true });
         }
       } catch (err) {
         console.error('Auth callback error:', err);
-        setError(err instanceof Error ? err.message : '로그인 처리 중 오류가 발생했습니다.');
+        setError(err instanceof Error ? err.message : 'An error occurred during login processing.');
         setProcessing(false);
 
-        // 5초 후 로그인 페이지로 이동
+        // Redirect to login page after 5 seconds
         setTimeout(() => {
           navigate('/auth', { replace: true });
         }, 5000);
@@ -66,7 +66,7 @@ const AuthCallback: React.FC = () => {
         }}
       >
         <div style={{ fontSize: '48px' }}>😕</div>
-        <h2 style={{ color: '#333', margin: 0 }}>로그인 실패</h2>
+        <h2 style={{ color: '#333', margin: 0 }}>Login Failed</h2>
         <div
           style={{
             background: '#fee2e2',
@@ -81,7 +81,7 @@ const AuthCallback: React.FC = () => {
           {error}
         </div>
         <p style={{ color: '#666', fontSize: '14px' }}>
-          잠시 후 로그인 페이지로 이동합니다...
+          Redirecting to login page in a moment...
         </p>
         <button
           onClick={() => navigate('/auth', { replace: true })}
@@ -95,7 +95,7 @@ const AuthCallback: React.FC = () => {
             fontSize: '14px',
           }}
         >
-          지금 이동하기
+          Go now
         </button>
       </div>
     );
@@ -113,7 +113,7 @@ const AuthCallback: React.FC = () => {
       }}
     >
       <div className="spinner" style={{ width: '48px', height: '48px' }} />
-      <p style={{ color: '#666', fontSize: '16px' }}>로그인 처리 중...</p>
+      <p style={{ color: '#666', fontSize: '16px' }}>Processing login...</p>
     </div>
   );
 };

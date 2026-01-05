@@ -64,7 +64,7 @@ export const GoalModal: React.FC<GoalModalProps> = ({ isOpen, onClose, editingGo
           priority,
           target_date: targetDate || new Date().toISOString().split('T')[0],
         });
-        showToast('목표가 수정되었습니다', 'success');
+        showToast('Goal updated', 'success');
       } else {
         await addGoal({
           title: title.trim(),
@@ -73,12 +73,12 @@ export const GoalModal: React.FC<GoalModalProps> = ({ isOpen, onClose, editingGo
           priority,
           target_date: targetDate || new Date().toISOString().split('T')[0],
         });
-        showToast('목표가 추가되었습니다', 'success');
+        showToast('Goal added', 'success');
       }
       onClose();
     } catch (error) {
       console.error('Failed to save goal:', error);
-      showToast('목표 저장에 실패했습니다', 'error');
+      showToast('Failed to save goal', 'error');
     } finally {
       setIsLoading(false);
     }
@@ -94,7 +94,7 @@ export const GoalModal: React.FC<GoalModalProps> = ({ isOpen, onClose, editingGo
       setNewCategoryColor(CATEGORY_COLORS[0]);
     } catch (error) {
       console.error('Failed to add category:', error);
-      alert('카테고리 추가에 실패했습니다.');
+      alert('Failed to add category.');
     }
   };
 
@@ -102,34 +102,34 @@ export const GoalModal: React.FC<GoalModalProps> = ({ isOpen, onClose, editingGo
     <div className="modal-overlay" onClick={onClose}>
       <div className="modal" onClick={(e) => e.stopPropagation()}>
         <div className="modal-header">
-          <div className="modal-title">{editingGoal ? '목표 수정' : '새 목표'}</div>
+          <div className="modal-title">{editingGoal ? 'Edit Goal' : 'New Goal'}</div>
           <button className="modal-close" onClick={onClose}>×</button>
         </div>
 
         <div className="modal-body">
           <div className="form-group">
-            <label className="form-label">목표 이름 *</label>
+            <label className="form-label">Goal Title *</label>
             <input
               type="text"
               className="form-input"
-              placeholder="예: 토익 900점 달성, 10kg 감량"
+              placeholder="e.g. Achieve TOEIC 900, Lose 10kg"
               value={title}
               onChange={(e) => setTitle(e.target.value)}
             />
           </div>
 
           <div className="form-group">
-            <label className="form-label">설명</label>
+            <label className="form-label">Description</label>
             <textarea
               className="form-input"
-              placeholder="목표에 대한 상세 설명을 입력하세요"
+              placeholder="Enter detailed description for the goal"
               value={description}
               onChange={(e) => setDescription(e.target.value)}
             />
           </div>
 
           <div className="form-group">
-            <label className="form-label">카테고리</label>
+            <label className="form-label">Category</label>
             <div className="category-select">
               {categories.map((cat) => (
                 <div
@@ -153,7 +153,7 @@ export const GoalModal: React.FC<GoalModalProps> = ({ isOpen, onClose, editingGo
                 onClick={() => setShowNewCategory(true)}
                 style={{ borderStyle: 'dashed' }}
               >
-                <span>+ 추가</span>
+                <span>+ Add</span>
               </div>
             </div>
 
@@ -163,7 +163,7 @@ export const GoalModal: React.FC<GoalModalProps> = ({ isOpen, onClose, editingGo
                   <input
                     type="text"
                     className="form-input"
-                    placeholder="새 카테고리 이름"
+                    placeholder="New Category Name"
                     value={newCategoryName}
                     onChange={(e) => setNewCategoryName(e.target.value)}
                   />
@@ -180,10 +180,10 @@ export const GoalModal: React.FC<GoalModalProps> = ({ isOpen, onClose, editingGo
                 </div>
                 <div style={{ display: 'flex', gap: '8px' }}>
                   <button className="btn btn-sm btn-primary" onClick={handleAddCategory}>
-                    추가
+                    Add
                   </button>
                   <button className="btn btn-sm btn-secondary" onClick={() => setShowNewCategory(false)}>
-                    취소
+                    Cancel
                   </button>
                 </div>
               </div>
@@ -191,31 +191,31 @@ export const GoalModal: React.FC<GoalModalProps> = ({ isOpen, onClose, editingGo
           </div>
 
           <div className="form-group">
-            <label className="form-label">우선순위</label>
+            <label className="form-label">Priority</label>
             <div className="priority-select">
               <div
                 className={`priority-option ${priority === 'high' ? 'selected high' : ''}`}
                 onClick={() => setPriority('high')}
               >
-                높음
+                High
               </div>
               <div
                 className={`priority-option ${priority === 'medium' ? 'selected medium' : ''}`}
                 onClick={() => setPriority('medium')}
               >
-                보통
+                Medium
               </div>
               <div
                 className={`priority-option ${priority === 'low' ? 'selected low' : ''}`}
                 onClick={() => setPriority('low')}
               >
-                낮음
+                Low
               </div>
             </div>
           </div>
 
           <div className="form-group">
-            <label className="form-label">목표 달성일</label>
+            <label className="form-label">Target Date</label>
             <input
               type="date"
               className="form-input"
@@ -227,14 +227,14 @@ export const GoalModal: React.FC<GoalModalProps> = ({ isOpen, onClose, editingGo
 
         <div className="modal-footer">
           <button className="btn btn-secondary" onClick={onClose}>
-            취소
+            Cancel
           </button>
           <button
             className={`btn btn-primary ${isLoading ? 'loading' : ''}`}
             onClick={handleSubmit}
             disabled={!title.trim() || isLoading}
           >
-            {editingGoal ? '수정' : '추가'}
+            {editingGoal ? 'Update' : 'Add'}
           </button>
         </div>
       </div>

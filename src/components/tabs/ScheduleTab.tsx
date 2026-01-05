@@ -2,9 +2,9 @@ import React, { useState, useEffect } from 'react';
 import { useEventStore } from '../../store/eventStore';
 import { useTodoStore } from '../../store/todoStore';
 import { useCategoryStore } from '../../store/categoryStore';
-import { DEFAULT_CATEGORY_COLOR, type CalendarEvent, type Todo, type Category } from '../../types';
+import { DEFAULT_CATEGORY_COLOR, type CalendarEvent } from '../../types';
 
-// deadline에서 날짜와 시간 추출
+// Extract date from deadline
 function getDeadlineDate(deadline?: string): string | undefined {
   if (!deadline) return undefined;
   return deadline.split('T')[0];
@@ -66,11 +66,12 @@ const ScheduleTab: React.FC<ScheduleTabProps> = ({ onEventClick, onAddEvent, onA
     const todayStr = today.toISOString().split('T')[0];
     const tomorrowStr = tomorrow.toISOString().split('T')[0];
 
-    if (dateStr === todayStr) return '오늘';
-    if (dateStr === tomorrowStr) return '내일';
+    if (dateStr === todayStr) return 'Today';
+    if (dateStr === tomorrowStr) return 'Tomorrow';
 
-    const weekdays = ['일', '월', '화', '수', '목', '금', '토'];
-    return `${date.getMonth() + 1}월 ${date.getDate()}일 ${weekdays[date.getDay()]}요일`;
+    const weekdays = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+    const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+    return `${months[date.getMonth()]} ${date.getDate()} (${weekdays[date.getDay()]})`;
   };
 
   const getPriorityColor = (priority: string) => {
@@ -92,7 +93,7 @@ const ScheduleTab: React.FC<ScheduleTabProps> = ({ onEventClick, onAddEvent, onA
       {/* Category Sidebar */}
       <aside className="schedule-sidebar">
         <div className="schedule-sidebar-header">
-          <h3>카테고리</h3>
+          <h3>Categories</h3>
         </div>
         <div className="schedule-category-list">
           <button
@@ -100,7 +101,7 @@ const ScheduleTab: React.FC<ScheduleTabProps> = ({ onEventClick, onAddEvent, onA
             onClick={() => setSelectedCategory(null)}
           >
             <span className="category-color-dot" style={{ backgroundColor: '#4A90D9' }} />
-            <span className="category-name">전체</span>
+            <span className="category-name">All</span>
             <span className="category-count">{events.length}</span>
           </button>
           {categories.map(category => {
@@ -122,19 +123,19 @@ const ScheduleTab: React.FC<ScheduleTabProps> = ({ onEventClick, onAddEvent, onA
         <div className="schedule-sidebar-divider" />
 
         <div className="schedule-sidebar-section">
-          <h4>보기</h4>
+          <h4>View</h4>
           <div className="schedule-view-toggles">
             <button
               className={`schedule-view-toggle ${viewType === 'all' ? 'active' : ''}`}
               onClick={() => setViewType('all')}
             >
-              전체
+              All
             </button>
             <button
               className={`schedule-view-toggle ${viewType === 'events' ? 'active' : ''}`}
               onClick={() => setViewType('events')}
             >
-              일정
+              Events
             </button>
             <button
               className={`schedule-view-toggle ${viewType === 'todos' ? 'active' : ''}`}
@@ -151,15 +152,15 @@ const ScheduleTab: React.FC<ScheduleTabProps> = ({ onEventClick, onAddEvent, onA
         <div className="schedule-header">
           <h2>
             {selectedCategory
-              ? categories.find(c => c.id === selectedCategory)?.name || '일정'
-              : '전체 일정'}
+              ? categories.find(c => c.id === selectedCategory)?.name || 'Schedule'
+              : 'All Schedule'}
           </h2>
           <div className="schedule-actions">
             <button className="btn btn-primary btn-sm" onClick={() => onAddEvent()}>
-              + 일정 추가
+              + Add Event
             </button>
             <button className="btn btn-secondary btn-sm" onClick={onAddTodo}>
-              + TODO 추가
+              + Add Todo
             </button>
           </div>
         </div>
@@ -168,11 +169,11 @@ const ScheduleTab: React.FC<ScheduleTabProps> = ({ onEventClick, onAddEvent, onA
           {/* Events Section */}
           {(viewType === 'all' || viewType === 'events') && (
             <div className="schedule-events-section">
-              {viewType === 'all' && <h3 className="schedule-section-title">일정</h3>}
+              {viewType === 'all' && <h3 className="schedule-section-title">Events</h3>}
 
               {sortedDates.length === 0 ? (
                 <div className="schedule-empty">
-                  <p>일정이 없습니다</p>
+                  <p>No events</p>
                 </div>
               ) : (
                 sortedDates.map(date => (
@@ -195,7 +196,7 @@ const ScheduleTab: React.FC<ScheduleTabProps> = ({ onEventClick, onAddEvent, onA
                               <div className="schedule-event-title">{event.title}</div>
                               <div className="schedule-event-meta">
                                 {event.is_all_day ? (
-                                  <span>종일</span>
+                                  <span>All day</span>
                                 ) : (
                                   <span>
                                     {event.start_time?.slice(0, 5)}
@@ -227,7 +228,7 @@ const ScheduleTab: React.FC<ScheduleTabProps> = ({ onEventClick, onAddEvent, onA
 
               {filteredTodos.length === 0 ? (
                 <div className="schedule-empty">
-                  <p>할 일이 없습니다</p>
+                  <p>No todos</p>
                 </div>
               ) : (
                 <div className="schedule-todos-list">
@@ -255,7 +256,7 @@ const ScheduleTab: React.FC<ScheduleTabProps> = ({ onEventClick, onAddEvent, onA
                         className="schedule-todo-priority"
                         style={{ backgroundColor: getPriorityColor(todo.priority) }}
                       >
-                        {todo.priority === 'high' ? '높음' : todo.priority === 'medium' ? '중간' : '낮음'}
+                        {todo.priority === 'high' ? 'High' : todo.priority === 'medium' ? 'Medium' : 'Low'}
                       </div>
                     </div>
                   ))}

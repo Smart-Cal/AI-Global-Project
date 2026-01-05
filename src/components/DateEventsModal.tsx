@@ -25,12 +25,13 @@ export const DateEventsModal: React.FC<DateEventsModalProps> = ({
 
   const formatDate = (dateStr: string) => {
     const d = new Date(dateStr);
-    const days = ['일', '월', '화', '수', '목', '금', '토'];
-    return `${d.getMonth() + 1}월 ${d.getDate()}일 (${days[d.getDay()]})`;
+    const days = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+    const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+    return `${months[d.getMonth()]} ${d.getDate()} (${days[d.getDay()]})`;
   };
 
   const formatTime = (time?: string) => {
-    if (!time) return '종일';
+    if (!time) return 'All day';
     return time.slice(0, 5);
   };
 
@@ -38,21 +39,21 @@ export const DateEventsModal: React.FC<DateEventsModalProps> = ({
     <Modal isOpen={isOpen} onClose={onClose} title={`${formatDate(date)}`}>
       <div style={{ marginBottom: '16px' }}>
         <button className="btn btn-primary" onClick={onAddEvent}>
-          + 새 일정 추가
+          + Add New Event
         </button>
       </div>
 
       {events.length === 0 ? (
         <div className="empty-state">
           <div className="icon">📭</div>
-          <p>이 날짜에 일정이 없습니다</p>
+          <p>No events on this day</p>
         </div>
       ) : (
         <div>
           {events.map((event) => {
             const category = event.category_id ? getCategoryById(event.category_id) : null;
             const categoryColor = category?.color || DEFAULT_CATEGORY_COLOR;
-            const categoryName = category?.name || '기본';
+            const categoryName = category?.name || 'Default';
             return (
               <div
                 key={event.id}

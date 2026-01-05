@@ -17,14 +17,14 @@ interface AuthState {
   initFromToken: () => Promise<void>;
 }
 
-// 다른 스토어에 사용자 ID 동기화
+// Sync user ID to other stores
 const syncUserToStores = (userId: string | null) => {
   useGoalStore.getState().setCurrentUser(userId);
   useTodoStore.getState().setCurrentUser(userId);
   useCategoryStore.getState().setCurrentUser(userId);
 };
 
-// Supabase 클라이언트 캐시
+// Supabase client cache
 let supabaseClientCache: SupabaseClient | null = null;
 
 async function getSupabaseClient(): Promise<SupabaseClient> {
@@ -42,7 +42,7 @@ async function getSupabaseClient(): Promise<SupabaseClient> {
     return supabaseClientCache;
   } catch (error) {
     console.error('Failed to get Supabase config:', error);
-    throw new Error('Supabase 설정을 불러올 수 없습니다.');
+    throw new Error('Failed to load Supabase config.');
   }
 }
 
@@ -71,7 +71,7 @@ export const useAuthStore = create<AuthState>()((set, get) => ({
         console.error('OAuth error:', error);
         throw error;
       }
-      // 리다이렉트가 발생하므로 여기서는 isLoading을 false로 설정하지 않음
+      // Redirect occurs, so do not set isLoading to false here
     } catch (error) {
       set({ isLoading: false });
       throw error;
@@ -83,22 +83,22 @@ export const useAuthStore = create<AuthState>()((set, get) => ({
     try {
       const supabase = await getSupabaseClient();
 
-      // URL 해시에서 세션 정보 추출
+      // Extract session info from URL hash
       const hashParams = new URLSearchParams(window.location.hash.substring(1));
       const accessToken = hashParams.get('access_token');
 
       if (accessToken) {
-        // URL 해시에서 직접 토큰을 가져온 경우
+        // When token is directly retrieved from URL hash
         console.log('Found access_token in URL hash');
 
-        // Supabase 세션 설정
+        // Set Supabase session
         const { data: { session }, error: sessionError } = await supabase.auth.getSession();
 
         if (sessionError) {
           console.error('Session error:', sessionError);
         }
 
-        // access_token으로 백엔드에 로그인 요청
+        // Request login to backend with access_token
         const response = await api.loginWithGoogle(accessToken);
 
         const user: User = {
@@ -116,20 +116,20 @@ export const useAuthStore = create<AuthState>()((set, get) => ({
         return true;
       }
 
-      // URL 해시에 토큰이 없으면 Supabase 세션에서 가져오기
+      // If no token in URL hash, get from Supabase session
       const { data: { session }, error: sessionError } = await supabase.auth.getSession();
 
       if (sessionError) {
         console.error('Session error:', sessionError);
-        throw new Error('세션을 가져오는데 실패했습니다.');
+        throw new Error('Failed to get session.');
       }
 
       if (!session) {
         console.error('No session found');
-        throw new Error('세션을 찾을 수 없습니다. 다시 로그인해주세요.');
+        throw new Error('Session not found. Please login again.');
       }
 
-      // 백엔드에 access_token 전송해서 우리 서비스 JWT 받기
+      // Send access_token to backend to receive service JWT
       const response = await api.loginWithGoogle(session.access_token);
 
       const user: User = {
@@ -157,13 +157,13 @@ export const useAuthStore = create<AuthState>()((set, get) => ({
     set({ user: null });
     syncUserToStores(null);
 
-    // Supabase 로그아웃도 처리
+    // Handle Supabase logout as well
     getSupabaseClient()
       .then((supabase) => {
         supabase.auth.signOut();
       })
       .catch(() => {
-        // 무시
+        // Ignore
       });
   },
 
@@ -191,7 +191,7 @@ export const useAuthStore = create<AuthState>()((set, get) => ({
   },
 }));
 
-// 사용자 정보 로컬 스토리지 동기화
+// Sync user info to local storage
 useAuthStore.subscribe((state) => {
   if (state.user) {
     localStorage.setItem('palm_user', JSON.stringify(state.user));

@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 import { useGoalStore, calculateGoalProgress } from '../store/goalStore';
 import { useTodoStore } from '../store/todoStore';
@@ -26,23 +27,23 @@ const GoalDecomposition: React.FC<GoalDecompositionProps> = ({ goal, onClose }) 
   const [isLoading, setIsLoading] = useState(false);
   const [decomposedTodos, setDecomposedTodos] = useState<DecomposedTodo[]>([]);
   const [strategy, setStrategy] = useState('');
-  const [activityType, setActivityType] = useState('공부');
+  const [activityType, setActivityType] = useState('Study');
   const [hasDecomposed, setHasDecomposed] = useState(false);
 
-  // Goal에 연결된 기존 Todo들
+  // Existing Todos connected to Goal
   const existingTodos = goal.id ? getTodosByGoal(goal.id) : [];
 
   const activityTypes = [
-    { value: '공부', label: '공부/학습' },
-    { value: '운동', label: '운동/건강' },
-    { value: '프로젝트', label: '프로젝트' },
-    { value: '자격증', label: '자격증/시험' },
-    { value: '기타', label: '기타' },
+    { value: 'Study', label: 'Study/Learning' },
+    { value: 'Exercise', label: 'Exercise/Health' },
+    { value: 'Project', label: 'Project' },
+    { value: 'Certification', label: 'Cert/Exam' },
+    { value: 'Other', label: 'Other' },
   ];
 
   const handleDecompose = async () => {
     if (!goal.target_date) {
-      showToast('목표 날짜를 먼저 설정해주세요', 'warning');
+      showToast('Please set a target date first', 'warning');
       return;
     }
 
@@ -56,41 +57,41 @@ const GoalDecomposition: React.FC<GoalDecompositionProps> = ({ goal, onClose }) 
           'Authorization': `Bearer ${token}`,
         },
         body: JSON.stringify({
-          message: `목표를 분해해줘: ${goal.title}`,
+          message: `Break down this goal: ${goal.title}`,
           mode: 'goal',
           conversation_history: [],
         }),
       });
 
       if (!response.ok) {
-        throw new Error('API 호출 실패');
+        throw new Error('API call failed');
       }
 
-      // 간단한 분해 로직 (백엔드 응답 대신 클라이언트에서 처리)
+      // Simple decomposition logic (processed on client instead of backend response for now)
       const strategies: Record<string, { steps: string[]; durations: number[] }> = {
-        '공부': {
-          steps: ['개념 학습', '연습 문제 풀이', '복습', '모의 테스트'],
+        'Study': {
+          steps: ['Concept Learning', 'Practice Problems', 'Review', 'Mock Test'],
           durations: [90, 60, 45, 60]
         },
-        '운동': {
-          steps: ['워밍업', '본 운동', '쿨다운', '스트레칭'],
+        'Exercise': {
+          steps: ['Warm-up', 'Main Workout', 'Cool-down', 'Stretching'],
           durations: [10, 40, 10, 15]
         },
-        '프로젝트': {
-          steps: ['기획 및 설계', '구현', '테스트', '리뷰 및 개선'],
+        'Project': {
+          steps: ['Planning & Design', 'Implementation', 'Testing', 'Review & Improvement'],
           durations: [60, 120, 60, 30]
         },
-        '자격증': {
-          steps: ['이론 공부', '기출문제 풀이', '오답 노트 정리', '모의고사'],
+        'Certification': {
+          steps: ['Theory Study', 'Past Exam Problems', 'Review Incorrect Answers', 'Mock Exam'],
           durations: [90, 60, 30, 60]
         },
-        '기타': {
-          steps: ['준비', '실행', '정리', '검토'],
+        'Other': {
+          steps: ['Preparation', 'Execution', 'Cleanup', 'Review'],
           durations: [30, 60, 20, 15]
         }
       };
 
-      const selectedStrategy = strategies[activityType] || strategies['기타'];
+      const selectedStrategy = strategies[activityType] || strategies['Other'];
 
       const todos = selectedStrategy.steps.map((step, index) => ({
         title: `${goal.title} - ${step}`,
@@ -99,27 +100,27 @@ const GoalDecomposition: React.FC<GoalDecompositionProps> = ({ goal, onClose }) 
         isSelected: true,
       }));
 
-      // D-day 계산
+      // D-day calculation
       const today = new Date();
       const target = new Date(goal.target_date);
       const daysUntilTarget = Math.ceil((target.getTime() - today.getTime()) / (1000 * 60 * 60 * 24));
 
       let frequency = '';
       if (daysUntilTarget <= 7) {
-        frequency = '매일';
+        frequency = 'Daily';
       } else if (daysUntilTarget <= 30) {
-        frequency = '주 3-4회';
+        frequency = '3-4 times a week';
       } else {
-        frequency = '주 2-3회';
+        frequency = '2-3 times a week';
       }
 
       setDecomposedTodos(todos);
-      setStrategy(`${goal.title}을 위해 ${frequency} ${todos.length}단계로 진행하는 것을 추천합니다. (D-${daysUntilTarget})`);
+      setStrategy(`Recommended ${todos.length} steps ${frequency} for ${goal.title}. (${daysUntilTarget} days left)`);
       setHasDecomposed(true);
-      showToast('목표가 세부 작업으로 분해되었습니다', 'success');
+      showToast('Goal has been broken down into sub-tasks', 'success');
     } catch (error) {
       console.error('Failed to decompose goal:', error);
-      showToast('목표 분해에 실패했습니다', 'error');
+      showToast('Failed to decompose goal', 'error');
     } finally {
       setIsLoading(false);
     }
@@ -136,7 +137,7 @@ const GoalDecomposition: React.FC<GoalDecompositionProps> = ({ goal, onClose }) 
   const handleCreateTodos = async () => {
     const selectedTodos = decomposedTodos.filter(t => t.isSelected);
     if (selectedTodos.length === 0) {
-      showToast('최소 하나의 작업을 선택해주세요', 'warning');
+      showToast('Please select at least one task', 'warning');
       return;
     }
 
@@ -147,7 +148,7 @@ const GoalDecomposition: React.FC<GoalDecompositionProps> = ({ goal, onClose }) 
           user_id: goal.user_id,
           goal_id: goal.id,
           title: todo.title,
-          description: `${goal.title} 목표의 세부 작업`,
+          description: `Sub-task for goal: ${goal.title}`,
           priority: goal.priority,
           is_recurring: false,
           is_hard_deadline: false,
@@ -156,11 +157,11 @@ const GoalDecomposition: React.FC<GoalDecompositionProps> = ({ goal, onClose }) 
           estimated_time: todo.duration,
         });
       }
-      showToast(`${selectedTodos.length}개의 작업이 생성되었습니다`, 'success');
+      showToast(`${selectedTodos.length} tasks created`, 'success');
       onClose();
     } catch (error) {
       console.error('Failed to create todos:', error);
-      showToast('작업 생성에 실패했습니다', 'error');
+      showToast('Failed to create tasks', 'error');
     } finally {
       setIsLoading(false);
     }
@@ -176,22 +177,22 @@ const GoalDecomposition: React.FC<GoalDecompositionProps> = ({ goal, onClose }) 
   };
 
   const formatDuration = (minutes: number) => {
-    if (minutes < 60) return `${minutes}분`;
+    if (minutes < 60) return `${minutes}m`;
     const hours = Math.floor(minutes / 60);
     const mins = minutes % 60;
-    return mins > 0 ? `${hours}시간 ${mins}분` : `${hours}시간`;
+    return mins > 0 ? `${hours}h ${mins}m` : `${hours}h`;
   };
 
   return (
     <div className="modal-overlay" onClick={onClose}>
       <div className="modal large" onClick={(e) => e.stopPropagation()}>
         <div className="modal-header">
-          <div className="modal-title">목표 분해</div>
+          <div className="modal-title">Break Down Goal</div>
           <button className="modal-close" onClick={onClose}>×</button>
         </div>
 
         <div className="modal-body">
-          {/* Goal 정보 */}
+          {/* Goal Info */}
           <div className="goal-decompose-header">
             <h3>{goal.title}</h3>
             {goal.description && <p className="goal-description">{goal.description}</p>}
@@ -200,23 +201,23 @@ const GoalDecomposition: React.FC<GoalDecompositionProps> = ({ goal, onClose }) 
                 className="goal-priority-badge"
                 style={{ backgroundColor: getPriorityColor(goal.priority) }}
               >
-                {goal.priority === 'high' ? '높음' : goal.priority === 'medium' ? '중간' : '낮음'}
+                {goal.priority === 'high' ? 'High' : goal.priority === 'medium' ? 'Medium' : 'Low'}
               </span>
               {goal.target_date && (
                 <span className="goal-target-date">
-                  목표일: {new Date(goal.target_date).toLocaleDateString('ko-KR')}
+                  Target: {new Date(goal.target_date).toLocaleDateString()}
                 </span>
               )}
               <span className="goal-progress-badge">
-                진행률: {calculateGoalProgress(goal)}%
+                Progress: {calculateGoalProgress(goal)}%
               </span>
             </div>
           </div>
 
-          {/* 기존 연결된 Todo */}
+          {/* Existing Connected Todos */}
           {existingTodos.length > 0 && (
             <div className="goal-existing-todos">
-              <h4>연결된 작업 ({existingTodos.length})</h4>
+              <h4>Linked Tasks ({existingTodos.length})</h4>
               <div className="existing-todo-list">
                 {existingTodos.map((todo) => (
                   <div
@@ -233,10 +234,10 @@ const GoalDecomposition: React.FC<GoalDecompositionProps> = ({ goal, onClose }) 
             </div>
           )}
 
-          {/* 활동 유형 선택 */}
+          {/* Activity Type Selection */}
           {!hasDecomposed && (
             <div className="goal-decompose-options">
-              <h4>활동 유형 선택</h4>
+              <h4>Select Activity Type</h4>
               <div className="activity-type-selector">
                 {activityTypes.map((type) => (
                   <button
@@ -251,7 +252,7 @@ const GoalDecomposition: React.FC<GoalDecompositionProps> = ({ goal, onClose }) 
             </div>
           )}
 
-          {/* 분해 결과 */}
+          {/* Decomposition Result */}
           {hasDecomposed && (
             <div className="goal-decompose-result">
               <div className="decompose-strategy">
@@ -259,7 +260,7 @@ const GoalDecomposition: React.FC<GoalDecompositionProps> = ({ goal, onClose }) 
                 <p>{strategy}</p>
               </div>
 
-              <h4>생성할 세부 작업</h4>
+              <h4>Sub-tasks to Create</h4>
               <div className="decomposed-todo-list">
                 {decomposedTodos.map((todo, index) => (
                   <div
@@ -280,8 +281,8 @@ const GoalDecomposition: React.FC<GoalDecompositionProps> = ({ goal, onClose }) 
               </div>
 
               <div className="decompose-summary">
-                <span>선택된 작업: {decomposedTodos.filter(t => t.isSelected).length}개</span>
-                <span>총 소요 시간: {formatDuration(
+                <span>Selected: {decomposedTodos.filter(t => t.isSelected).length}</span>
+                <span>Total Time: {formatDuration(
                   decomposedTodos.filter(t => t.isSelected).reduce((sum, t) => sum + t.duration, 0)
                 )}</span>
               </div>
@@ -291,7 +292,7 @@ const GoalDecomposition: React.FC<GoalDecompositionProps> = ({ goal, onClose }) 
 
         <div className="modal-footer">
           <button className="btn btn-secondary" onClick={onClose}>
-            취소
+            Cancel
           </button>
           {!hasDecomposed ? (
             <button
@@ -299,7 +300,7 @@ const GoalDecomposition: React.FC<GoalDecompositionProps> = ({ goal, onClose }) 
               onClick={handleDecompose}
               disabled={isLoading || !goal.target_date}
             >
-              {isLoading ? '분해 중...' : '목표 분해하기'}
+              {isLoading ? 'Breaking down...' : 'Break Down Goal'}
             </button>
           ) : (
             <>
@@ -307,14 +308,14 @@ const GoalDecomposition: React.FC<GoalDecompositionProps> = ({ goal, onClose }) 
                 className="btn btn-secondary"
                 onClick={() => setHasDecomposed(false)}
               >
-                다시 분해
+                Reset
               </button>
               <button
                 className={`btn btn-primary ${isLoading ? 'loading' : ''}`}
                 onClick={handleCreateTodos}
                 disabled={isLoading || decomposedTodos.filter(t => t.isSelected).length === 0}
               >
-                {isLoading ? '생성 중...' : '작업 생성'}
+                {isLoading ? 'Creating...' : 'Create Tasks'}
               </button>
             </>
           )}

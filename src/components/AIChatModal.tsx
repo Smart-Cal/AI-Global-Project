@@ -51,7 +51,7 @@ export const AIChatModal: React.FC<AIChatModalProps> = ({ isOpen, onClose }) => 
         setPendingSchedule(response.scheduleInfo);
       }
     } catch {
-      setMessages((prev) => [...prev, { role: 'assistant', content: '오류가 발생했습니다. 다시 시도해주세요.' }]);
+      setMessages((prev) => [...prev, { role: 'assistant', content: 'An error occurred. Please try again.' }]);
     } finally {
       setIsLoading(false);
     }
@@ -82,7 +82,7 @@ export const AIChatModal: React.FC<AIChatModalProps> = ({ isOpen, onClose }) => 
         description: pendingSchedule.description,
       });
 
-      setMessages((prev) => [...prev, { role: 'assistant', content: `'${pendingSchedule.title}' 일정이 추가되었습니다!` }]);
+      setMessages((prev) => [...prev, { role: 'assistant', content: `'${pendingSchedule.title}' event added!` }]);
       setPendingSchedule(null);
     } finally {
       setIsLoading(false);
@@ -90,17 +90,17 @@ export const AIChatModal: React.FC<AIChatModalProps> = ({ isOpen, onClose }) => 
   };
 
   const handleReject = () => {
-    setMessages((prev) => [...prev, { role: 'assistant', content: '알겠습니다. 다른 조건이 있으시면 말씀해주세요!' }]);
+    setMessages((prev) => [...prev, { role: 'assistant', content: 'Understood. Please let me know if you have other conditions!' }]);
     setPendingSchedule(null);
   };
 
-  const quickInputs = ['내일 점심 약속', '이번주 토요일 저녁', '다음주 회의'];
+  const quickInputs = ['Lunch appointment tomorrow', 'Dinner this Saturday', 'Meeting next week'];
 
   return (
-    <Modal isOpen={isOpen} onClose={onClose} title="AI 일정 도우미">
+    <Modal isOpen={isOpen} onClose={onClose} title="AI Schedule Assistant">
       <div style={{ background: '#E3F2FD', padding: '12px', borderRadius: '12px', marginBottom: '16px', textAlign: 'center' }}>
         <span style={{ fontSize: '13px', color: '#1565C0' }}>
-          자연어로 일정을 추가해보세요!<br />예: '내일 12시 강남역에서 점심약속'
+          Add events using natural language!<br />e.g., 'Lunch meeting at Gangnam Station tomorrow 12 PM'
         </span>
       </div>
 
@@ -111,18 +111,18 @@ export const AIChatModal: React.FC<AIChatModalProps> = ({ isOpen, onClose }) => 
 
         {pendingSchedule && (
           <div className="schedule-card">
-            <div className="schedule-card-title">이 일정을 추가할까요?</div>
-            <div className="schedule-card-item">• 제목: {pendingSchedule.title}</div>
-            <div className="schedule-card-item">• 날짜: {pendingSchedule.date}</div>
-            <div className="schedule-card-item">• 시간: {pendingSchedule.start_time || '미정'}</div>
-            <div className="schedule-card-item">• 장소: {pendingSchedule.location || '미정'}</div>
-            <div className="schedule-card-item">• 카테고리: {pendingSchedule.category_name || '기본'}</div>
+            <div className="schedule-card-title">Add this event?</div>
+            <div className="schedule-card-item">• Title: {pendingSchedule.title}</div>
+            <div className="schedule-card-item">• Date: {pendingSchedule.date}</div>
+            <div className="schedule-card-item">• Time: {pendingSchedule.start_time || 'TBD'}</div>
+            <div className="schedule-card-item">• Location: {pendingSchedule.location || 'Not specified'}</div>
+            <div className="schedule-card-item">• Category: {pendingSchedule.category_name || 'Default'}</div>
             <div style={{ display: 'flex', gap: '12px', marginTop: '16px' }}>
               <button className="btn btn-primary" onClick={handleConfirm} disabled={isLoading} style={{ flex: 1 }}>
-                예, 추가합니다
+                Yes, Add
               </button>
               <button className="btn btn-secondary" onClick={handleReject} disabled={isLoading} style={{ flex: 1 }}>
-                아니오
+                No
               </button>
             </div>
           </div>
@@ -131,7 +131,7 @@ export const AIChatModal: React.FC<AIChatModalProps> = ({ isOpen, onClose }) => 
         {isLoading && !pendingSchedule && (
           <div className="loading">
             <div className="spinner" />
-            <span>AI가 분석 중...</span>
+            <span>AI is analyzing...</span>
           </div>
         )}
       </div>
@@ -145,14 +145,14 @@ export const AIChatModal: React.FC<AIChatModalProps> = ({ isOpen, onClose }) => 
       <div className="chat-input-container">
         <input
           className="chat-input"
-          placeholder="예: 다음주 금요일 저녁 7시 회식"
+          placeholder="e.g., Team dinner next Friday 7 PM"
           value={input}
           onChange={(e) => setInput(e.target.value)}
           onKeyDown={(e) => e.key === 'Enter' && handleSend()}
           disabled={isLoading}
         />
         <button className="chat-send" onClick={handleSend} disabled={isLoading || !input.trim()}>
-          전송
+          Send
         </button>
       </div>
 
@@ -162,7 +162,7 @@ export const AIChatModal: React.FC<AIChatModalProps> = ({ isOpen, onClose }) => 
           onClick={() => { setMessages([]); setPendingSchedule(null); }}
           style={{ marginTop: '12px' }}
         >
-          대화 초기화
+          Reset Chat
         </button>
       )}
     </Modal>

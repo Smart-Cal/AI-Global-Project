@@ -48,14 +48,15 @@ export const Dashboard: React.FC<DashboardProps> = ({
 
   const getGreeting = () => {
     const hour = today.getHours();
-    if (hour < 12) return '좋은 아침이에요';
-    if (hour < 18) return '좋은 오후예요';
-    return '좋은 저녁이에요';
+    if (hour < 12) return 'Good morning';
+    if (hour < 18) return 'Good afternoon';
+    return 'Good evening';
   };
 
   const formatDate = (date: Date) => {
-    const weekdays = ['일', '월', '화', '수', '목', '금', '토'];
-    return `${date.getMonth() + 1}월 ${date.getDate()}일 ${weekdays[date.getDay()]}요일`;
+    const weekdays = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+    const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+    return `${weekdays[date.getDay()]}, ${months[date.getMonth()]} ${date.getDate()}`;
   };
 
   const findCategoryId = (categoryName?: string): string | undefined => {
@@ -93,7 +94,7 @@ export const Dashboard: React.FC<DashboardProps> = ({
         start_time: evt.datetime ? evt.datetime.split('T')[1]?.slice(0, 5) : undefined,
         end_time: undefined,
         location: evt.location,
-        category_name: '기본',
+        category_name: 'Default',
         description: evt.description,
         reason: '',
         added: false,
@@ -123,7 +124,7 @@ export const Dashboard: React.FC<DashboardProps> = ({
         {
           id: crypto.randomUUID(),
           role: 'assistant',
-          content: '죄송합니다. 오류가 발생했습니다. 다시 시도해주세요.',
+          content: 'Sorry, an error occurred. Please try again.',
           timestamp: new Date(),
         },
       ]);
@@ -181,16 +182,16 @@ export const Dashboard: React.FC<DashboardProps> = ({
   };
 
   const quickPrompts = [
-    '오늘 일정 정리해줘',
-    '이번 주 운동 계획 세워줘',
-    '내일 회의 일정 잡아줘',
-    '주말 계획 추천해줘',
+    'Summarize today\'s schedule',
+    'Plan a workout for this week',
+    'Schedule a meeting for tomorrow',
+    'Recommend weekend plans',
   ];
 
   const getCategoryInfo = (categoryName?: string) => {
     if (!categoryName) {
       const defaultCat = getDefaultCategory();
-      return { name: defaultCat?.name || '기본', color: defaultCat?.color || DEFAULT_CATEGORY_COLOR };
+      return { name: defaultCat?.name || 'Default', color: defaultCat?.color || DEFAULT_CATEGORY_COLOR };
     }
     const cat = getCategoryByName(categoryName);
     if (cat) return { name: cat.name, color: cat.color };
@@ -215,8 +216,8 @@ export const Dashboard: React.FC<DashboardProps> = ({
                 <span className="schedule-card-category" style={{ backgroundColor: categoryInfo.color }}>
                   {categoryInfo.name}
                 </span>
-                {isAdded && <span className="schedule-card-status added">✓ 추가됨</span>}
-                {isRejected && <span className="schedule-card-status rejected">거절됨</span>}
+                {isAdded && <span className="schedule-card-status added">✓ Added</span>}
+                {isRejected && <span className="schedule-card-status rejected">Rejected</span>}
               </div>
               <div className="schedule-card-title">{event.title}</div>
               <div className="schedule-card-info">
@@ -227,10 +228,10 @@ export const Dashboard: React.FC<DashboardProps> = ({
               {!isAdded && !isRejected && (
                 <div className="schedule-card-actions">
                   <button className="btn btn-success btn-xs" onClick={() => handleAddSuggestedEvent(event, msg.id, idx)}>
-                    추가
+                    Add
                   </button>
                   <button className="btn btn-danger-outline btn-xs" onClick={() => handleRejectEvent(msg.id, idx)}>
-                    거절
+                    Reject
                   </button>
                 </div>
               )}
@@ -253,11 +254,11 @@ export const Dashboard: React.FC<DashboardProps> = ({
         {/* 오늘 일정 */}
         <div className="sidebar-section">
           <div className="sidebar-section-header">
-            <span>오늘 일정</span>
+            <span>Today's Schedule</span>
             <span className="sidebar-count">{todayEvents.length}</span>
           </div>
           {todayEvents.length === 0 ? (
-            <div className="sidebar-empty">일정이 없어요</div>
+            <div className="sidebar-empty">No events</div>
           ) : (
             <div className="sidebar-list">
               {todayEvents.slice(0, 5).map((event) => {
@@ -266,7 +267,7 @@ export const Dashboard: React.FC<DashboardProps> = ({
                   <div key={event.id} className="sidebar-item" onClick={() => onEventClick(event)}>
                     <div className="sidebar-item-color" style={{ backgroundColor: category?.color || DEFAULT_CATEGORY_COLOR }} />
                     <div className="sidebar-item-content">
-                      <div className="sidebar-item-time">{event.is_all_day ? '종일' : event.start_time?.slice(0, 5)}</div>
+                      <div className="sidebar-item-time">{event.is_all_day ? 'All day' : event.start_time?.slice(0, 5)}</div>
                       <div className="sidebar-item-title">{event.title}</div>
                     </div>
                   </div>
@@ -279,11 +280,11 @@ export const Dashboard: React.FC<DashboardProps> = ({
         {/* 오늘 할 일 */}
         <div className="sidebar-section">
           <div className="sidebar-section-header">
-            <span>오늘 할 일</span>
+            <span>Today's Todos</span>
             <span className="sidebar-count">{todayTodos.length + overdueTodos.length}</span>
           </div>
           {todayTodos.length + overdueTodos.length === 0 ? (
-            <div className="sidebar-empty">할 일이 없어요</div>
+            <div className="sidebar-empty">No todos</div>
           ) : (
             <div className="sidebar-list">
               {[...overdueTodos, ...todayTodos].slice(0, 5).map((todo) => (
@@ -302,11 +303,11 @@ export const Dashboard: React.FC<DashboardProps> = ({
         {/* 진행 중인 목표 */}
         <div className="sidebar-section">
           <div className="sidebar-section-header">
-            <span>목표</span>
+            <span>Goals</span>
             <span className="sidebar-count">{activeGoals.length}</span>
           </div>
           {activeGoals.length === 0 ? (
-            <div className="sidebar-empty">목표가 없어요</div>
+            <div className="sidebar-empty">No goals</div>
           ) : (
             <div className="sidebar-list">
               {activeGoals.slice(0, 3).map((goal) => {
@@ -335,13 +336,13 @@ export const Dashboard: React.FC<DashboardProps> = ({
 
         <div className="sidebar-nav">
           <button className="sidebar-nav-btn" onClick={() => onViewChange('calendar')}>
-            캘린더
+            Calendar
           </button>
           <button className="sidebar-nav-btn" onClick={() => onViewChange('todos')}>
-            할 일
+            Todos
           </button>
           <button className="sidebar-nav-btn" onClick={() => onViewChange('goals')}>
-            목표
+            Goals
           </button>
         </div>
       </aside>
@@ -353,8 +354,8 @@ export const Dashboard: React.FC<DashboardProps> = ({
             {messages.length === 0 && (
               <div className="chat-welcome">
                 <div className="chat-welcome-icon">🌴</div>
-                <h2>안녕하세요, {user?.nickname || user?.name}님!</h2>
-                <p>무엇을 도와드릴까요? 일정 추가, 계획 세우기, 할 일 관리 등을 도와드립니다.</p>
+                <h2>Hello, {user?.nickname || user?.name}!</h2>
+                <p>How can I help you? I can assist with scheduling, planning, and managing todos.</p>
                 <div className="quick-prompts-grid">
                   {quickPrompts.map((prompt, idx) => (
                     <button key={idx} className="quick-prompt-card" onClick={() => setInput(prompt)}>
@@ -380,7 +381,7 @@ export const Dashboard: React.FC<DashboardProps> = ({
                   {renderScheduleCards(msg)}
                 </div>
               </div>
-            ))}
+            )}
 
             {isLoading && (
               <div className="chat-message assistant">
@@ -403,7 +404,7 @@ export const Dashboard: React.FC<DashboardProps> = ({
               <input
                 type="text"
                 className="chat-input-field"
-                placeholder="메시지를 입력하세요... (예: 내일 3시에 팀 미팅 잡아줘)"
+                placeholder="Enter a message... (e.g. Schedule a team meeting at 3 PM tomorrow)"
                 value={input}
                 onChange={(e) => setInput(e.target.value)}
                 onKeyDown={(e) => {

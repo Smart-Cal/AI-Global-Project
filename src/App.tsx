@@ -34,7 +34,7 @@ const ProtectedRoute: React.FC<{ children: React.ReactNode }> = ({ children }) =
     return (
       <div className="loading" style={{ height: '100vh' }}>
         <div className="spinner" />
-        <span>로딩 중...</span>
+        <span>Loading...</span>
       </div>
     );
   }
@@ -135,19 +135,19 @@ const MainLayout: React.FC = () => {
   const getContentTitle = () => {
     switch (currentView) {
       case 'dashboard':
-        return '대시보드';
+        return 'Dashboard';
       case 'assistant':
-        return '비서';
+        return 'Assistant';
       case 'calendar':
-        return '캘린더';
+        return 'Calendar';
       case 'schedule':
-        return '일정';
+        return 'Schedule';
       case 'goal':
-        return 'Goal';
+        return 'Goals';
       case 'groups':
-        return '그룹';
+        return 'Groups';
       case 'group-detail':
-        return '그룹 상세';
+        return 'Group Detail';
       default:
         return '';
     }
@@ -258,22 +258,22 @@ const MainLayout: React.FC = () => {
           <div className="content-actions">
             <button className="search-btn" onClick={() => setSearchModalOpen(true)}>
               <SearchIcon size={16} />
-              <span>검색</span>
+              <span>Search</span>
               <kbd>Ctrl+K</kbd>
             </button>
             {currentView === 'calendar' && (
               <button className="btn btn-primary btn-sm" onClick={() => handleAddEvent()}>
-                <PlusIcon size={14} /> 새 일정
+                <PlusIcon size={14} /> New Event
               </button>
             )}
             {currentView === 'goal' && (
               <button className="btn btn-primary btn-sm" onClick={handleAddGoal}>
-                <PlusIcon size={14} /> 새 목표
+                <PlusIcon size={14} /> New Goal
               </button>
             )}
             {currentView === 'schedule' && (
               <button className="btn btn-primary btn-sm" onClick={handleAddTodo}>
-                <PlusIcon size={14} /> 새 할 일
+                <PlusIcon size={14} /> New Todo
               </button>
             )}
           </div>

@@ -7,8 +7,8 @@ interface UserSettings {
   chronotype: Chronotype;
   wakeUpTime: string; // HH:MM
   sleepTime: string; // HH:MM
-  preferredWorkDuration: number; // 분 단위
-  breakInterval: number; // 분 단위
+  preferredWorkDuration: number; // minutes
+  breakInterval: number; // minutes
   notificationsEnabled: boolean;
   soundEnabled: boolean;
 }
@@ -45,25 +45,25 @@ const chronotypeInfo: Record<Chronotype, {
   energyPeak: string;
 }> = {
   morning: {
-    label: '아침형',
-    description: '아침에 에너지가 높고 일찍 일어나는 것을 선호합니다',
+    label: 'Early Bird',
+    description: 'Preferences waking up early with high energy in the morning',
     icon: '🌅',
-    focusHours: '오전 6시 ~ 11시',
-    energyPeak: '오전 8시 ~ 11시',
+    focusHours: '6 AM - 11 AM',
+    energyPeak: '8 AM - 11 AM',
   },
   evening: {
-    label: '저녁형',
-    description: '저녁에 에너지가 높고 늦게까지 활동하는 것을 선호합니다',
+    label: 'Night Owl',
+    description: 'Active late at night with higher energy in the evening',
     icon: '🌙',
-    focusHours: '오후 2시 ~ 저녁 8시',
-    energyPeak: '오후 4시 ~ 저녁 8시',
+    focusHours: '2 PM - 8 PM',
+    energyPeak: '4 PM - 8 PM',
   },
   neutral: {
-    label: '중립형',
-    description: '일정한 시간대에 균형잡힌 에너지를 유지합니다',
+    label: 'Neutral',
+    description: 'Maintains balanced energy throughout the day',
     icon: '⚖️',
-    focusHours: '오전 9시 ~ 오후 4시',
-    energyPeak: '오전 10시 ~ 오후 3시',
+    focusHours: '9 AM - 4 PM',
+    energyPeak: '10 AM - 3 PM',
   },
 };
 
@@ -81,7 +81,7 @@ export const useSettingsStore = create<SettingsState>()(
       setChronotype: (chronotype) => {
         const updates: Partial<UserSettings> = { chronotype };
 
-        // Chronotype에 따른 기본 시간 설정
+        // Default time settings based on Chronotype
         switch (chronotype) {
           case 'morning':
             updates.wakeUpTime = '05:30';

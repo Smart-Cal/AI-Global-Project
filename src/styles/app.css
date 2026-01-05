@@ -553,7 +553,7 @@ body {
 
 /* ==================== Dashboard Styles ==================== */
 
-/* 채팅 중심 대시보드 레이아웃 */
+/* Chat-centric dashboard layout */
 .dashboard-chat-layout {
   display: flex;
   height: calc(100vh - var(--header-height));
@@ -658,7 +658,7 @@ body {
   text-overflow: ellipsis;
 }
 
-/* 사이드바 할 일 */
+/* Sidebar Todos */
 .sidebar-todo-item {
   display: flex;
   align-items: center;
@@ -715,7 +715,7 @@ body {
   color: var(--text-muted);
 }
 
-/* 사이드바 목표 */
+/* Sidebar Goals */
 .sidebar-goal-item {
   padding: 8px;
   border-radius: var(--border-radius);
@@ -761,7 +761,7 @@ body {
   min-width: 30px;
 }
 
-/* 사이드바 네비게이션 */
+/* Sidebar Navigation */
 .dashboard-sidebar .sidebar-nav {
   padding: 16px;
   margin-top: auto;
@@ -787,7 +787,7 @@ body {
   background: var(--bg-hover);
 }
 
-/* 메인 채팅 영역 */
+/* Main Chat Area */
 .dashboard-chat-main {
   flex: 1;
   display: flex;
@@ -808,7 +808,7 @@ body {
   padding: 24px;
 }
 
-/* 채팅 환영 메시지 */
+/* Chat Welcome Message */
 .chat-welcome {
   display: flex;
   flex-direction: column;
@@ -859,7 +859,7 @@ body {
   border-color: var(--primary);
 }
 
-/* 채팅 메시지 스타일 개선 */
+/* Improved Chat Message Styles */
 .dashboard-chat-main .chat-message {
   display: flex;
   gap: 12px;
@@ -911,7 +911,7 @@ body {
   border-bottom-left-radius: 4px;
 }
 
-/* 추천 일정 리스트 */
+/* Suggested Event List */
 .suggested-events-list {
   display: flex;
   flex-direction: column;
@@ -945,7 +945,7 @@ body {
   font-size: 11px;
 }
 
-/* 채팅 입력 영역 */
+/* Chat Input Area */
 .chat-input-container {
   padding: 16px 24px 24px;
   border-top: 1px solid var(--border-light);
@@ -1004,7 +1004,7 @@ body {
   cursor: not-allowed;
 }
 
-/* 반응형 채팅 대시보드 */
+/* Responsive Chat Dashboard */
 @media (max-width: 768px) {
   .dashboard-chat-layout {
     flex-direction: column;
@@ -1032,7 +1032,7 @@ body {
   }
 }
 
-/* 기존 대시보드 스타일 (레거시 호환) */
+/* Legacy Dashboard Styles (Backward Compatibility) */
 .dashboard {
   padding: 24px;
   max-width: 1200px;
@@ -4896,7 +4896,7 @@ textarea.form-input {
   left: 0;
 }
 
-/* assistant-view에 토글 버튼 공간 확보 */
+/* Reserve space for toggle button in assistant-view */
 .conversation-sidebar:not(.closed) ~ .assistant-view {
   margin-left: 24px;
 }
@@ -6400,7 +6400,7 @@ textarea.form-input {
   font-weight: 500;
 }
 
-/* 기존 연결된 Todo */
+/* Existing Linked Todos */
 .goal-existing-todos {
   margin-bottom: 24px;
   padding: 16px;
@@ -6457,7 +6457,7 @@ textarea.form-input {
   text-decoration: line-through;
 }
 
-/* 활동 유형 선택 */
+/* Activity Type Selection */
 .goal-decompose-options {
   margin-bottom: 24px;
 }
@@ -6497,7 +6497,7 @@ textarea.form-input {
   font-weight: 500;
 }
 
-/* 분해 결과 */
+/* Decomposition Result */
 .goal-decompose-result {
   margin-top: 16px;
 }
@@ -6619,7 +6619,7 @@ textarea.form-input {
   color: var(--text-secondary);
 }
 
-/* Goal 카드 내 Todo 표시 */
+/* Display Todos within Goal Card */
 .goal-card-todos {
   margin-top: 12px;
   padding-top: 12px;
@@ -6650,7 +6650,7 @@ textarea.form-input {
   margin: 0;
 }
 
-/* Chronotype 선택 */
+/* Chronotype Selection */
 .chronotype-selector {
   display: flex;
   flex-direction: column;
@@ -6708,7 +6708,7 @@ textarea.form-input {
   flex-shrink: 0;
 }
 
-/* 추천 시간대 정보 */
+/* Recommended Time Slot Info */
 .chronotype-hours-info {
   margin-bottom: 24px;
 }
@@ -6757,7 +6757,7 @@ textarea.form-input {
   color: var(--text-primary);
 }
 
-/* 기상/취침 시간 설정 */
+/* Wake/Sleep Time Settings */
 .chronotype-times {
   margin-bottom: 24px;
 }
@@ -6780,7 +6780,7 @@ textarea.form-input {
   flex-direction: column;
 }
 
-/* 작업 설정 */
+/* Work Settings */
 .chronotype-work-settings {
   margin-bottom: 16px;
 }
@@ -6814,7 +6814,7 @@ textarea.form-input {
   font-size: 14px;
 }
 
-/* Sidebar Chronotype 버튼 */
+/* Sidebar Chronotype Button */
 .sidebar-settings {
   padding: 12px 14px;
   border-top: 1px solid var(--border-light);
@@ -6862,7 +6862,7 @@ textarea.form-input {
   }
 }
 
-/* 새 카테고리 추가 인라인 입력 */
+/* Inline Input for Adding New Category */
 .new-category-input-container {
   display: flex;
   flex-direction: column;
@@ -6945,7 +6945,7 @@ textarea.form-input {
   cursor: not-allowed;
 }
 
-/* 색상 팔레트 */
+/* Color Palette */
 .new-category-color-palette {
   display: flex !important;
   gap: 6px;
@@ -6979,7 +6979,7 @@ textarea.form-input {
   cursor: not-allowed;
 }
 
-/* 카테고리 선택 with 색상 박스 */
+/* Category Selection with Color Box */
 .category-select-wrapper {
   position: relative;
   width: 100%;
@@ -7027,7 +7027,7 @@ textarea.form-input {
 }
 
 /* ==============================================
-   MCP Data Styles ("행동하는 AI" 결과)
+   MCP Data Styles ("Acting AI" Results)
    ============================================== */
 
 .mcp-data-container {

@@ -12,14 +12,14 @@ interface ChatPanelProps {
   onClose: () => void;
 }
 
-// 수정 모달용 인터페이스
+// Interface for editing modal
 interface EditingEvent {
   messageId: string;
   eventIndex: number;
   event: SuggestedEvent;
 }
 
-// 슬라이더 인덱스 관리용
+// Interface for slider index management
 interface SliderState {
   [messageId: string]: number;
 }
@@ -32,7 +32,7 @@ export const ChatPanel: React.FC<ChatPanelProps> = ({ onClose }) => {
   const [sliderIndexes, setSliderIndexes] = useState<SliderState>({});
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
-  // 새 카테고리 추가 관련 상태
+  // States for adding new category
   const [showNewCategory, setShowNewCategory] = useState(false);
   const [newCategoryName, setNewCategoryName] = useState('');
   const [newCategoryColor, setNewCategoryColor] = useState(CATEGORY_COLORS[0]);
@@ -66,17 +66,17 @@ export const ChatPanel: React.FC<ChatPanelProps> = ({ onClose }) => {
     setIsLoading(true);
 
     try {
-      // 백엔드 API를 통해 AI와 대화
+      // Chat with AI via backend API
       const apiResponse: ChatResponse = await sendChatMessage(userMessage.content);
 
-      // API 응답을 AgentMessage로 변환
+      // Convert API response to AgentMessage
       const suggestedEvents: SuggestedEvent[] = (apiResponse.pending_events || []).map((evt: any) => ({
         title: evt.title || '',
         date: evt.datetime ? evt.datetime.split('T')[0] : new Date().toISOString().split('T')[0],
         start_time: evt.datetime ? evt.datetime.split('T')[1]?.slice(0, 5) : undefined,
         end_time: undefined,
         location: evt.location,
-        category_name: '기본',
+        category_name: 'Default',
         description: evt.description,
         reason: '',
         added: false,
@@ -95,12 +95,12 @@ export const ChatPanel: React.FC<ChatPanelProps> = ({ onClose }) => {
       };
 
       setMessages((prev) => [...prev, response]);
-      // 새 메시지의 슬라이더 인덱스를 0으로 초기화
+      // Initialize slider index for new message to 0
       setSliderIndexes((prev) => ({ ...prev, [response.id]: 0 }));
 
-      // 이벤트가 생성되었으면 store 새로고침
+      // Refresh store if events were created
       if (apiResponse.pending_events && apiResponse.pending_events.length > 0) {
-        // 이벤트 목록 새로고침
+        // Refresh event list
         loadEvents();
       }
     } catch (error) {
@@ -110,7 +110,7 @@ export const ChatPanel: React.FC<ChatPanelProps> = ({ onClose }) => {
         {
           id: crypto.randomUUID(),
           role: 'assistant',
-          content: '죄송합니다. 오류가 발생했습니다. 다시 시도해주세요.',
+          content: 'Sorry, an error occurred. Please try again.',
           timestamp: new Date(),
         },
       ]);
@@ -119,12 +119,12 @@ export const ChatPanel: React.FC<ChatPanelProps> = ({ onClose }) => {
     }
   };
 
-  // 새 카테고리 추가 핸들러
+  // Handler for adding new category
   const handleAddCategory = async () => {
     if (!newCategoryName.trim()) return;
     try {
       const newCat = await addCategory(newCategoryName.trim(), newCategoryColor);
-      // 수정 중인 이벤트의 카테고리를 새로 추가한 카테고리로 변경
+      // Update category of event being edited to the new category
       if (editingEvent) {
         setEditingEvent({
           ...editingEvent,
@@ -136,22 +136,22 @@ export const ChatPanel: React.FC<ChatPanelProps> = ({ onClose }) => {
       setNewCategoryColor(CATEGORY_COLORS[0]);
     } catch (error) {
       console.error('Failed to add category:', error);
-      alert('카테고리 추가에 실패했습니다.');
+      alert('Failed to add category.');
     }
   };
 
-  // 카테고리 이름으로 category_id 찾기
+  // Find category_id by category name
   const findCategoryId = (categoryName?: string): string | undefined => {
     if (!categoryName) {
       const defaultCat = getDefaultCategory();
       return defaultCat?.id;
     }
 
-    // 정확히 매칭되는 카테고리 찾기
+    // Find exactly matching category
     const exactMatch = getCategoryByName(categoryName);
     if (exactMatch) return exactMatch.id;
 
-    // 기본 카테고리 반환
+    // Return default category
     const defaultCat = getDefaultCategory();
     return defaultCat?.id;
   };
@@ -159,7 +159,7 @@ export const ChatPanel: React.FC<ChatPanelProps> = ({ onClose }) => {
   const handleAddSuggestedEvent = async (event: SuggestedEvent, messageId: string, eventIndex: number) => {
     if (!user) {
       console.error('User not logged in');
-      alert('로그인이 필요합니다.');
+      alert('Login is required.');
       return;
     }
 
@@ -186,7 +186,7 @@ export const ChatPanel: React.FC<ChatPanelProps> = ({ onClose }) => {
       console.log('Add event result:', result);
 
       if (result) {
-        // 해당 일정 카드를 '추가됨' 상태로 업데이트
+        // Update schedule card to 'Added' status
         setMessages((prev) => prev.map((msg) => {
           if (msg.id === messageId && msg.metadata?.suggested_events) {
             const updatedEvents = [...msg.metadata.suggested_events];
@@ -199,11 +199,11 @@ export const ChatPanel: React.FC<ChatPanelProps> = ({ onClose }) => {
           return msg;
         }));
       } else {
-        alert('일정 추가에 실패했습니다. 다시 시도해주세요.');
+        alert('Failed to add event. Please try again.');
       }
     } catch (error) {
       console.error('Failed to add event:', error);
-      alert('일정 추가 중 오류가 발생했습니다.');
+      alert('An error occurred while adding the event.');
     }
   };
 
@@ -252,7 +252,7 @@ export const ChatPanel: React.FC<ChatPanelProps> = ({ onClose }) => {
       console.log('Save result:', result);
 
       if (result) {
-        // 해당 일정 카드를 '추가됨' 상태로 업데이트
+        // Update schedule card to 'Added' status
         setMessages((prev) => prev.map((msg) => {
           if (msg.id === editingEvent.messageId && msg.metadata?.suggested_events) {
             const updatedEvents = [...msg.metadata.suggested_events];
@@ -269,15 +269,15 @@ export const ChatPanel: React.FC<ChatPanelProps> = ({ onClose }) => {
         }));
         setEditingEvent(null);
       } else {
-        alert('일정 추가에 실패했습니다. 다시 시도해주세요.');
+        alert('Failed to add event. Please try again.');
       }
     } catch (error) {
       console.error('Failed to save edited event:', error);
-      alert('일정 추가 중 오류가 발생했습니다.');
+      alert('An error occurred while adding the event.');
     }
   };
 
-  // 슬라이더 네비게이션
+  // Slider navigation
   const handlePrevEvent = (messageId: string, totalEvents: number) => {
     setSliderIndexes((prev) => ({
       ...prev,
@@ -297,11 +297,11 @@ export const ChatPanel: React.FC<ChatPanelProps> = ({ onClose }) => {
     return time.slice(0, 5);
   };
 
-  // 카테고리 이름 또는 ID로 카테고리 정보 가져오기
+  // Get category info by category name or ID
   const getCategoryInfo = (categoryName?: string) => {
     if (!categoryName) {
       const defaultCat = getDefaultCategory();
-      return { name: defaultCat?.name || '기본', color: defaultCat?.color || DEFAULT_CATEGORY_COLOR };
+      return { name: defaultCat?.name || 'Default', color: defaultCat?.color || DEFAULT_CATEGORY_COLOR };
     }
     const cat = getCategoryByName(categoryName);
     if (cat) {
@@ -312,10 +312,10 @@ export const ChatPanel: React.FC<ChatPanelProps> = ({ onClose }) => {
   };
 
   const quickPrompts = [
-    '이번 주 운동 계획 세워줘',
-    '내일 저녁 약속 잡아줘',
-    '토익 공부 일정 추천해줘',
-    '주말 여행 계획 세워줘',
+    'Plan exercise schedule for this week',
+    'Schedule a dinner for tomorrow evening',
+    'Recommend study plan for TOEIC',
+    'Plan a weekend trip',
   ];
 
   const renderScheduleCards = (msg: AgentMessage) => {
@@ -331,7 +331,7 @@ export const ChatPanel: React.FC<ChatPanelProps> = ({ onClose }) => {
 
     return (
       <div className="schedule-slider">
-        {/* 슬라이더 헤더 */}
+        {/* Slider Header */}
         {totalEvents > 1 && (
           <div className="schedule-slider-nav">
             <button
@@ -354,7 +354,7 @@ export const ChatPanel: React.FC<ChatPanelProps> = ({ onClose }) => {
           </div>
         )}
 
-        {/* 현재 일정 카드 */}
+        {/* Current Schedule Card */}
         <div
           key={`${msg.id}-${currentIndex}`}
           className={`schedule-card ${isAdded ? 'added' : ''} ${isRejected ? 'rejected' : ''}`}
@@ -366,8 +366,8 @@ export const ChatPanel: React.FC<ChatPanelProps> = ({ onClose }) => {
             >
               {categoryInfo.name}
             </span>
-            {isAdded && <span className="schedule-card-status added">추가됨</span>}
-            {isRejected && <span className="schedule-card-status rejected">거절됨</span>}
+            {isAdded && <span className="schedule-card-status added">Added</span>}
+            {isRejected && <span className="schedule-card-status rejected">Rejected</span>}
           </div>
 
           <div className="schedule-card-title">{event.title}</div>
@@ -404,25 +404,25 @@ export const ChatPanel: React.FC<ChatPanelProps> = ({ onClose }) => {
                 className="btn btn-success btn-sm"
                 onClick={() => handleAddSuggestedEvent(event, msg.id, currentIndex)}
               >
-                ✓ 추가
+                ✓ Add
               </button>
               <button
                 className="btn btn-secondary btn-sm"
                 onClick={() => handleOpenEditModal(event, msg.id, currentIndex)}
               >
-                ✎ 수정
+                ✎ Edit
               </button>
               <button
                 className="btn btn-danger-outline btn-sm"
                 onClick={() => handleRejectEvent(msg.id, currentIndex)}
               >
-                ✕ 거절
+                ✕ Reject
               </button>
             </div>
           )}
         </div>
 
-        {/* 모든 일정 상태 표시 (도트) */}
+        {/* All schedule status indicator (dots) */}
         {totalEvents > 1 && (
           <div className="schedule-dots">
             {suggestedEvents.map((e, idx) => (
@@ -441,7 +441,7 @@ export const ChatPanel: React.FC<ChatPanelProps> = ({ onClose }) => {
   return (
     <div className="chat-panel">
       <div className="panel-header">
-        <span className="panel-title">AI 스케줄러</span>
+        <span className="panel-title">AI Scheduler</span>
         <button className="panel-close" onClick={onClose}>
           ×
         </button>
@@ -450,11 +450,11 @@ export const ChatPanel: React.FC<ChatPanelProps> = ({ onClose }) => {
       <div className="chat-messages">
         {messages.length === 0 && (
           <div className="empty-state">
-            <div className="empty-state-title">AI 스케줄러</div>
+            <div className="empty-state-title">AI Scheduler</div>
             <div className="empty-state-text">
-              일정을 추천받고 싶은 내용을 말씀해주세요.
+              Tell me what you want to schedule.
               <br />
-              예: "이번 주 운동 계획 세워줘"
+              Example: "Plan exercise schedule for this week"
             </div>
           </div>
         )}
@@ -474,7 +474,7 @@ export const ChatPanel: React.FC<ChatPanelProps> = ({ onClose }) => {
               {msg.metadata?.place_recommendations?.map((place, idx) => (
                 <div key={idx} className="schedule-card">
                   <div className="schedule-card-header">
-                    <span className="schedule-card-category">장소 추천</span>
+                    <span className="schedule-card-category">Place Recommendation</span>
                   </div>
                   <div className="schedule-card-title">{place.name}</div>
                   <div className="schedule-card-info">
@@ -530,7 +530,7 @@ export const ChatPanel: React.FC<ChatPanelProps> = ({ onClose }) => {
           <input
             type="text"
             className="chat-input"
-            placeholder="일정을 추천받고 싶은 내용을 입력하세요..."
+            placeholder="Type your request here..."
             value={input}
             onChange={(e) => setInput(e.target.value)}
             onKeyDown={(e) => {
@@ -551,17 +551,17 @@ export const ChatPanel: React.FC<ChatPanelProps> = ({ onClose }) => {
         </div>
       </div>
 
-      {/* 수정 모달 */}
+      {/* Edit Modal */}
       {editingEvent && (
         <div className="modal-overlay" onClick={() => setEditingEvent(null)}>
           <div className="modal" onClick={(e) => e.stopPropagation()}>
             <div className="modal-header">
-              <div className="modal-title">일정 수정</div>
+              <div className="modal-title">Edit Event</div>
               <button className="modal-close" onClick={() => setEditingEvent(null)}>×</button>
             </div>
             <div className="modal-body">
               <div className="form-group">
-                <label className="form-label">일정 제목</label>
+                <label className="form-label">Title</label>
                 <input
                   type="text"
                   className="form-input"
@@ -574,7 +574,7 @@ export const ChatPanel: React.FC<ChatPanelProps> = ({ onClose }) => {
               </div>
 
               <div className="form-group">
-                <label className="form-label">날짜</label>
+                <label className="form-label">Date</label>
                 <input
                   type="date"
                   className="form-input"
@@ -588,7 +588,7 @@ export const ChatPanel: React.FC<ChatPanelProps> = ({ onClose }) => {
 
               <div className="form-row">
                 <div className="form-group">
-                  <label className="form-label">시작 시간</label>
+                  <label className="form-label">Start Time</label>
                   <input
                     type="time"
                     className="form-input"
@@ -600,7 +600,7 @@ export const ChatPanel: React.FC<ChatPanelProps> = ({ onClose }) => {
                   />
                 </div>
                 <div className="form-group">
-                  <label className="form-label">종료 시간</label>
+                  <label className="form-label">End Time</label>
                   <input
                     type="time"
                     className="form-input"
@@ -614,7 +614,7 @@ export const ChatPanel: React.FC<ChatPanelProps> = ({ onClose }) => {
               </div>
 
               <div className="form-group">
-                <label className="form-label">장소</label>
+                <label className="form-label">Location</label>
                 <input
                   type="text"
                   className="form-input"
@@ -627,7 +627,7 @@ export const ChatPanel: React.FC<ChatPanelProps> = ({ onClose }) => {
               </div>
 
               <div className="form-group">
-                <label className="form-label">카테고리</label>
+                <label className="form-label">Category</label>
                 <div className="category-select" style={{ display: 'flex', flexWrap: 'wrap', gap: '8px' }}>
                   {categories.map((cat) => (
                     <div
@@ -677,7 +677,7 @@ export const ChatPanel: React.FC<ChatPanelProps> = ({ onClose }) => {
                     }}
                     onClick={() => setShowNewCategory(true)}
                   >
-                    <span>+ 새 카테고리</span>
+                    <span>+ New Category</span>
                   </div>
                 </div>
 
@@ -696,7 +696,7 @@ export const ChatPanel: React.FC<ChatPanelProps> = ({ onClose }) => {
                       <input
                         type="text"
                         className="form-input"
-                        placeholder="새 카테고리 이름"
+                        placeholder="New category name"
                         value={newCategoryName}
                         onChange={(e) => setNewCategoryName(e.target.value)}
                         style={{ fontSize: '13px' }}
@@ -704,7 +704,7 @@ export const ChatPanel: React.FC<ChatPanelProps> = ({ onClose }) => {
                     </div>
                     <div style={{ marginBottom: '10px' }}>
                       <label style={{ fontSize: '12px', color: '#6B7280', marginBottom: '6px', display: 'block' }}>
-                        색상 선택
+                        Select Color
                       </label>
                       <div className="color-picker" style={{ display: 'flex', gap: '6px', flexWrap: 'wrap' }}>
                         {CATEGORY_COLORS.map((color) => (
@@ -730,7 +730,7 @@ export const ChatPanel: React.FC<ChatPanelProps> = ({ onClose }) => {
                         style={{ padding: '6px 12px', fontSize: '12px' }}
                         onClick={handleAddCategory}
                       >
-                        추가
+                        Add
                       </button>
                       <button
                         className="btn btn-secondary"
@@ -741,7 +741,7 @@ export const ChatPanel: React.FC<ChatPanelProps> = ({ onClose }) => {
                           setNewCategoryColor(CATEGORY_COLORS[0]);
                         }}
                       >
-                        취소
+                        Cancel
                       </button>
                     </div>
                   </div>
@@ -749,7 +749,7 @@ export const ChatPanel: React.FC<ChatPanelProps> = ({ onClose }) => {
               </div>
 
               <div className="form-group">
-                <label className="form-label">메모</label>
+                <label className="form-label">Memo</label>
                 <textarea
                   className="form-input"
                   value={editingEvent.event.description || ''}
@@ -762,10 +762,10 @@ export const ChatPanel: React.FC<ChatPanelProps> = ({ onClose }) => {
             </div>
             <div className="modal-footer">
               <button className="btn btn-secondary" onClick={() => setEditingEvent(null)}>
-                취소
+                Cancel
               </button>
               <button className="btn btn-primary" onClick={handleSaveEditedEvent}>
-                저장 후 추가
+                Save and Add
               </button>
             </div>
           </div>

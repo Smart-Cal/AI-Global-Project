@@ -82,7 +82,7 @@ const CalendarView: React.FC<CalendarViewProps> = ({
 
   // Get default category ID
   const getDefaultCategoryId = () => {
-    const defaultCat = categories.find(c => c.name === 'Default' || c.name === '기본');
+    const defaultCat = categories.find(c => c.name === 'Default');
     return defaultCat?.id;
   };
 

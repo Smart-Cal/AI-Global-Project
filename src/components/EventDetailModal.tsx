@@ -26,7 +26,7 @@ export const EventDetailModal: React.FC<EventDetailModalProps> = ({
 
   const category = event.category_id ? getCategoryById(event.category_id) : null;
   const categoryColor = category?.color || DEFAULT_CATEGORY_COLOR;
-  const categoryName = category?.name || '기본';
+  const categoryName = category?.name || 'Default';
 
   const formatTime = (time?: string) => {
     if (!time) return '';
@@ -34,7 +34,7 @@ export const EventDetailModal: React.FC<EventDetailModalProps> = ({
   };
 
   const handleDelete = async () => {
-    if (confirm('이 일정을 삭제하시겠습니까?')) {
+    if (confirm('Are you sure you want to delete this event?')) {
       await removeEvent(event.id!);
       onClose();
     }
@@ -52,12 +52,12 @@ export const EventDetailModal: React.FC<EventDetailModalProps> = ({
     <div className="modal-overlay" onClick={onClose}>
       <div className="modal" onClick={(e) => e.stopPropagation()}>
         <div className="modal-header">
-          <div className="modal-title">일정 상세</div>
+          <div className="modal-title">Event Details</div>
           <div style={{ display: 'flex', gap: '8px' }}>
             <button
               className="btn btn-ghost btn-sm"
               onClick={onEdit}
-              title="수정"
+              title="Edit"
             >
               ✎
             </button>
@@ -75,7 +75,7 @@ export const EventDetailModal: React.FC<EventDetailModalProps> = ({
               {categoryName}
             </span>
             {event.is_ai_suggested && (
-              <span className="event-detail-ai-badge">AI 추천</span>
+              <span className="event-detail-ai-badge">AI Suggested</span>
             )}
           </div>
 
@@ -95,7 +95,7 @@ export const EventDetailModal: React.FC<EventDetailModalProps> = ({
           <div className="event-detail-row">
             <span>
               {event.event_date}
-              {event.is_all_day ? ' (종일)' : ''}
+              {event.is_all_day ? ' (All day)' : ''}
             </span>
           </div>
 
@@ -118,7 +118,7 @@ export const EventDetailModal: React.FC<EventDetailModalProps> = ({
           {/* 메모 */}
           {event.description && (
             <div className="event-detail-section">
-              <div className="event-detail-label">메모</div>
+              <div className="event-detail-label">Memo</div>
               <div className="event-detail-description">{event.description}</div>
             </div>
           )}
@@ -130,13 +130,13 @@ export const EventDetailModal: React.FC<EventDetailModalProps> = ({
             onClick={handleDelete}
             style={{ marginRight: 'auto' }}
           >
-            삭제
+            Delete
           </button>
           <button className="btn btn-secondary" onClick={onClose}>
-            닫기
+            Close
           </button>
           <button className="btn btn-primary" onClick={onEdit}>
-            수정하기
+            Edit
           </button>
         </div>
       </div>

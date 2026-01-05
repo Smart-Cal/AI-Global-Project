@@ -44,10 +44,10 @@ const GoalView: React.FC<GoalViewProps> = ({ onGoalClick, onAddGoal }) => {
 
   const getPriorityLabel = (priority: string) => {
     switch (priority) {
-      case 'high': return { text: '높음', color: '#FF6B6B' };
-      case 'medium': return { text: '중간', color: '#FECA57' };
-      case 'low': return { text: '낮음', color: '#1DD1A1' };
-      default: return { text: '중간', color: '#FECA57' };
+      case 'high': return { text: 'High', color: '#FF6B6B' };
+      case 'medium': return { text: 'Medium', color: '#FECA57' };
+      case 'low': return { text: 'Low', color: '#1DD1A1' };
+      default: return { text: 'Medium', color: '#FECA57' };
     }
   };
 
@@ -62,9 +62,9 @@ const GoalView: React.FC<GoalViewProps> = ({ onGoalClick, onAddGoal }) => {
     const target = new Date(targetDate);
     const today = new Date();
     const diff = Math.ceil((target.getTime() - today.getTime()) / (1000 * 60 * 60 * 24));
-    if (diff < 0) return { text: `${Math.abs(diff)}일 지남`, isOverdue: true };
-    if (diff === 0) return { text: '오늘까지', isOverdue: false };
-    return { text: `${diff}일 남음`, isOverdue: false };
+    if (diff < 0) return { text: `${Math.abs(diff)} days overdue`, isOverdue: true };
+    if (diff === 0) return { text: 'Due today', isOverdue: false };
+    return { text: `${diff} days left`, isOverdue: false };
   };
 
   // 진행률은 Todo 완료에 따라 자동 계산됨 - 수동 변경 제거
@@ -85,7 +85,7 @@ const GoalView: React.FC<GoalViewProps> = ({ onGoalClick, onAddGoal }) => {
       <div className="goal-header">
         <h2>Goal</h2>
         <button className="btn btn-primary" onClick={onAddGoal}>
-          + 새 목표
+          + New Goal
         </button>
       </div>
 
@@ -94,19 +94,19 @@ const GoalView: React.FC<GoalViewProps> = ({ onGoalClick, onAddGoal }) => {
           className={`goal-filter-tab ${showFilter === 'all' ? 'active' : ''}`}
           onClick={() => setShowFilter('all')}
         >
-          전체 ({goals.length})
+          All ({goals.length})
         </button>
         <button
           className={`goal-filter-tab ${showFilter === 'active' ? 'active' : ''}`}
           onClick={() => setShowFilter('active')}
         >
-          진행중 ({goals.filter(g => isGoalActive(g) && calculateGoalProgress(g) < 100).length})
+          Active ({goals.filter(g => isGoalActive(g) && calculateGoalProgress(g) < 100).length})
         </button>
         <button
           className={`goal-filter-tab ${showFilter === 'completed' ? 'active' : ''}`}
           onClick={() => setShowFilter('completed')}
         >
-          완료 ({goals.filter(g => calculateGoalProgress(g) >= 100 || !isGoalActive(g)).length})
+          Completed ({goals.filter(g => calculateGoalProgress(g) >= 100 || !isGoalActive(g)).length})
         </button>
       </div>
 
@@ -114,9 +114,9 @@ const GoalView: React.FC<GoalViewProps> = ({ onGoalClick, onAddGoal }) => {
         <div className="goal-list">
           {filteredGoals.length === 0 ? (
             <div className="goal-empty">
-              <p>목표가 없습니다</p>
+              <p>No goals found</p>
               <button className="btn btn-primary" onClick={onAddGoal}>
-                첫 번째 목표 설정하기
+                Set your first goal
               </button>
             </div>
           ) : (
@@ -139,7 +139,7 @@ const GoalView: React.FC<GoalViewProps> = ({ onGoalClick, onAddGoal }) => {
                       className="goal-card-category"
                       style={{ backgroundColor: category?.color || DEFAULT_CATEGORY_COLOR }}
                     >
-                      {category?.name || '기본'}
+                      {category?.name || 'Default'}
                     </div>
                     <div
                       className="goal-card-priority"
@@ -172,7 +172,7 @@ const GoalView: React.FC<GoalViewProps> = ({ onGoalClick, onAddGoal }) => {
                   {linkedTodos.length > 0 && (
                     <div className="goal-card-todos">
                       <span className="todo-count">
-                        ✓ {completedTodos.length}/{linkedTodos.length} 작업
+                        ✓ {completedTodos.length}/{linkedTodos.length} tasks
                       </span>
                     </div>
                   )}
@@ -205,12 +205,12 @@ const GoalView: React.FC<GoalViewProps> = ({ onGoalClick, onAddGoal }) => {
 
             <div className="goal-detail-content">
               <div className="goal-detail-section">
-                <h4>설명</h4>
-                <p>{selectedGoal.description || '설명이 없습니다'}</p>
+                <h4>Description</h4>
+                <p>{selectedGoal.description || 'No description'}</p>
               </div>
 
               <div className="goal-detail-section">
-                <h4>진행률</h4>
+                <h4>Progress</h4>
                 <div className="goal-detail-progress">
                   <div className="goal-progress-bar" style={{ flex: 1 }}>
                     <div
@@ -224,23 +224,23 @@ const GoalView: React.FC<GoalViewProps> = ({ onGoalClick, onAddGoal }) => {
                   <span>{calculateGoalProgress(selectedGoal)}%</span>
                 </div>
                 <p style={{ fontSize: '12px', color: 'var(--text-muted)', marginTop: '8px' }}>
-                  진행률은 연결된 Todo 완료에 따라 자동 계산됩니다
+                  Progress is automatically calculated based on linked Todo completion
                 </p>
               </div>
 
               {selectedGoal.target_date && (
                 <div className="goal-detail-section">
-                  <h4>목표 날짜</h4>
+                  <h4>Target Date</h4>
                   <p>{formatDate(selectedGoal.target_date)}</p>
                 </div>
               )}
 
               <div className="goal-detail-section">
-                <h4>첨부 파일</h4>
+                <h4>Attachments</h4>
                 <div className="goal-attachments">
                   <button className="goal-attachment-add" onClick={handleFileUpload}>
                     <span>+</span>
-                    <span>파일 추가</span>
+                    <span>Add File</span>
                   </button>
                 </div>
                 <input
@@ -258,24 +258,24 @@ const GoalView: React.FC<GoalViewProps> = ({ onGoalClick, onAddGoal }) => {
                   className="btn btn-secondary"
                   onClick={() => setDecomposeGoal(selectedGoal)}
                 >
-                  목표 분해
+                  Decompose Goal
                 </button>
                 <button
                   className="btn btn-primary"
                   onClick={() => onGoalClick(selectedGoal)}
                 >
-                  편집
+                  Edit
                 </button>
                 <button
                   className="btn btn-danger"
                   onClick={async () => {
-                    if (selectedGoal.id && window.confirm('정말 삭제하시겠습니까?')) {
+                    if (selectedGoal.id && window.confirm('Are you sure you want to delete this goal?')) {
                       await deleteGoal(selectedGoal.id);
                       setSelectedGoal(null);
                     }
                   }}
                 >
-                  삭제
+                  Delete
                 </button>
               </div>
             </div>

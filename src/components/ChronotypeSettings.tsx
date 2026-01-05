@@ -18,20 +18,20 @@ const ChronotypeSettings: React.FC<ChronotypeSettingsProps> = ({ isOpen, onClose
     {
       value: 'morning',
       icon: '🌅',
-      label: '아침형 (Early Bird)',
-      description: '아침에 에너지가 높고 일찍 일어나는 것을 선호합니다',
+      label: 'Morning (Early Bird)',
+      description: 'Prefers waking up early and has high energy in the morning',
     },
     {
       value: 'neutral',
       icon: '⚖️',
-      label: '중립형 (Intermediate)',
-      description: '일정한 시간대에 균형잡힌 에너지를 유지합니다',
+      label: 'Intermediate',
+      description: 'Maintains balanced energy throughout the day',
     },
     {
       value: 'evening',
       icon: '🌙',
-      label: '저녁형 (Night Owl)',
-      description: '저녁에 에너지가 높고 늦게까지 활동하는 것을 선호합니다',
+      label: 'Evening (Night Owl)',
+      description: 'Prefers staying up late and has high energy in the evening',
     },
   ];
 
@@ -54,7 +54,7 @@ const ChronotypeSettings: React.FC<ChronotypeSettingsProps> = ({ isOpen, onClose
 
   const handleSave = () => {
     updateSettings(localSettings);
-    showToast('설정이 저장되었습니다', 'success');
+    showToast('Settings saved', 'success');
     onClose();
   };
 
@@ -62,21 +62,21 @@ const ChronotypeSettings: React.FC<ChronotypeSettingsProps> = ({ isOpen, onClose
     switch (chronotype) {
       case 'morning':
         return {
-          focus: '오전 6시 ~ 11시',
-          energy: '오전 8시 ~ 11시',
-          windDown: '저녁 7시 ~ 9시',
+          focus: '6 AM ~ 11 AM',
+          energy: '8 AM ~ 11 AM',
+          windDown: '7 PM ~ 9 PM',
         };
       case 'evening':
         return {
-          focus: '오후 2시 ~ 저녁 8시',
-          energy: '오후 4시 ~ 저녁 8시',
-          windDown: '밤 10시 ~ 자정',
+          focus: '2 PM ~ 8 PM',
+          energy: '4 PM ~ 8 PM',
+          windDown: '10 PM ~ Midnight',
         };
       case 'neutral':
         return {
-          focus: '오전 9시 ~ 오후 4시',
-          energy: '오전 10시 ~ 오후 3시',
-          windDown: '저녁 8시 ~ 10시',
+          focus: '9 AM ~ 4 PM',
+          energy: '10 AM ~ 3 PM',
+          windDown: '8 PM ~ 10 PM',
         };
     }
   };
@@ -89,7 +89,7 @@ const ChronotypeSettings: React.FC<ChronotypeSettingsProps> = ({ isOpen, onClose
     <div className="modal-overlay" onClick={onClose}>
       <div className="modal large" onClick={(e) => e.stopPropagation()}>
         <div className="modal-header">
-          <div className="modal-title">Chronotype 설정</div>
+          <div className="modal-title">Chronotype Settings</div>
           <button className="modal-close" onClick={onClose}>×</button>
         </div>
 
@@ -97,8 +97,8 @@ const ChronotypeSettings: React.FC<ChronotypeSettingsProps> = ({ isOpen, onClose
           {/* Chronotype 설명 */}
           <div className="chronotype-intro">
             <p>
-              Chronotype(생체리듬 유형)은 당신의 하루 에너지 패턴을 나타냅니다.
-              본인에게 맞는 유형을 선택하면 PALM이 최적의 시간대에 활동을 추천해드립니다.
+              Chronotype represents your daily energy pattern.
+              Select the type that suits you, and PALM will recommend optimal activity times.
             </p>
           </div>
 
@@ -129,26 +129,26 @@ const ChronotypeSettings: React.FC<ChronotypeSettingsProps> = ({ isOpen, onClose
 
           {/* 최적 시간대 정보 */}
           <div className="chronotype-hours-info">
-            <h4>추천 활동 시간대</h4>
+            <h4>Recommended Activity Times</h4>
             <div className="hours-grid">
               <div className="hours-item">
                 <span className="hours-icon">🎯</span>
                 <div className="hours-content">
-                  <span className="hours-label">집중 시간</span>
+                  <span className="hours-label">Focus Time</span>
                   <span className="hours-value">{currentHours.focus}</span>
                 </div>
               </div>
               <div className="hours-item">
                 <span className="hours-icon">⚡</span>
                 <div className="hours-content">
-                  <span className="hours-label">에너지 피크</span>
+                  <span className="hours-label">Energy Peak</span>
                   <span className="hours-value">{currentHours.energy}</span>
                 </div>
               </div>
               <div className="hours-item">
                 <span className="hours-icon">🌙</span>
                 <div className="hours-content">
-                  <span className="hours-label">마무리 시간</span>
+                  <span className="hours-label">Wind Down Time</span>
                   <span className="hours-value">{currentHours.windDown}</span>
                 </div>
               </div>
@@ -157,22 +157,22 @@ const ChronotypeSettings: React.FC<ChronotypeSettingsProps> = ({ isOpen, onClose
 
           {/* 기상/취침 시간 설정 */}
           <div className="chronotype-times">
-            <h4>기상 및 취침 시간</h4>
+            <h4>Wake Up & Sleep Time</h4>
             <div className="times-row">
               <div className="time-field">
                 <TimePicker
-                  label="기상 시간"
+                  label="Wake Up Time"
                   value={localSettings.wakeUpTime}
                   onChange={(value) => setLocalSettings(prev => ({ ...prev, wakeUpTime: value }))}
-                  placeholder="기상 시간 선택"
+                  placeholder="Select Wake Up Time"
                 />
               </div>
               <div className="time-field">
                 <TimePicker
-                  label="취침 시간"
+                  label="Sleep Time"
                   value={localSettings.sleepTime}
                   onChange={(value) => setLocalSettings(prev => ({ ...prev, sleepTime: value }))}
-                  placeholder="취침 시간 선택"
+                  placeholder="Select Sleep Time"
                 />
               </div>
             </div>
@@ -180,10 +180,10 @@ const ChronotypeSettings: React.FC<ChronotypeSettingsProps> = ({ isOpen, onClose
 
           {/* 작업 설정 */}
           <div className="chronotype-work-settings">
-            <h4>작업 설정</h4>
+            <h4>Work Settings</h4>
             <div className="work-settings-grid">
               <div className="setting-item">
-                <label>집중 작업 시간</label>
+                <label>Focus Duration</label>
                 <select
                   value={localSettings.preferredWorkDuration}
                   onChange={(e) => setLocalSettings(prev => ({
@@ -192,15 +192,15 @@ const ChronotypeSettings: React.FC<ChronotypeSettingsProps> = ({ isOpen, onClose
                   }))}
                   className="form-input"
                 >
-                  <option value={25}>25분 (포모도로)</option>
-                  <option value={45}>45분</option>
-                  <option value={60}>60분</option>
-                  <option value={90}>90분 (울트라디안)</option>
-                  <option value={120}>120분</option>
+                  <option value={25}>25 min (Pomodoro)</option>
+                  <option value={45}>45 min</option>
+                  <option value={60}>60 min</option>
+                  <option value={90}>90 min (Ultradian)</option>
+                  <option value={120}>120 min</option>
                 </select>
               </div>
               <div className="setting-item">
-                <label>휴식 간격</label>
+                <label>Break Interval</label>
                 <select
                   value={localSettings.breakInterval}
                   onChange={(e) => setLocalSettings(prev => ({
@@ -209,11 +209,11 @@ const ChronotypeSettings: React.FC<ChronotypeSettingsProps> = ({ isOpen, onClose
                   }))}
                   className="form-input"
                 >
-                  <option value={5}>5분</option>
-                  <option value={10}>10분</option>
-                  <option value={15}>15분</option>
-                  <option value={20}>20분</option>
-                  <option value={30}>30분</option>
+                  <option value={5}>5 min</option>
+                  <option value={10}>10 min</option>
+                  <option value={15}>15 min</option>
+                  <option value={20}>20 min</option>
+                  <option value={30}>30 min</option>
                 </select>
               </div>
             </div>

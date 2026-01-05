@@ -1488,11 +1488,11 @@ const AssistantView: React.FC = () => {
                       </div>
                       <div className="mcp-card-price">
                         <span className="mcp-current-price">
-                          {product.price.toLocaleString()}원
+                          {product.price.toLocaleString()} KRW
                         </span>
                         {product.originalPrice && product.originalPrice > product.price && (
                           <span className="mcp-original-price">
-                            {product.originalPrice.toLocaleString()}원
+                            {product.originalPrice.toLocaleString()} KRW
                           </span>
                         )}
                       </div>
@@ -1505,7 +1505,7 @@ const AssistantView: React.FC = () => {
                       {sellerName && (
                         <div className="mcp-card-seller">
                           🏪 {sellerName}
-                          {product.isFreeShipping && <span className="mcp-free-shipping">무료배송</span>}
+                          {product.isFreeShipping && <span className="mcp-free-shipping">Free Shipping</span>}
                         </div>
                       )}
                     </div>
@@ -1519,7 +1519,7 @@ const AssistantView: React.FC = () => {
         {/* 뉴스 */}
         {hasNews && (
           <div className="mcp-section news-section">
-            <h4 className="mcp-section-title">📰 뉴스</h4>
+            <h4 className="mcp-section-title">📰 News</h4>
             <div className="mcp-cards-slider mcp-news-slider">
               {mcpData.news!.map((article, idx) => (
                 <a
@@ -1548,23 +1548,11 @@ const AssistantView: React.FC = () => {
                       <span className="mcp-news-source">{article.source}</span>
                       {article.publishedAt && (
                         <span className="mcp-news-date">
-                          {new Date(article.publishedAt).toLocaleDateString('ko-KR')}
+                          {new Date(article.publishedAt).toLocaleDateString('en-US')}
                         </span>
                       )}
                     </div>
-                    {product.seller && (
-                      <div className="mcp-product-seller">{product.seller}</div>
-                    )}
-                    {product.productUrl && (
-                      <a
-                        href={product.productUrl}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="mcp-product-link"
-                      >
-                        Buy now →
-                      </a>
-                    )}
+
                   </div>
                 </a>
               ))}

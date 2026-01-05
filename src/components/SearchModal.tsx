@@ -169,17 +169,17 @@ const SearchModal: React.FC<SearchModalProps> = ({
 
   const formatDate = (dateStr: string) => {
     const [year, month, day] = dateStr.split('-').map(Number);
-    return `${month}월 ${day}일`;
+    return `${month}/${day}`;
   };
 
   const formatEventDate = (dateStr: string, timeStr?: string) => {
     const [year, month, day] = dateStr.split('-').map(Number);
-    let result = `${month}월 ${day}일`;
+    let result = `${month}/${day}`;
     if (timeStr) {
       const [hours, minutes] = timeStr.split(':').map(Number);
-      const ampm = hours < 12 ? '오전' : '오후';
+      const ampm = hours < 12 ? 'AM' : 'PM';
       const displayHours = hours === 0 ? 12 : hours > 12 ? hours - 12 : hours;
-      result += ` ${ampm} ${displayHours}:${minutes.toString().padStart(2, '0')}`;
+      result += ` ${displayHours}:${minutes.toString().padStart(2, '0')} ${ampm}`;
     }
     return result;
   };
@@ -187,11 +187,11 @@ const SearchModal: React.FC<SearchModalProps> = ({
   const getTypeLabel = (type: SearchResultType) => {
     switch (type) {
       case 'event':
-        return '일정';
+        return 'Event';
       case 'todo':
-        return '할 일';
+        return 'Todo';
       case 'goal':
-        return '목표';
+        return 'Goal';
     }
   };
 
@@ -200,24 +200,24 @@ const SearchModal: React.FC<SearchModalProps> = ({
       case 'event':
         return (
           <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
-            <rect x="2" y="3" width="12" height="11" rx="2" stroke="currentColor" strokeWidth="1.5"/>
-            <path d="M2 6h12" stroke="currentColor" strokeWidth="1.5"/>
-            <path d="M5 1v3M11 1v3" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/>
+            <rect x="2" y="3" width="12" height="11" rx="2" stroke="currentColor" strokeWidth="1.5" />
+            <path d="M2 6h12" stroke="currentColor" strokeWidth="1.5" />
+            <path d="M5 1v3M11 1v3" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
           </svg>
         );
       case 'todo':
         return (
           <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
-            <rect x="2" y="2" width="12" height="12" rx="2" stroke="currentColor" strokeWidth="1.5"/>
-            <path d="M5 8l2 2 4-4" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+            <rect x="2" y="2" width="12" height="12" rx="2" stroke="currentColor" strokeWidth="1.5" />
+            <path d="M5 8l2 2 4-4" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
           </svg>
         );
       case 'goal':
         return (
           <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
-            <circle cx="8" cy="8" r="6" stroke="currentColor" strokeWidth="1.5"/>
-            <circle cx="8" cy="8" r="3" stroke="currentColor" strokeWidth="1.5"/>
-            <circle cx="8" cy="8" r="1" fill="currentColor"/>
+            <circle cx="8" cy="8" r="6" stroke="currentColor" strokeWidth="1.5" />
+            <circle cx="8" cy="8" r="3" stroke="currentColor" strokeWidth="1.5" />
+            <circle cx="8" cy="8" r="1" fill="currentColor" />
           </svg>
         );
     }
@@ -231,21 +231,21 @@ const SearchModal: React.FC<SearchModalProps> = ({
         <div className="search-modal-header">
           <div className="search-input-wrapper">
             <svg className="search-icon" width="20" height="20" viewBox="0 0 20 20" fill="none">
-              <circle cx="9" cy="9" r="6" stroke="currentColor" strokeWidth="2"/>
-              <path d="M14 14l4 4" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/>
+              <circle cx="9" cy="9" r="6" stroke="currentColor" strokeWidth="2" />
+              <path d="M14 14l4 4" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
             </svg>
             <input
               ref={inputRef}
               type="text"
               className="search-input"
-              placeholder="일정, 할 일, 목표 검색..."
+              placeholder="Search events, todos, goals..."
               value={query}
               onChange={(e) => setQuery(e.target.value)}
             />
             {query && (
               <button className="search-clear" onClick={() => setQuery('')}>
                 <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
-                  <path d="M12 4l-8 8M4 4l8 8" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/>
+                  <path d="M12 4l-8 8M4 4l8 8" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
                 </svg>
               </button>
             )}
@@ -255,25 +255,25 @@ const SearchModal: React.FC<SearchModalProps> = ({
               className={`search-filter-btn ${filter === 'all' ? 'active' : ''}`}
               onClick={() => setFilter('all')}
             >
-              전체
+              All
             </button>
             <button
               className={`search-filter-btn ${filter === 'event' ? 'active' : ''}`}
               onClick={() => setFilter('event')}
             >
-              일정
+              Event
             </button>
             <button
               className={`search-filter-btn ${filter === 'todo' ? 'active' : ''}`}
               onClick={() => setFilter('todo')}
             >
-              할 일
+              Todo
             </button>
             <button
               className={`search-filter-btn ${filter === 'goal' ? 'active' : ''}`}
               onClick={() => setFilter('goal')}
             >
-              목표
+              Goal
             </button>
           </div>
         </div>
@@ -281,12 +281,12 @@ const SearchModal: React.FC<SearchModalProps> = ({
         <div className="search-modal-body">
           {query.trim() === '' ? (
             <div className="search-empty">
-              <p>검색어를 입력하세요</p>
-              <p className="search-hint">Tip: Ctrl+K 로 빠르게 검색할 수 있습니다</p>
+              <p>Enter search term</p>
+              <p className="search-hint">Tip: Press Ctrl+K to search quickly</p>
             </div>
           ) : searchResults.length === 0 ? (
             <div className="search-empty">
-              <p>"{query}"에 대한 검색 결과가 없습니다</p>
+              <p>No results found for "{query}"</p>
             </div>
           ) : (
             <div className="search-results">
@@ -312,10 +312,10 @@ const SearchModal: React.FC<SearchModalProps> = ({
 
         <div className="search-modal-footer">
           <span className="search-shortcut">
-            <kbd>Esc</kbd> 닫기
+            <kbd>Esc</kbd> Close
           </span>
           <span className="search-result-count">
-            {query.trim() && `${searchResults.length}개 결과`}
+            {query.trim() && `${searchResults.length} results`}
           </span>
         </div>
       </div>

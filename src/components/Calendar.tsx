@@ -101,7 +101,8 @@ export const Calendar: React.FC<CalendarProps> = ({
     calendarDays.push({ day, month: 'next', dateStr });
   }
 
-  const weekdays = ['일', '월', '화', '수', '목', '금', '토'];
+  const weekdays = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+  const months = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
 
   return (
     <div className="calendar-container">
@@ -110,32 +111,32 @@ export const Calendar: React.FC<CalendarProps> = ({
           ←
         </button>
         <h2 className="calendar-month-title">
-          {selectedYear}년 {selectedMonth}월
+          {months[selectedMonth - 1]} {selectedYear}
         </h2>
         <button className="calendar-nav-btn" onClick={handleNextMonth}>
           →
         </button>
         <button className="calendar-today-btn" onClick={handleToday}>
-          오늘
+          Today
         </button>
         <div className="calendar-view-toggle">
           <button
             className={`view-toggle-btn ${view === 'month' ? 'active' : ''}`}
             onClick={() => onViewChange('month')}
           >
-            월
+            Month
           </button>
           <button
             className={`view-toggle-btn ${view === 'week' ? 'active' : ''}`}
             onClick={() => onViewChange('week')}
           >
-            주
+            Week
           </button>
           <button
             className={`view-toggle-btn ${view === 'day' ? 'active' : ''}`}
             onClick={() => onViewChange('day')}
           >
-            일
+            Day
           </button>
         </div>
       </div>

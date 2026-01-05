@@ -21,7 +21,7 @@ interface TodoState {
   clearUserData: () => void;
 }
 
-// API Todo는 이제 DB 스키마와 동일하므로 직접 사용
+// API Todo now matches DB schema, so use directly
 function apiTodoToFrontendTodo(todo: api.Todo): Todo {
   return {
     id: todo.id,
@@ -43,7 +43,7 @@ function apiTodoToFrontendTodo(todo: api.Todo): Todo {
   };
 }
 
-// 프론트엔드 Todo를 API Todo로 변환
+// Convert Frontend Todo to API Todo
 function frontendTodoToApiTodo(todo: Partial<Todo>): Partial<api.Todo> {
   return {
     goal_id: todo.goal_id,
@@ -59,7 +59,7 @@ function frontendTodoToApiTodo(todo: Partial<Todo>): Partial<api.Todo> {
   };
 }
 
-// deadline에서 날짜 부분만 추출
+// Extract date part from deadline
 function getDeadlineDate(deadline?: string): string | undefined {
   if (!deadline) return undefined;
   return deadline.split('T')[0];
@@ -98,7 +98,7 @@ export const useTodoStore = create<TodoState>()((set, get) => ({
 
   addTodo: async (todoData) => {
     const userId = get().currentUserId;
-    if (!userId) throw new Error('로그인이 필요합니다.');
+    if (!userId) throw new Error('Login is required.');
 
     const apiTodo = frontendTodoToApiTodo({
       ...todoData,

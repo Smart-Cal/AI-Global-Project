@@ -44,7 +44,7 @@ const AuthPage: React.FC = () => {
       await loginWithGoogle();
     } catch (err) {
       console.error('Google login error:', err);
-      setError(err instanceof Error ? err.message : '구글 로그인에 실패했습니다.');
+      setError(err instanceof Error ? err.message : 'Google login failed.');
     }
   };
 
@@ -59,16 +59,16 @@ const AuthPage: React.FC = () => {
 
         <div className="auth-features">
           <div className="auth-feature">
-            <span>목표 기반 일정 추천</span>
+            <span>Goal-based Schedule Recommendation</span>
           </div>
           <div className="auth-feature">
-            <span>AI 에이전트와 대화</span>
+            <span>Chat with AI Agent</span>
           </div>
           <div className="auth-feature">
-            <span>스마트 할 일 관리</span>
+            <span>Smart Todo Management</span>
           </div>
           <div className="auth-feature">
-            <span>자동 시간 배치</span>
+            <span>Automatic Time Scheduling</span>
           </div>
         </div>
 
@@ -110,12 +110,12 @@ const AuthPage: React.FC = () => {
           {isLoading ? (
             <>
               <div className="spinner" style={{ width: '20px', height: '20px' }} />
-              <span>로그인 중...</span>
+              <span>Logging in...</span>
             </>
           ) : (
             <>
               <GoogleIcon />
-              <span>Google로 시작하기</span>
+              <span>Continue with Google</span>
             </>
           )}
         </button>
@@ -128,7 +128,7 @@ const AuthPage: React.FC = () => {
             textAlign: 'center',
           }}
         >
-          로그인 시 서비스 이용약관 및 개인정보처리방침에 동의하게 됩니다.
+          By logging in, you agree to our Terms of Service and Privacy Policy.
         </p>
       </div>
     </div>

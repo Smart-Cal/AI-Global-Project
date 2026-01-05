@@ -1,11 +1,11 @@
 /**
  * PALM API Client
- * Backend API와 통신하는 서비스 레이어
+ * Service layer communicating with Backend API
  */
 
 const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001/api';
 
-// 토큰 관리
+// Token management
 let authToken: string | null = localStorage.getItem('palm_token');
 
 export function setAuthToken(token: string | null) {
@@ -21,7 +21,7 @@ export function getAuthToken(): string | null {
   return authToken;
 }
 
-// API 요청 헬퍼
+// API request helper
 async function apiRequest<T>(
   endpoint: string,
   options: RequestInit = {}
@@ -49,7 +49,7 @@ async function apiRequest<T>(
 }
 
 // ==============================================
-// Auth API (구글 로그인 전용)
+// Auth API (Google Login only)
 // ==============================================
 
 export interface AuthResponse {
@@ -73,12 +73,12 @@ export async function logout(): Promise<void> {
   try {
     await apiRequest('/auth/logout', { method: 'POST' });
   } catch {
-    // 로그아웃은 항상 성공으로 처리
+    // Logout is always treated as success
   }
   setAuthToken(null);
 }
 
-// 구글 OAuth
+// Google OAuth
 export async function getSupabaseConfig(): Promise<SupabaseConfig> {
   return apiRequest<SupabaseConfig>('/auth/supabase-config');
 }
@@ -103,7 +103,7 @@ export interface PendingEvent {
   location?: string;
   description?: string;
   type: 'fixed' | 'personal' | 'goal';
-  category?: string; // AI가 추천한 카테고리 이름
+  category?: string; // Category name recommended by AI
 }
 
 export interface PendingTodo {
@@ -113,7 +113,7 @@ export interface PendingTodo {
   priority?: 'high' | 'medium' | 'low';
   deadline?: string;
   description?: string;
-  category?: string; // AI가 추천한 카테고리 이름
+  category?: string; // Category name recommended by AI
 }
 
 export interface PendingGoal {
@@ -125,7 +125,7 @@ export interface PendingGoal {
   decomposed_todos?: PendingTodo[];
 }
 
-// MCP 데이터 타입 ("행동하는 AI" 기능)
+// MCP Data Types ("Acting AI" features)
 export interface MCPPlaceResult {
   id: string;
   name: string;
@@ -222,7 +222,7 @@ export interface ChatResponse {
   scheduled_items?: any[];
   needs_user_input?: boolean;
   suggestions?: string[];
-  // MCP 데이터 ("행동하는 AI" 기능)
+  // MCP Data ("Acting AI" features)
   mcp_data?: MCPResponseData;
 }
 
@@ -312,7 +312,7 @@ export async function deleteConversation(id: string): Promise<void> {
 // Events API
 // ==============================================
 
-// DB 스키마와 일치하는 Event 인터페이스
+// Event Interface matching DB schema
 export interface Event {
   id: string;
   user_id: string;
@@ -320,13 +320,13 @@ export interface Event {
   related_todo_id?: string;
   title: string;
   description?: string;
-  event_date: string;           // 시작일 (YYYY-MM-DD)
-  end_date?: string;            // 종료일 (기간 일정용, YYYY-MM-DD)
+  event_date: string;           // Start date (YYYY-MM-DD)
+  end_date?: string;            // End date (for multi-day events, YYYY-MM-DD)
   start_time?: string;          // HH:MM
   end_time?: string;            // HH:MM
   is_all_day: boolean;
   location?: string;
-  is_fixed: boolean;            // true: 고정, false: 유동
+  is_fixed: boolean;            // true: fixed, false: flexible
   priority: number;             // 1-5
   is_completed: boolean;
   completed_at?: string;
@@ -381,18 +381,18 @@ export async function completeEvent(
 // Todos API
 // ==============================================
 
-// DB 스키마와 일치하는 Todo 인터페이스
+// Todo Interface matching DB schema
 export interface Todo {
   id: string;
   user_id: string;
-  goal_id?: string;               // 연결된 Goal
+  goal_id?: string;               // Linked Goal
   title: string;
   description?: string;
-  deadline?: string;              // 마감 시각 (ISO datetime)
-  is_hard_deadline: boolean;      // true면 절대 밀릴 수 없음
-  estimated_time?: number;        // 예상 시간 (분)
-  completed_time: number;         // 완료된 시간 (분)
-  is_divisible: boolean;          // 분할 가능 여부
+  deadline?: string;              // Deadline (ISO datetime)
+  is_hard_deadline: boolean;      // If true, cannot be postponed
+  estimated_time?: number;        // Estimated time (minutes)
+  completed_time: number;         // Completed time (minutes)
+  is_divisible: boolean;          // Whether it can be divided
   priority: 'high' | 'medium' | 'low';
   is_completed: boolean;
   completed_at?: string;
@@ -547,23 +547,23 @@ export async function deleteCategory(id: string): Promise<void> {
 
 export type GoalStatus = 'planning' | 'scheduled' | 'in_progress' | 'completed' | 'failed';
 
-// DB 스키마와 일치하는 Goal 인터페이스
+// Goal Interface matching DB schema
 export interface Goal {
   id: string;
   user_id: string;
   category_id?: string;
   title: string;
   description?: string;
-  target_date: string;            // 마감일 (필수, YYYY-MM-DD)
+  target_date: string;            // Due date (Required, YYYY-MM-DD)
   priority: 'high' | 'medium' | 'low';
-  status: GoalStatus;             // 목표 상태
-  total_estimated_time: number;   // 총 예상 시간 (분)
-  completed_time: number;         // 완료된 시간 (분)
+  status: GoalStatus;             // Goal status
+  total_estimated_time: number;   // Total estimated time (minutes)
+  completed_time: number;         // Completed time (minutes)
   created_at?: string;
   updated_at?: string;
 }
 
-// 진행률 계산 헬퍼
+// Progress calculation helper
 export function calculateGoalProgress(goal: Goal): number {
   if (goal.total_estimated_time === 0) return 0;
   return Math.round((goal.completed_time / goal.total_estimated_time) * 100);
@@ -688,13 +688,13 @@ export async function reverseGeocode(lat: number, lon: number): Promise<{ city: 
 }
 
 // ==============================================
-// Groups API (그룹 일정)
+// Groups API (Group Scheduling)
 // ==============================================
 
 export interface Group {
   id: string;
   name: string;
-  invite_code: string;  // 디스코드 스타일 초대 코드
+  invite_code: string;  // Discord-style invite code
   owner_id: string;
   created_at: string;
   updated_at: string;
@@ -762,7 +762,7 @@ export interface MeetingRecommendation {
   };
 }
 
-// 그룹 CRUD
+// Group CRUD
 export async function getGroups(): Promise<{ groups: Group[] }> {
   return apiRequest<{ groups: Group[] }>('/groups');
 }
@@ -789,7 +789,7 @@ export async function deleteGroup(id: string): Promise<void> {
   await apiRequest(`/groups/${id}`, { method: 'DELETE' });
 }
 
-// 그룹 멤버
+// Group Members
 export async function getGroupMembers(groupId: string): Promise<{ members: GroupMember[] }> {
   return apiRequest(`/groups/${groupId}/members`);
 }
@@ -798,172 +798,13 @@ export async function removeGroupMember(groupId: string, memberId: string): Prom
   await apiRequest(`/groups/${groupId}/members/${memberId}`, { method: 'DELETE' });
 }
 
-export async function leaveGroup(groupId: string): Promise<void> {
-  await apiRequest(`/groups/${groupId}/leave`, { method: 'POST' });
-}
-
-// 초대 코드 (디스코드 스타일)
-export async function joinGroupByCode(inviteCode: string): Promise<{ message: string; group: Group }> {
-  return apiRequest('/groups/join', {
+export async function joinGroupByCode(code: string): Promise<{ message: string; group: Group }> {
+  return apiRequest<{ message: string; group: Group }>('/groups/join', {
     method: 'POST',
-    body: JSON.stringify({ invite_code: inviteCode }),
+    body: JSON.stringify({ invite_code: code }),
   });
 }
 
-export async function getGroupByCode(inviteCode: string): Promise<{ group: { id: string; name: string; member_count: number } }> {
-  return apiRequest(`/groups/code/${inviteCode}`);
-}
-
-export async function regenerateInviteCode(groupId: string): Promise<{ message: string; invite_code: string }> {
-  return apiRequest(`/groups/${groupId}/regenerate-code`, { method: 'POST' });
-}
-
-// 그룹 초대 (이메일 - 레거시)
-export async function getPendingInvitations(): Promise<{ invitations: GroupInvitation[] }> {
-  return apiRequest('/groups/invitations/pending');
-}
-
-export async function getGroupInvitations(groupId: string): Promise<{ invitations: GroupInvitation[] }> {
-  return apiRequest(`/groups/${groupId}/invitations`);
-}
-
-export async function inviteToGroup(groupId: string, email: string): Promise<{ invitation: GroupInvitation }> {
-  return apiRequest(`/groups/${groupId}/invitations`, {
-    method: 'POST',
-    body: JSON.stringify({ email }),
-  });
-}
-
-export async function respondToInvitation(invitationId: string, accept: boolean): Promise<{ invitation: GroupInvitation; message: string }> {
-  return apiRequest(`/groups/invitations/${invitationId}/respond`, {
-    method: 'POST',
-    body: JSON.stringify({ accept }),
-  });
-}
-
-export async function cancelInvitation(groupId: string, invitationId: string): Promise<void> {
-  await apiRequest(`/groups/${groupId}/invitations/${invitationId}`, { method: 'DELETE' });
-}
-
-// 그룹 일정 매칭
-export async function getGroupAvailableSlots(
-  groupId: string,
-  options?: {
-    start_date?: string;
-    end_date?: string;
-    min_duration?: number;
-    work_start?: number;
-    work_end?: number;
-  }
-): Promise<{ slots: AvailableSlot[]; member_count: number; date_range: { start: string; end: string } }> {
-  const params = new URLSearchParams();
-  if (options?.start_date) params.append('start_date', options.start_date);
-  if (options?.end_date) params.append('end_date', options.end_date);
-  if (options?.min_duration) params.append('min_duration', options.min_duration.toString());
-  if (options?.work_start) params.append('work_start', options.work_start.toString());
-  if (options?.work_end) params.append('work_end', options.work_end.toString());
-
-  const query = params.toString() ? `?${params.toString()}` : '';
-  return apiRequest(`/groups/${groupId}/available-slots${query}`);
-}
-
-export async function findMeetingTime(
-  groupId: string,
-  options?: {
-    duration?: number;
-    preferred_dates?: string[];
-    preferred_times?: string[];
-  }
-): Promise<{
-  recommendations: {
-    date: string;
-    start_time: string;
-    end_time: string;
-    type: string;
-    recommendation_type: 'best' | 'alternative';
-    reason: string;
-    conflicting_members?: string[];
-  }[];
-  total_available: number;
-  total_negotiable: number;
-}> {
-  return apiRequest(`/groups/${groupId}/find-meeting-time`, {
-    method: 'POST',
-    body: JSON.stringify(options || {}),
-  });
-}
-
-// MCP 기반 그룹 미팅 계획
-export async function planGroupMeeting(
-  groupId: string,
-  options?: {
-    title?: string;
-    duration?: number;
-    location_area?: string;
-    place_type?: string;
-    budget?: number;
-    preferences?: string;
-  }
-): Promise<MeetingRecommendation> {
-  return apiRequest(`/groups/${groupId}/plan-meeting`, {
-    method: 'POST',
-    body: JSON.stringify(options || {}),
-  });
-}
-
-export async function createGroupMeeting(
-  groupId: string,
-  meeting: {
-    title: string;
-    date: string;
-    start_time: string;
-    end_time?: string;
-    location?: string;
-    description?: string;
-  }
-): Promise<{
-  success: boolean;
-  message: string;
-  meeting: {
-    title: string;
-    date: string;
-    time: string;
-    location?: string;
-  };
-  created_for: number;
-  failed_for: number;
-}> {
-  return apiRequest(`/groups/${groupId}/create-meeting`, {
-    method: 'POST',
-    body: JSON.stringify(meeting),
-  });
-}
-
-export async function findGroupMidpoint(
-  groupId: string,
-  memberLocations: { user_id: string; location: { lat: number; lng: number } }[]
-): Promise<{
-  midpoint: { lat: number; lng: number };
-  nearby_places: MCPPlaceResult[];
-  member_distances: { user_id: string; distance: string }[];
-}> {
-  return apiRequest(`/groups/${groupId}/find-midpoint`, {
-    method: 'POST',
-    body: JSON.stringify({ member_locations: memberLocations }),
-  });
-}
-
-// 그룹 AI 비서 채팅
-export async function sendGroupChatMessage(
-  groupId: string,
-  message: string
-): Promise<{
-  message: string;
-  available_slots: AvailableSlot[];
-  member_count: number;
-}> {
-  return apiRequest(`/groups/${groupId}/chat`, {
-    method: 'POST',
-    body: JSON.stringify({ message }),
-  });
+export async function getGroupByCode(code: string): Promise<{ group: { id: string; name: string; member_count: number } }> {
+  return apiRequest(`/groups/code/${code}`);
 }

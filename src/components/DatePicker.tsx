@@ -11,7 +11,7 @@ const DatePicker: React.FC<DatePickerProps> = ({
   value,
   onChange,
   label,
-  placeholder = '날짜 선택'
+  placeholder = 'Select Date'
 }) => {
   const [isOpen, setIsOpen] = useState(false);
   const [currentYear, setCurrentYear] = useState(new Date().getFullYear());
@@ -21,7 +21,7 @@ const DatePicker: React.FC<DatePickerProps> = ({
   // Parse initial value
   useEffect(() => {
     if (value) {
-      // YYYY-MM-DD 형식에서 직접 파싱 (타임존 문제 방지)
+      // Direct parsing from YYYY-MM-DD
       const [year, month] = value.split('-').map(Number);
       setCurrentYear(year);
       setCurrentMonth(month - 1);
@@ -39,7 +39,8 @@ const DatePicker: React.FC<DatePickerProps> = ({
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
 
-  const weekdays = ['일', '월', '화', '수', '목', '금', '토'];
+  const weekdays = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+  const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
 
   const getDaysInMonth = (year: number, month: number) => {
     return new Date(year, month + 1, 0).getDate();
@@ -73,12 +74,10 @@ const DatePicker: React.FC<DatePickerProps> = ({
 
   const formatDisplay = () => {
     if (!value) return '';
-    // YYYY-MM-DD 형식에서 직접 파싱 (타임존 문제 방지)
     const [year, month, day] = value.split('-').map(Number);
-    // 요일 계산을 위해 로컬 날짜로 생성
     const date = new Date(year, month - 1, day);
     const weekday = weekdays[date.getDay()];
-    return `${year}년 ${month}월 ${day}일 (${weekday})`;
+    return `${months[month - 1]} ${day}, ${year} (${weekday})`;
   };
 
   const clearDate = (e: React.MouseEvent) => {
@@ -143,7 +142,7 @@ const DatePicker: React.FC<DatePickerProps> = ({
               ◀
             </button>
             <span className="date-picker-title">
-              {currentYear}년 {currentMonth + 1}월
+              {months[currentMonth]} {currentYear}
             </span>
             <button className="date-picker-nav" onClick={() => navigateMonth(1)}>
               ▶

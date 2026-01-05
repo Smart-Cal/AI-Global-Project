@@ -28,7 +28,7 @@ export const registerUser = async (
 ): Promise<User | null> => {
   try {
     const exists = await checkPhoneExists(phone);
-    if (exists) throw new Error('이미 등록된 전화번호입니다.');
+    if (exists) throw new Error('This phone number is already registered.');
 
     const passwordHash = await hashPassword(password);
     const { data, error } = await supabase
@@ -40,16 +40,16 @@ export const registerUser = async (
     if (error) {
       console.error('Supabase register error:', error);
       if (error.code === '23505') {
-        throw new Error('이미 등록된 전화번호입니다.');
+        throw new Error('This phone number is already registered.');
       }
-      throw new Error(error.message || '회원가입 중 오류가 발생했습니다.');
+      throw new Error(error.message || 'An error occurred during registration.');
     }
     return data;
   } catch (err) {
     if (err instanceof Error) {
       throw err;
     }
-    throw new Error('회원가입 중 오류가 발생했습니다.');
+    throw new Error('An error occurred during registration.');
   }
 };
 
@@ -61,11 +61,11 @@ export const loginUser = async (phone: string, password: string): Promise<User |
     .eq('is_active', true)
     .single();
 
-  if (error || !data) throw new Error('사용자를 찾을 수 없습니다.');
+  if (error || !data) throw new Error('User not found.');
 
   const passwordHash = await hashPassword(password);
   if (passwordHash !== data.password_hash) {
-    throw new Error('비밀번호가 올바르지 않습니다.');
+    throw new Error('Incorrect password.');
   }
 
   await supabase.from('users').update({ last_login_at: new Date().toISOString() }).eq('id', data.id);
@@ -237,7 +237,7 @@ export const getCategoriesByUser = async (userId: string): Promise<Category[]> =
 };
 
 export const createDefaultCategory = async (userId: string): Promise<Category | null> => {
-  // 기본 카테고리가 이미 존재하는지 확인
+  // Check if default category already exists
   const { data: existing } = await supabase
     .from('categories')
     .select('id')
@@ -247,10 +247,10 @@ export const createDefaultCategory = async (userId: string): Promise<Category | 
 
   if (existing) return existing as Category;
 
-  // 기본 카테고리 생성
+  // Create default category
   return createCategory({
     user_id: userId,
-    name: '기본',
+    name: 'Default',
     color: '#9CA3AF',
     is_default: true,
   });

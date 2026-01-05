@@ -1,4 +1,4 @@
-// User types (구글 로그인 전용)
+// User types (Google Login only)
 export interface User {
   id: string;
   email: string;
@@ -10,7 +10,7 @@ export interface User {
   created_at?: string;
 }
 
-// Category types - 사용자 정의 카테고리
+// Category types - User defined categories
 export interface Category {
   id: string;
   user_id: string;
@@ -20,60 +20,60 @@ export interface Category {
   created_at?: string;
 }
 
-// 기본 카테고리 색상
+// Default category color
 export const DEFAULT_CATEGORY_COLOR = '#9CA3AF';
 
-// 카테고리 색상 선택지
+// Category color options
 export const CATEGORY_COLORS = [
   '#FF6B6B', '#FF9F43', '#FECA57', '#48DBFB',
   '#1DD1A1', '#5F27CD', '#FF9FF3', '#54A0FF',
   '#9CA3AF', '#6366F1', '#EC4899', '#14B8A6',
 ];
 
-// Goal Status 타입
+// Goal Status type
 export type GoalStatus = 'planning' | 'scheduled' | 'in_progress' | 'completed' | 'failed';
 
-// Goal types - 사용자의 장기 목표 (DB 스키마와 일치)
+// Goal types - User's long-term goals (matches DB schema)
 export interface Goal {
   id?: string;
   user_id: string;
   category_id?: string;
   title: string;
   description?: string;
-  target_date: string;            // 마감일 (필수, YYYY-MM-DD)
+  target_date: string;            // Due date (Required, YYYY-MM-DD)
   priority: 'high' | 'medium' | 'low';
-  status: GoalStatus;             // 목표 상태
-  total_estimated_time: number;   // 총 예상 시간 (분)
-  completed_time: number;         // 완료된 시간 (분)
+  status: GoalStatus;             // Goal status
+  total_estimated_time: number;   // Total estimated time (minutes)
+  completed_time: number;         // Completed time (minutes)
   created_at?: string;
   updated_at?: string;
 }
 
-// 진행률 계산 헬퍼
+// Progress calculation helper
 export function calculateGoalProgress(goal: Goal): number {
   const totalTime = goal.total_estimated_time ?? 0;
   const completedTime = goal.completed_time ?? 0;
 
-  // total_estimated_time이 0이거나 없으면 0% 반환
+  // Return 0% if total_estimated_time is 0 or missing
   if (totalTime === 0) return 0;
 
   const progress = Math.round((completedTime / totalTime) * 100);
-  // NaN 방지 및 0-100 범위 제한
+  // Prevent NaN and limit to 0-100 range
   return isNaN(progress) ? 0 : Math.min(100, Math.max(0, progress));
 }
 
-// Todo types - 할 일 목록 (DB 스키마와 일치)
+// Todo types - To-do list (matches DB schema)
 export interface Todo {
   id?: string;
   user_id: string;
-  goal_id?: string;               // 연결된 Goal
+  goal_id?: string;               // Linked Goal
   title: string;
   description?: string;
-  deadline?: string;              // 마감 시각 (ISO datetime)
-  is_hard_deadline: boolean;      // true면 절대 밀릴 수 없음
-  estimated_time?: number;        // 예상 시간 (분)
-  completed_time: number;         // 완료된 시간 (분)
-  is_divisible: boolean;          // 분할 가능 여부
+  deadline?: string;              // Deadline (ISO datetime)
+  is_hard_deadline: boolean;      // If true, cannot be postponed
+  estimated_time?: number;        // Estimated time (minutes)
+  completed_time: number;         // Completed time (minutes)
+  is_divisible: boolean;          // Whether it can be divided
   priority: 'high' | 'medium' | 'low';
   is_completed: boolean;
   completed_at?: string;
@@ -82,50 +82,50 @@ export interface Todo {
   created_at?: string;
 }
 
-// Event Priority 타입 (1-5 스케일)
+// Event Priority type (1-5 scale)
 export type EventPriority = 1 | 2 | 3 | 4 | 5;
 
-// Priority 설명
-// 1: 낮음 (언제든 이동/취소 가능) - 청소, 넷플릭스
-// 2: 보통-낮음 (가능하면 유지) - 개인 운동
-// 3: 보통 (기본값) - 일반 약속
-// 4: 높음 (웬만하면 변경 불가) - 중요 미팅
-// 5: 절대 (절대 변경 불가) - 시험, 면접
+// Priority description
+// 1: Low (Can be moved/cancelled anytime) - Cleaning, Netflix
+// 2: Medium-Low (Keep if possible) - Personal workout
+// 3: Medium (Default) - General appointments
+// 4: High (Hard to change) - Important meetings
+// 5: Absolute (Cannot be changed) - Exams, Interviews
 
-// Event types (DB 스키마와 일치)
+// Event types (matches DB schema)
 export interface CalendarEvent {
   id?: string;
   user_id: string;
-  category_id?: string;         // 카테고리 연결 (선택)
-  related_todo_id?: string;     // 연결된 Todo
+  category_id?: string;         // Category link (optional)
+  related_todo_id?: string;     // Linked Todo
   title: string;
   description?: string;
-  event_date: string;           // 시작일 (YYYY-MM-DD)
-  end_date?: string;            // 종료일 (기간 일정용, YYYY-MM-DD)
-  start_time?: string;          // 시작 시간 (HH:mm)
-  end_time?: string;            // 종료 시간 (HH:mm)
+  event_date: string;           // Start date (YYYY-MM-DD)
+  end_date?: string;            // End date (for multi-day events, YYYY-MM-DD)
+  start_time?: string;          // Start time (HH:mm)
+  end_time?: string;            // End time (HH:mm)
   is_all_day: boolean;
   location?: string;
 
-  // 유동성 관련
-  is_fixed: boolean;            // true: 고정 일정, false: 유동 일정
-  priority: EventPriority;      // 1-5 우선순위
+  // Flexibility related
+  is_fixed: boolean;            // true: Fixed event, false: Flexible event
+  priority: EventPriority;      // 1-5 Priority
 
-  is_completed: boolean;        // 일정 완료 여부
+  is_completed: boolean;        // Event completion status
   completed_at?: string;
   created_at?: string;
 
-  // UI 전용 (DB에 저장 안함)
+  // UI only (not saved in DB)
   is_ai_suggested?: boolean;
   is_confirmed?: boolean;
 }
 
-// 기간 일정인지 확인하는 헬퍼
+// Helper to check if it's a multi-day event
 export function isMultiDayEvent(event: CalendarEvent): boolean {
   return !!event.end_date && event.end_date !== event.event_date;
 }
 
-// 일정 기간(일수) 계산 헬퍼
+// Helper to calculate event duration (days)
 export function getEventDurationDays(event: CalendarEvent): number {
   if (!event.end_date) return 1;
   const start = new Date(event.event_date);
@@ -155,10 +155,10 @@ export interface SuggestedEvent {
   start_time?: string;
   end_time?: string;
   location?: string;
-  category_name?: string; // AI가 추천하는 카테고리 이름 (매칭용)
+  category_name?: string; // AI suggested category name (for matching)
   description?: string;
-  reason: string; // AI가 추천하는 이유
-  // UI 상태 (채팅에서만 사용)
+  reason: string; // Reason for AI suggestion
+  // UI status (used in chat only)
   added?: boolean;
   rejected?: boolean;
 }
@@ -194,50 +194,50 @@ export interface AgentConfig {
 export const AGENT_CONFIGS: Record<AgentType, AgentConfig> = {
   master: {
     type: 'master',
-    name: '통합 매니저',
+    name: 'Master Manager',
     icon: '',
-    description: '모든 에이전트를 조율하고 최적의 일정을 제안합니다',
-    specialties: ['일정 조율', '목표 관리', '우선순위 설정'],
+    description: 'Coordinates all agents and suggests optimal schedules.',
+    specialties: ['Schedule Coordination', 'Goal Management', 'Priority Setting'],
     color: '#4A90D9',
   },
   health: {
     type: 'health',
-    name: '건강 코치',
+    name: 'Health Coach',
     icon: '',
-    description: '운동, 식단, 건강 관리를 도와드립니다',
-    specialties: ['운동 계획', '다이어트', '수면 관리', '건강 습관'],
+    description: 'Helps with exercise, diet, and health management.',
+    specialties: ['Exercise Planning', 'Diet', 'Sleep Management', 'Health Habits'],
     color: '#1DD1A1',
   },
   study: {
     type: 'study',
-    name: '학습 멘토',
+    name: 'Study Mentor',
     icon: '',
-    description: '공부 계획과 학습 목표를 관리합니다',
-    specialties: ['학습 계획', '시험 준비', '자격증', '언어 학습'],
+    description: 'Manages study plans and learning goals.',
+    specialties: ['Study Planning', 'Exam Prep', 'Certifications', 'Language Learning'],
     color: '#FECA57',
   },
   career: {
     type: 'career',
-    name: '커리어 어드바이저',
+    name: 'Career Advisor',
     icon: '',
-    description: '직장/커리어 관련 일정과 목표를 관리합니다',
-    specialties: ['업무 관리', '커리어 개발', '네트워킹', '자기계발'],
+    description: 'Manages work/career-related schedules and goals.',
+    specialties: ['Work Management', 'Career Development', 'Networking', 'Self Improvement'],
     color: '#54A0FF',
   },
   lifestyle: {
     type: 'lifestyle',
-    name: '라이프 플래너',
+    name: 'Life Planner',
     icon: '',
-    description: '일상생활과 여가, 관계를 관리합니다',
-    specialties: ['약속 관리', '취미 활동', '여행 계획', '관계 관리'],
+    description: 'Manages daily life, leisure, and relationships.',
+    specialties: ['Appointment Management', 'Hobbies', 'Travel Planning', 'Relationship Management'],
     color: '#FF9FF3',
   },
   scheduler: {
     type: 'scheduler',
-    name: '스케줄 최적화',
+    name: 'Schedule Optimizer',
     icon: '',
-    description: '일정 충돌을 해결하고 최적의 시간을 찾습니다',
-    specialties: ['시간 최적화', '충돌 해결', '여유시간 확보'],
+    description: 'Resolves schedule conflicts and finds optimal times.',
+    specialties: ['Time Optimization', 'Conflict Resolution', 'Free Time Allocation'],
     color: '#5F27CD',
   },
 };
@@ -254,7 +254,7 @@ export interface ScheduleInfo {
   start_time?: string;
   end_time?: string;
   location?: string;
-  category_name?: string; // 카테고리 이름 (매칭용)
+  category_name?: string; // Category name (for matching)
   description?: string;
 }
 
@@ -290,23 +290,23 @@ export type CalendarView = 'month' | 'week' | 'day';
 // MCP Tool System Types (Phase 2)
 // =============================================
 
-// 위험도 레벨
+// Risk level
 export type RiskLevel = 'low' | 'medium' | 'high';
 
-// 도구 카테고리
+// Tool category
 export type ToolCategory = 'internal' | 'external' | 'integration';
 
-// 도구 실행 상태
+// Tool execution status
 export type ToolExecutionStatus =
-  | 'pending'     // 확인 대기 중
-  | 'confirmed'   // 확인됨
-  | 'executing'   // 실행 중
-  | 'completed'   // 완료
-  | 'failed'      // 실패
-  | 'cancelled'   // 취소됨
-  | 'expired';    // 만료됨
+  | 'pending'     // Pending confirmation
+  | 'confirmed'   // Confirmed
+  | 'executing'   // Executing
+  | 'completed'   // Completed
+  | 'failed'      // Failed
+  | 'cancelled'   // Cancelled
+  | 'expired';    // Expired
 
-// 도구 실행 정보
+// Tool execution info
 export interface ToolExecution {
   id: string;
   user_id: string;
@@ -326,10 +326,10 @@ export interface ToolExecution {
   created_at: string;
 }
 
-// 확인 타입 (위험도에 따라 다른 UI)
+// Confirmation type (Different UI based on risk)
 export type ConfirmationType = 'immediate' | 'inline' | 'modal';
 
-// 대기 중인 확인 요청
+// Pending confirmation request
 export interface PendingConfirmation {
   executionId: string;
   toolName: string;
@@ -340,7 +340,7 @@ export interface PendingConfirmation {
   expiresAt: Date;
 }
 
-// 도구 미리보기 데이터
+// Tool preview data
 export interface ToolPreviewData {
   title: string;
   description: string;
@@ -352,7 +352,7 @@ export interface ToolPreviewData {
 // External Service Types (Phase 3)
 // =============================================
 
-// 외부 서비스 타입
+// External service type
 export type ExternalServiceType =
   | 'weather'
   | 'shopping'
@@ -360,7 +360,7 @@ export type ExternalServiceType =
   | 'google_calendar'
   | 'notion';
 
-// 외부 서비스 설정
+// External service config
 export interface ExternalService {
   id: string;
   user_id: string;
@@ -373,7 +373,7 @@ export interface ExternalService {
   updated_at: string;
 }
 
-// 날씨 데이터
+// Weather data
 export interface WeatherData {
   location: string;
   temperature: number;
@@ -394,7 +394,7 @@ export interface DailyForecast {
   icon: string;
 }
 
-// 장소 검색 결과
+// Place search result
 export interface PlaceSearchResult {
   id: string;
   name: string;
@@ -411,10 +411,10 @@ export interface PlaceSearchResult {
   distance?: number;
 }
 
-// 경로 정보
+// Route info
 export interface DirectionsResult {
-  duration: number;      // 분 단위
-  distance: number;      // km 단위
+  duration: number;      // Minute unit
+  distance: number;      // km unit
   departureTime?: string;
   arrivalTime?: string;
   transportMode: 'transit' | 'driving' | 'walking';
@@ -427,7 +427,7 @@ export interface DirectionStep {
   duration: number;
 }
 
-// 상품 검색 결과
+// Product search result
 export interface ProductSearchResult {
   id: string;
   title: string;
@@ -441,7 +441,7 @@ export interface ProductSearchResult {
 }
 
 // =============================================
-// Action Log Types (감사/롤백용)
+// Action Log Types (For Audit/Rollback)
 // =============================================
 
 export type ActionType = 'create' | 'update' | 'delete' | 'external_call' | 'sync';

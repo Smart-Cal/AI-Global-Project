@@ -10,12 +10,12 @@ import type {
 } from '../types';
 import { calculateGoalProgress } from '../types';
 
-// Goal이 활성 상태인지 확인
+// Check if Goal is active
 function isGoalActive(goal: Goal): boolean {
   return !['completed', 'failed'].includes(goal.status);
 }
 
-// deadline에서 날짜 추출
+// Extract date from deadline
 function getDeadlineDate(deadline?: string): string | undefined {
   if (!deadline) return undefined;
   return deadline.split('T')[0];
@@ -29,16 +29,17 @@ const openai = new OpenAI({
 });
 
 const getWeekday = (date: Date): string => {
-  return ['일', '월', '화', '수', '목', '금', '토'][date.getDay()];
+  return ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'][date.getDay()];
 };
 
 const formatDate = (date: Date): string => {
-  return `${date.getFullYear()}년 ${date.getMonth() + 1}월 ${date.getDate()}일 (${getWeekday(date)}요일)`;
+  const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+  return `${months[date.getMonth()]} ${date.getDate()}, ${date.getFullYear()} (${getWeekday(date)})`;
 };
 
-// 현재 일정 요약 (완료 여부 포함)
+// Summarize current events (including completion status)
 const summarizeEvents = (events: CalendarEvent[], categories: Category[], days: number = 14): string => {
-  if (!events.length) return '현재 등록된 일정이 없습니다.';
+  if (!events.length) return 'No events registered.';
 
   const today = new Date();
   today.setHours(0, 0, 0, 0);
@@ -50,27 +51,27 @@ const summarizeEvents = (events: CalendarEvent[], categories: Category[], days: 
     return d >= today && d <= futureDate;
   });
 
-  if (!relevant.length) return `향후 ${days}일간 등록된 일정이 없습니다.`;
+  if (!relevant.length) return `No events registered for the next ${days} days.`;
 
   return relevant.slice(0, 20).map((e) => {
-    const time = e.start_time ? `${e.start_time.slice(0, 5)}~${e.end_time?.slice(0, 5) || ''}` : '종일';
+    const time = e.start_time ? `${e.start_time.slice(0, 5)}~${e.end_time?.slice(0, 5) || ''}` : 'All day';
     const location = e.location ? ` @ ${e.location}` : '';
-    const status = e.is_completed ? '[완료]' : '';
+    const status = e.is_completed ? '[Completed]' : '';
     const category = categories.find(c => c.id === e.category_id);
     const categoryName = category ? `[${category.name}]` : '';
     return `- ${e.event_date} (${getWeekday(new Date(e.event_date))}) ${time}: ${categoryName}${status} ${e.title}${location}`;
   }).join('\n');
 };
 
-// 목표 요약 (목표일과 진행률 강조)
+// Summarize goals (highlight target date and progress)
 const summarizeGoals = (goals: Goal[], categories: Category[]): string => {
   const activeGoals = goals.filter(isGoalActive);
-  if (!activeGoals.length) return '설정된 목표가 없습니다.';
+  if (!activeGoals.length) return 'No goals set.';
 
   const today = new Date().toISOString().split('T')[0];
 
   return activeGoals.map(g => {
-    const progress = `진행률: ${calculateGoalProgress(g)}%`;
+    const progress = `Progress: ${calculateGoalProgress(g)}%`;
     const category = categories.find(c => c.id === g.category_id);
     const categoryName = category ? `[${category.name}]` : '';
 
@@ -78,13 +79,13 @@ const summarizeGoals = (goals: Goal[], categories: Category[]): string => {
     if (g.target_date) {
       const daysLeft = Math.ceil((new Date(g.target_date).getTime() - new Date(today).getTime()) / (1000 * 60 * 60 * 24));
       if (daysLeft < 0) {
-        deadlineInfo = ` (목표일 ${Math.abs(daysLeft)}일 초과!)`;
+        deadlineInfo = ` (${Math.abs(daysLeft)} days overdue!)`;
       } else if (daysLeft === 0) {
-        deadlineInfo = ' (오늘 마감!)';
+        deadlineInfo = ' (Due today!)';
       } else if (daysLeft <= 7) {
-        deadlineInfo = ` (${daysLeft}일 남음)`;
+        deadlineInfo = ` (${daysLeft} days left)`;
       } else {
-        deadlineInfo = ` (목표일: ${g.target_date})`;
+        deadlineInfo = ` (Target: ${g.target_date})`;
       }
     }
 
@@ -92,50 +93,50 @@ const summarizeGoals = (goals: Goal[], categories: Category[]): string => {
   }).join('\n');
 };
 
-// Todo 요약
+// Summarize Todos
 const summarizeTodos = (todos: Todo[]): string => {
   const pending = todos.filter(t => !t.is_completed);
-  if (!pending.length) return '할 일이 없습니다.';
+  if (!pending.length) return 'No todos.';
 
   return pending.slice(0, 10).map(t => {
     const deadlineDate = getDeadlineDate(t.deadline);
-    const due = deadlineDate ? ` (기한: ${deadlineDate})` : '';
-    const priority = t.priority === 'high' ? '[긴급]' : t.priority === 'medium' ? '[보통]' : '[낮음]';
+    const due = deadlineDate ? ` (Due: ${deadlineDate})` : '';
+    const priority = t.priority === 'high' ? '[Urgent]' : t.priority === 'medium' ? '[Normal]' : '[Low]';
     return `${priority} ${t.title}${due}`;
   }).join('\n');
 };
 
-// 사용자 메시지를 분석하여 관련 에이전트 타입들을 결정
+// Analyze user message to determine relevant agent types
 const analyzeMessageForAgents = (message: string): AgentType[] => {
   const lowerMsg = message.toLowerCase();
   const agents: AgentType[] = [];
 
-  // 건강/운동 관련
-  if (/운동|헬스|건강|다이어트|체중|살|조깅|러닝|요가|스트레칭|수영|근력|유산소|식단|영양|gym|workout/i.test(lowerMsg)) {
+  // Health/Workout related
+  if (/exercise|health|diet|weight|fat|jogging|running|yoga|stretching|swim|muscle|cardio|nutrition|gym|workout/i.test(lowerMsg)) {
     agents.push('health');
   }
 
-  // 학습/공부 관련
-  if (/공부|학습|시험|토익|토플|자격증|영어|수학|독서|책|강의|수업|과제|숙제|암기|복습|study/i.test(lowerMsg)) {
+  // Study/Learning related
+  if (/study|learn|exam|test|toeic|toefl|cert|english|math|reading|book|lecture|class|assignment|homework|memorize|review/i.test(lowerMsg)) {
     agents.push('study');
   }
 
-  // 커리어/업무 관련
-  if (/회의|업무|프로젝트|일|직장|커리어|면접|이력서|발표|프레젠테이션|보고서|미팅|work|meeting/i.test(lowerMsg)) {
+  // Career/Work related
+  if (/meeting|work|project|job|career|interview|resume|presentation|report|business/i.test(lowerMsg)) {
     agents.push('career');
   }
 
-  // 라이프스타일/약속 관련
-  if (/약속|친구|데이트|여행|맛집|카페|영화|공연|쇼핑|저녁|점심|식사|만남|파티|생일|홍대|강남|이태원/i.test(lowerMsg)) {
+  // Lifestyle/Appointments related
+  if (/appointment|friend|date|trip|travel|restaurant|cafe|movie|concert|shopping|dinner|lunch|meal|meet|party|birthday/i.test(lowerMsg)) {
     agents.push('lifestyle');
   }
 
-  // 일정 조율 관련
-  if (/일정|스케줄|시간|언제|조정|변경|충돌|비어있|여유|최적|schedule/i.test(lowerMsg)) {
+  // Schedule coordination related
+  if (/schedule|time|when|adjust|change|conflict|empty|free|optimal|available/i.test(lowerMsg)) {
     agents.push('scheduler');
   }
 
-  // 기본적으로 master는 항상 포함
+  // Always include master
   if (!agents.includes('master')) {
     agents.unshift('master');
   }
@@ -143,7 +144,7 @@ const analyzeMessageForAgents = (message: string): AgentType[] => {
   return agents;
 };
 
-// 다음 N일의 날짜 목록 생성
+// Generate list of next N days
 const getNextNDays = (n: number): string[] => {
   const dates: string[] = [];
   const today = new Date();
@@ -155,7 +156,7 @@ const getNextNDays = (n: number): string[] => {
   return dates;
 };
 
-// 빈 시간대 찾기
+// Find available slots
 const findAvailableSlots = (events: CalendarEvent[], date: string): string[] => {
   const dayEvents = events
     .filter(e => e.event_date === date && e.start_time && e.end_time)
@@ -167,12 +168,12 @@ const findAvailableSlots = (events: CalendarEvent[], date: string): string[] => 
     end: e.end_time!
   }));
 
-  // 기본 활동 시간: 07:00 ~ 22:00
+  // Default active hours: 07:00 ~ 22:00
   const dayStart = '07:00';
   const dayEnd = '22:00';
 
   if (busyTimes.length === 0) {
-    slots.push(`${dayStart}~${dayEnd} (전체 가능)`);
+    slots.push(`${dayStart}~${dayEnd} (All day available)`);
     return slots;
   }
 
@@ -193,7 +194,7 @@ const findAvailableSlots = (events: CalendarEvent[], date: string): string[] => 
   return slots;
 };
 
-// 메인 시스템 프롬프트 생성
+// Generate main system prompt
 const getMultiAgentSystemPrompt = (
   relevantAgents: AgentType[],
   events: CalendarEvent[],
@@ -204,96 +205,96 @@ const getMultiAgentSystemPrompt = (
   const today = new Date();
   const nextWeekDates = getNextNDays(7);
 
-  // 각 날짜별 빈 시간대 계산
+  // Calculate available slots for each date
   const availableSlotsByDate = nextWeekDates.map(date => {
     const slots = findAvailableSlots(events, date);
     const dayOfWeek = getWeekday(new Date(date));
-    return `${date} (${dayOfWeek}): ${slots.length > 0 ? slots.join(', ') : '일정 없음'}`;
+    return `${date} (${dayOfWeek}): ${slots.length > 0 ? slots.join(', ') : 'No slots'}`;
   }).join('\n');
 
-  // 사용자 정의 카테고리 목록
-  const categoryList = categories.map(c => c.name).join(', ') || '기본';
+  // User defined categories
+  const categoryList = categories.map(c => c.name).join(', ') || 'Default';
 
-  return `당신은 사용자의 일정을 관리하는 AI 어시스턴트입니다.
+  return `You are an AI Assistant managing the user's schedule.
 
-## 가장 중요한 규칙
-**현재 사용자의 요청에만 집중하세요.** 이전 대화에서 다른 주제(예: 운동)에 대해 이야기했더라도, 현재 요청이 다른 주제(예: 식사)라면 현재 요청에만 맞는 일정을 추천하세요.
+## Most Important Rules
+**Focus ONLY on the user's current request.** Even if previous conversations were about other topics (e.g., exercise), if the current request is about something else (e.g., meals), recommend schedules fitting ONLY the current request.
 
-## 현재 시간 정보
-오늘: ${formatDate(today)}
-현재 시각: ${today.getHours()}시 ${today.getMinutes()}분
+## Current Time Information
+Today: ${formatDate(today)}
+Current Time: ${today.getHours()}:${today.getMinutes()}
 
-## 사용자 현황
+## User Status
 
-### 기존 일정 (향후 2주):
+### Existing Schedule (Next 2 weeks):
 ${summarizeEvents(events, categories)}
 
-### 향후 7일 빈 시간대:
+### Free Slots (Next 7 days):
 ${availableSlotsByDate}
 
-### 사용자의 목표:
+### User Goals:
 ${summarizeGoals(goals, categories)}
 
-### 할 일:
+### Todos:
 ${summarizeTodos(todos)}
 
-### 사용자 정의 카테고리:
+### User Categories:
 ${categoryList}
 
-## 목표 기반 일정 추천 전략
+## Goal-Based Recommendation Strategy
 
-사용자가 일정 추천을 요청하면, 다음을 고려하세요:
+When the user asks for schedule recommendations, consider the following:
 
-1. **목표와의 연관성**: 사용자의 목표를 확인하고, 목표 달성에 도움이 되는 일정인지 판단
-2. **목표일까지의 시간**: 목표일이 가까울수록 더 집중적인 일정 필요
-3. **진행률 분석**: 진행률이 낮은 목표에 더 많은 시간 할당 권장
-4. **기존 일정 패턴**: 사용자의 기존 일정 패턴을 참고하여 적절한 시간대 제안
+1. **Relevance to Goals**: Check user goals and determine if the schedule helps achieve them.
+2. **Time to Goal Target**: Closer target dates require more focused schedules.
+3. **Progress Analysis**: Recommend allocating more time to goals with low progress.
+4. **Existing Patterns**: Refer to the user's existing schedule patterns for appropriate timing.
 
-## 중요 지침
+## Important Guidelines
 
-1. 구체적인 일정만 제안하세요:
-   - 반드시 정확한 날짜(YYYY-MM-DD)와 시간(HH:MM)을 지정
-   - 장소도 구체적으로 (예: "집 근처 공원", "홍대입구역 근처", "집에서")
+1. Propose specific schedules:
+   - Must specify exact date (YYYY-MM-DD) and time (HH:MM).
+   - Specify location concretely (e.g., "Park near home", "Near Hongdae Station", "At home").
 
-2. 현실적인 일정을 제안하세요:
-   - 빈 시간대를 확인하고 충돌 없는 시간에 배치
-   - 이동 시간 고려 (연속 일정 사이에 최소 30분 여유)
+2. Propose realistic schedules:
+   - Check free slots and place in non-conflicting times.
+   - Consider travel time (leave at least 30 mins between consecutive events).
 
-3. 카테고리 매칭:
-   - 사용자가 정의한 카테고리 중 가장 적합한 것을 선택
-   - 맞는 카테고리가 없으면 "기본" 사용
+3. Category Matching:
+   - Select the most appropriate category from the user's defined categories.
+   - Use "Default" if no matching category exists.
 
-4. 응답 형식:
-   - 먼저 1-2문장의 간단한 설명
-   - 그 다음 반드시 [SCHEDULES] 태그 안에 JSON 배열로 일정 제공
+4. Response Format:
+   - First, provide a simple 1-2 sentence explanation.
+   - Then, MUST provide the schedule as a JSON array inside [SCHEDULES] tags.
 
-5. JSON 형식:
+5. JSON Format:
 
 [SCHEDULES]
 [
   {
-    "title": "일정 제목",
+    "title": "Event Title",
     "date": "YYYY-MM-DD",
     "start_time": "HH:MM",
     "end_time": "HH:MM",
-    "location": "구체적인 장소",
-    "category_name": "사용자의 카테고리 이름 (예: 공부, 운동, 약속 등)",
-    "description": "실제로 무엇을 할지 상세하게",
-    "reason": "왜 이 시간대와 활동을 추천하는지"
+    "location": "Specific Location",
+    "category_name": "User's Category Name (e.g., Study, Workout, etc.)",
+    "description": "Details of what to do",
+    "reason": "Why this time and activity is recommended"
   }
 ]
 [/SCHEDULES]
 
-6. 절대 하지 말 것:
-   - 마크다운 기호 사용 금지 (*, #, **, ## 등)
-   - 이전 대화 주제를 현재 요청에 혼합하기 금지
-   - 사용자에게 시간을 되묻기 금지`;
+6. NEVER do the following:
+   - Do NOT use markdown symbols (*, #, **, ##, etc.).
+   - Do NOT mix previous conversation topics into the current request.
+   - Do NOT ask the user for the time back (you should propose it).`;
 };
 
-// JSON 파싱 헬퍼
+// JSON parsing helper
 const parseSchedulesFromResponse = (text: string): SuggestedEvent[] => {
   try {
-    // [SCHEDULES] 태그 사이의 JSON 추출
+    // Extract JSON between [SCHEDULES] tags
     const match = text.match(/\[SCHEDULES\]([\s\S]*?)\[\/SCHEDULES\]/);
     if (match) {
       const jsonStr = match[1].trim();
@@ -305,14 +306,14 @@ const parseSchedulesFromResponse = (text: string): SuggestedEvent[] => {
           start_time: item.start_time,
           end_time: item.end_time,
           location: item.location,
-          category_name: item.category_name || item.category || '기본',
+          category_name: item.category_name || item.category || 'Default',
           description: item.description,
           reason: item.reason || '',
         })).filter(e => e.title && e.date);
       }
     }
 
-    // 대안: 일반 JSON 배열 찾기
+    // Alternative: Find general JSON array
     const jsonMatch = text.match(/\[\s*\{[\s\S]*?\}\s*\]/);
     if (jsonMatch) {
       const parsed = JSON.parse(jsonMatch[0]);
@@ -323,7 +324,7 @@ const parseSchedulesFromResponse = (text: string): SuggestedEvent[] => {
           start_time: item.start_time,
           end_time: item.end_time,
           location: item.location,
-          category_name: item.category_name || item.category || '기본',
+          category_name: item.category_name || item.category || 'Default',
           description: item.description,
           reason: item.reason || '',
         })).filter(e => e.title && e.date);
@@ -335,47 +336,47 @@ const parseSchedulesFromResponse = (text: string): SuggestedEvent[] => {
   return [];
 };
 
-// 텍스트 클린업 (마크다운 기호 제거)
+// Text cleanup (remove markdown symbols)
 const cleanResponseText = (text: string): string => {
   return text
-    .replace(/\[SCHEDULES\][\s\S]*?\[\/SCHEDULES\]/g, '') // JSON 블록 제거
-    .replace(/\[\s*\{[\s\S]*?\}\s*\]/g, '') // JSON 배열 제거
-    .replace(/#{1,6}\s*/g, '') // 헤더 제거
-    .replace(/\*{1,3}([^*]+)\*{1,3}/g, '$1') // 볼드/이탤릭 제거
-    .replace(/`{1,3}[^`]*`{1,3}/g, '') // 코드 블록 제거
-    .replace(/^[-*+]\s+/gm, '') // 리스트 마커 제거
-    .replace(/^\d+\.\s+/gm, '') // 숫자 리스트 제거
-    .replace(/\n{3,}/g, '\n\n') // 과도한 줄바꿈 정리
-    .replace(/\[([^\]]+)\]\([^)]+\)/g, '$1') // 링크 제거
+    .replace(/\[SCHEDULES\][\s\S]*?\[\/SCHEDULES\]/g, '') // Remove JSON block
+    .replace(/\[\s*\{[\s\S]*?\}\s*\]/g, '') // Remove JSON array
+    .replace(/#{1,6}\s*/g, '') // Remove headers
+    .replace(/\*{1,3}([^*]+)\*{1,3}/g, '$1') // Remove bold/italic
+    .replace(/`{1,3}[^`]*`{1,3}/g, '') // Remove code blocks
+    .replace(/^[-*+]\s+/gm, '') // Remove list markers
+    .replace(/^\d+\.\s+/gm, '') // Remove number lists
+    .replace(/\n{3,}/g, '\n\n') // Clean excessive newlines
+    .replace(/\[([^\]]+)\]\([^)]+\)/g, '$1') // Remove links
     .trim();
 };
 
-// 메인 채팅 함수 (멀티 에이전트)
+// Main chat function (Multi-Agent)
 export const chatWithAgent = async (
   userInput: string,
-  _agentType: AgentType, // 이제 자동 라우팅되므로 무시됨
+  _agentType: AgentType, // Ignored as routing is now automatic
   events: CalendarEvent[],
   goals: Goal[],
   todos: Todo[],
   categories: Category[],
   history: AgentMessage[] = []
 ): Promise<AgentMessage> => {
-  // 1. 메시지 분석하여 관련 에이전트 결정
+  // 1. Analyze message to determine relevant agents
   const relevantAgents = analyzeMessageForAgents(userInput);
   const primaryAgent = relevantAgents[0];
 
-  // 2. 시스템 프롬프트 생성
+  // 2. Generate system prompt
   const systemPrompt = getMultiAgentSystemPrompt(relevantAgents, events, goals, todos, categories);
 
-  // 3. 이전 대화 맥락 구성 (이전 추천 일정 정보도 포함)
+  // 3. Construct conversation context (include previous recommended schedules)
   const conversationHistory = history.slice(-6).map((m) => {
     let content = m.content;
-    // 이전 추천 일정이 있으면 맥락에 포함
+    // Include previously recommended schedules in context
     if (m.metadata?.suggested_events && m.metadata.suggested_events.length > 0) {
       const prevSchedules = m.metadata.suggested_events.map(e =>
         `- ${e.date} ${e.start_time || ''}: ${e.title}`
       ).join('\n');
-      content += `\n\n[이전에 추천한 일정]\n${prevSchedules}`;
+      content += `\n\n[Previously Recommended Schedules]\n${prevSchedules}`;
     }
     return {
       role: m.role as 'user' | 'assistant',
@@ -399,15 +400,15 @@ export const chatWithAgent = async (
 
     const rawContent = response.choices[0]?.message?.content || '';
 
-    // 4. 일정 추출
+    // 4. Extract schedules
     const suggestedEvents = parseSchedulesFromResponse(rawContent);
 
-    // 5. 텍스트 정리
+    // 5. Clean text
     let cleanedText = cleanResponseText(rawContent);
 
-    // 일정이 있으면 텍스트를 더 간결하게
+    // If schedules exist, make text more concise
     if (suggestedEvents.length > 0 && cleanedText.length > 200) {
-      // 첫 2문장만 유지
+      // Keep only first 2 sentences
       const sentences = cleanedText.split(/[.!?]\s+/);
       cleanedText = sentences.slice(0, 2).join('. ').trim();
       if (cleanedText && !cleanedText.endsWith('.') && !cleanedText.endsWith('!') && !cleanedText.endsWith('?')) {
@@ -418,7 +419,7 @@ export const chatWithAgent = async (
     return {
       id: crypto.randomUUID(),
       role: 'assistant',
-      content: cleanedText || '추천 일정을 준비했습니다.',
+      content: cleanedText || 'Schedules prepared.',
       agent_type: primaryAgent,
       timestamp: new Date(),
       metadata: {
@@ -430,14 +431,14 @@ export const chatWithAgent = async (
     return {
       id: crypto.randomUUID(),
       role: 'assistant',
-      content: 'AI 서비스에 일시적인 문제가 발생했습니다. 잠시 후 다시 시도해주세요.',
+      content: 'AI service is temporarily unavailable. Please try again later.',
       agent_type: primaryAgent,
       timestamp: new Date(),
     };
   }
 };
 
-// 자동 추천 생성 (목표 기반)
+// Auto Generate Recommendations (Goal-based)
 export const generateAutoRecommendations = async (
   events: CalendarEvent[],
   goals: Goal[],
@@ -453,12 +454,12 @@ export const generateAutoRecommendations = async (
     return `"${g.title}"${categoryName ? ` (${categoryName})` : ''}`;
   }).join(', ');
 
-  const prompt = `내 목표는 ${goalSummary}입니다. 이번 주에 목표 달성을 위해 실천할 수 있는 구체적인 일정 2-3개를 추천해주세요.`;
+  const prompt = `My goals are ${goalSummary}. Please recommend 2-3 concrete schedules to achieve these goals this week.`;
 
   return chatWithAgent(prompt, 'master', events, goals, todos, categories, []);
 };
 
-// 일정 충돌 감지
+// Detect Scheduler Conflicts
 export const detectScheduleConflicts = (events: CalendarEvent[]): string[] => {
   const conflicts: string[] = [];
 
@@ -477,7 +478,7 @@ export const detectScheduleConflicts = (events: CalendarEvent[]): string[] => {
       if (current.end_time && next.start_time) {
         if (current.end_time > next.start_time) {
           conflicts.push(
-            `"${current.title}" (${current.start_time}~${current.end_time})와 "${next.title}" (${next.start_time})이 겹칩니다.`
+            `"${current.title}" (${current.start_time}~${current.end_time}) and "${next.title}" (${next.start_time}) overlap.`
           );
         }
       }

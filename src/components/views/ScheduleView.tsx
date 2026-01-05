@@ -68,11 +68,12 @@ const ScheduleView: React.FC<ScheduleViewProps> = ({ onEventClick, onAddEvent, o
     const todayStr = today.toISOString().split('T')[0];
     const tomorrowStr = tomorrow.toISOString().split('T')[0];
 
-    if (dateStr === todayStr) return '오늘';
-    if (dateStr === tomorrowStr) return '내일';
+    if (dateStr === todayStr) return 'Today';
+    if (dateStr === tomorrowStr) return 'Tomorrow';
 
-    const weekdays = ['일', '월', '화', '수', '목', '금', '토'];
-    return `${date.getMonth() + 1}월 ${date.getDate()}일 ${weekdays[date.getDay()]}요일`;
+    const weekdays = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+    const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+    return `${weekdays[date.getDay()]}, ${months[date.getMonth()]} ${date.getDate()}`;
   };
 
   const getPriorityColor = (priority: string) => {
@@ -86,19 +87,19 @@ const ScheduleView: React.FC<ScheduleViewProps> = ({ onEventClick, onAddEvent, o
 
   const handleDeleteCategory = async (categoryId: string, categoryName: string, isDefault: boolean) => {
     if (isDefault) {
-      showToast('기본 카테고리는 삭제할 수 없습니다', 'error');
+      showToast('Cannot delete default category', 'error');
       return;
     }
-    if (confirm(`"${categoryName}" 카테고리를 삭제하시겠습니까?`)) {
+    if (confirm(`Are you sure you want to delete category "${categoryName}"?`)) {
       try {
         await deleteCategory(categoryId);
-        showToast(`"${categoryName}" 카테고리가 삭제되었습니다`, 'success');
+        showToast(`Category "${categoryName}" deleted`, 'success');
         // 삭제된 카테고리가 선택된 상태였다면 전체로 변경
         if (selectedCategory === categoryId) {
           setSelectedCategory(null);
         }
       } catch (error) {
-        showToast('카테고리 삭제에 실패했습니다', 'error');
+        showToast('Failed to delete category', 'error');
       }
     }
   };
@@ -112,7 +113,7 @@ const ScheduleView: React.FC<ScheduleViewProps> = ({ onEventClick, onAddEvent, o
     <div className="schedule-view">
       <aside className="schedule-sidebar">
         <div className="schedule-sidebar-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-          <h3>카테고리</h3>
+          <h3>Categories</h3>
           <button
             onClick={() => setShowCategoryManager(!showCategoryManager)}
             style={{
@@ -129,7 +130,7 @@ const ScheduleView: React.FC<ScheduleViewProps> = ({ onEventClick, onAddEvent, o
               justifyContent: 'center',
               padding: 0,
             }}
-            title="카테고리 관리"
+            title="Manage Categories"
           >
             ⚙
           </button>
@@ -140,7 +141,7 @@ const ScheduleView: React.FC<ScheduleViewProps> = ({ onEventClick, onAddEvent, o
             onClick={() => setSelectedCategory(null)}
           >
             <span className="category-color-dot" style={{ backgroundColor: '#4A90D9' }} />
-            <span className="category-name">전체</span>
+            <span className="category-name">All</span>
             <span className="category-count">{events.length}</span>
           </button>
           {categories.map(category => {
@@ -181,7 +182,7 @@ const ScheduleView: React.FC<ScheduleViewProps> = ({ onEventClick, onAddEvent, o
                       padding: 0,
                       flexShrink: 0,
                     }}
-                    title={`${category.name} 삭제`}
+                    title={`Delete ${category.name}`}
                   >
                     −
                   </button>
@@ -194,19 +195,19 @@ const ScheduleView: React.FC<ScheduleViewProps> = ({ onEventClick, onAddEvent, o
         <div className="schedule-sidebar-divider" />
 
         <div className="schedule-sidebar-section">
-          <h4>보기</h4>
+          <h4>View</h4>
           <div className="schedule-view-toggles">
             <button
               className={`schedule-view-toggle ${viewType === 'all' ? 'active' : ''}`}
               onClick={() => setViewType('all')}
             >
-              전체
+              All
             </button>
             <button
               className={`schedule-view-toggle ${viewType === 'events' ? 'active' : ''}`}
               onClick={() => setViewType('events')}
             >
-              일정
+              Events
             </button>
             <button
               className={`schedule-view-toggle ${viewType === 'todos' ? 'active' : ''}`}
@@ -222,15 +223,15 @@ const ScheduleView: React.FC<ScheduleViewProps> = ({ onEventClick, onAddEvent, o
         <div className="schedule-header">
           <h2>
             {selectedCategory
-              ? categories.find(c => c.id === selectedCategory)?.name || '일정'
-              : '전체 일정'}
+              ? categories.find(c => c.id === selectedCategory)?.name || 'Schedule'
+              : 'All Events'}
           </h2>
           <div className="schedule-actions">
             <button className="btn btn-primary btn-sm" onClick={() => onAddEvent()}>
-              + 일정 추가
+              + Add Event
             </button>
             <button className="btn btn-secondary btn-sm" onClick={onAddTodo}>
-              + TODO 추가
+              + Add Todo
             </button>
           </div>
         </div>
@@ -238,11 +239,11 @@ const ScheduleView: React.FC<ScheduleViewProps> = ({ onEventClick, onAddEvent, o
         <div className="schedule-content">
           {(viewType === 'all' || viewType === 'events') && (
             <div className="schedule-events-section">
-              {viewType === 'all' && <h3 className="schedule-section-title">일정</h3>}
+              {viewType === 'all' && <h3 className="schedule-section-title">Events</h3>}
 
               {sortedDates.length === 0 ? (
                 <div className="schedule-empty">
-                  <p>일정이 없습니다</p>
+                  <p>No events</p>
                 </div>
               ) : (
                 sortedDates.map(date => (
@@ -265,7 +266,7 @@ const ScheduleView: React.FC<ScheduleViewProps> = ({ onEventClick, onAddEvent, o
                               <div className="schedule-event-title">{event.title}</div>
                               <div className="schedule-event-meta">
                                 {event.is_all_day ? (
-                                  <span>종일</span>
+                                  <span>All day</span>
                                 ) : (
                                   <span>
                                     {event.start_time?.slice(0, 5)}
@@ -296,7 +297,7 @@ const ScheduleView: React.FC<ScheduleViewProps> = ({ onEventClick, onAddEvent, o
 
               {filteredTodos.length === 0 ? (
                 <div className="schedule-empty">
-                  <p>할 일이 없습니다</p>
+                  <p>No todos</p>
                 </div>
               ) : (
                 <div className="schedule-todos-list">
@@ -324,7 +325,7 @@ const ScheduleView: React.FC<ScheduleViewProps> = ({ onEventClick, onAddEvent, o
                         className="schedule-todo-priority"
                         style={{ backgroundColor: getPriorityColor(todo.priority) }}
                       >
-                        {todo.priority === 'high' ? '높음' : todo.priority === 'medium' ? '중간' : '낮음'}
+                        {todo.priority === 'high' ? 'High' : todo.priority === 'medium' ? 'Medium' : 'Low'}
                       </div>
                     </div>
                   ))}

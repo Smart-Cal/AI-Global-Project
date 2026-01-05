@@ -35,9 +35,9 @@ const riskStyles: Record<RiskLevel, { bg: string; border: string; text: string; 
 
 // 위험도 라벨
 const riskLabels: Record<RiskLevel, string> = {
-  low: '낮음',
-  medium: '보통',
-  high: '높음',
+  low: 'Low',
+  medium: 'Medium',
+  high: 'High',
 };
 
 interface InlineConfirmationProps {
@@ -126,7 +126,7 @@ export const InlineConfirmation: React.FC<InlineConfirmationProps> = ({
                       textDecoration: 'underline',
                     }}
                   >
-                    {isExpanded ? '상세 정보 숨기기' : '상세 정보 보기'}
+                    {isExpanded ? 'Hide Details' : 'View Details'}
                   </button>
                   {isExpanded && (
                     <div
@@ -154,7 +154,7 @@ export const InlineConfirmation: React.FC<InlineConfirmationProps> = ({
           {execution.expiresAt && (
             <div style={{ display: 'flex', alignItems: 'center', gap: '4px', fontSize: '12px', color: '#9CA3AF', marginBottom: '8px' }}>
               <ClockIcon size={12} />
-              <span>만료: {formatTimeRemaining(execution.expiresAt)}</span>
+              <span>Expires: {formatTimeRemaining(execution.expiresAt)}</span>
             </div>
           )}
 
@@ -178,7 +178,7 @@ export const InlineConfirmation: React.FC<InlineConfirmationProps> = ({
               }}
             >
               <CheckCircleIcon size={14} />
-              실행
+              Execute
             </button>
             <button
               onClick={() => onCancel(execution.id)}
@@ -199,7 +199,7 @@ export const InlineConfirmation: React.FC<InlineConfirmationProps> = ({
               }}
             >
               <XCircleIcon size={14} />
-              취소
+              Cancel
             </button>
           </div>
         </div>
@@ -291,7 +291,7 @@ export const ModalConfirmation: React.FC<ModalConfirmationProps> = ({
                   marginTop: '2px',
                 }}
               >
-                위험도: {riskLabels[execution.riskLevel]}
+                Risk Level: {riskLabels[execution.riskLevel]}
               </div>
             </div>
           </div>
@@ -300,7 +300,7 @@ export const ModalConfirmation: React.FC<ModalConfirmationProps> = ({
         {/* Body */}
         <div style={{ padding: '20px' }}>
           <div style={{ marginBottom: '16px', color: '#374151' }}>
-            이 작업을 실행하시겠습니까? {execution.riskLevel === 'high' && '이 작업은 되돌릴 수 없을 수 있습니다.'}
+            Execute this action? {execution.riskLevel === 'high' && 'This action might be irreversible.'}
           </div>
 
           {execution.preview && (
@@ -345,7 +345,7 @@ export const ModalConfirmation: React.FC<ModalConfirmationProps> = ({
               }}
             >
               <ClockIcon size={12} />
-              <span>만료: {formatTimeRemaining(execution.expiresAt)}</span>
+              <span>Expires: {formatTimeRemaining(execution.expiresAt)}</span>
             </div>
           )}
         </div>
@@ -376,7 +376,7 @@ export const ModalConfirmation: React.FC<ModalConfirmationProps> = ({
               opacity: isLoading ? 0.7 : 1,
             }}
           >
-            취소
+            Cancel
           </button>
           <button
             onClick={() => onConfirm(execution.id)}
@@ -394,7 +394,7 @@ export const ModalConfirmation: React.FC<ModalConfirmationProps> = ({
               opacity: isLoading ? 0.7 : 1,
             }}
           >
-            {isLoading ? '처리 중...' : execution.riskLevel === 'high' ? '확인 후 실행' : '실행'}
+            {isLoading ? 'Processing...' : execution.riskLevel === 'high' ? 'Confirm & Execute' : 'Execute'}
           </button>
         </div>
       </div>
@@ -409,15 +409,15 @@ function formatTimeRemaining(expiresAt: Date): string {
   const now = new Date();
   const diff = expiresAt.getTime() - now.getTime();
 
-  if (diff <= 0) return '만료됨';
+  if (diff <= 0) return 'Expired';
 
   const minutes = Math.floor(diff / 60000);
   const seconds = Math.floor((diff % 60000) / 1000);
 
   if (minutes > 0) {
-    return `${minutes}분 ${seconds}초 후`;
+    return `${minutes}m ${seconds}s remaining`;
   }
-  return `${seconds}초 후`;
+  return `${seconds}s remaining`;
 }
 
 /**
@@ -470,7 +470,7 @@ export const PendingExecutionsList: React.FC<PendingExecutionsListProps> = ({
           textTransform: 'uppercase',
         }}
       >
-        대기 중인 작업 ({executions.length})
+        Pending Actions ({executions.length})
       </div>
       <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
         {executions.map((execution) => (

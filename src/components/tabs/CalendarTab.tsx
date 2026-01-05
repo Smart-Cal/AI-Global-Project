@@ -119,18 +119,19 @@ const CalendarTab: React.FC<CalendarTabProps> = ({ onEventClick, onAddEvent }) =
     setCurrentDate(newDate);
   };
 
-  const weekdays = ['월', '화', '수', '목', '금', '토', '일'];
+  const weekdays = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
 
   // Month View
   const renderMonthView = () => {
     const days = getMonthDays();
     const today = formatDateStr(new Date());
+    const months = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
 
     return (
       <div className="calendar-month">
         <div className="calendar-month-header">
           <button onClick={() => navigateMonth(-1)} className="calendar-nav-btn">&lt;</button>
-          <h2>{currentDate.getFullYear()}년 {currentDate.getMonth() + 1}월</h2>
+          <h2>{months[currentDate.getMonth()]} {currentDate.getFullYear()}</h2>
           <button onClick={() => navigateMonth(1)} className="calendar-nav-btn">&gt;</button>
         </div>
 
@@ -192,15 +193,16 @@ const CalendarTab: React.FC<CalendarTabProps> = ({ onEventClick, onAddEvent }) =
     const weekDays = getWeekDays(weekStart);
     const today = formatDateStr(new Date());
     const hours = Array.from({ length: 24 }, (_, i) => i);
+    const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
 
     return (
       <div className="calendar-week">
         <div className="calendar-week-header">
           <button onClick={handleBackClick} className="calendar-back-btn">
-            ← 월 보기
+            ← Month View
           </button>
           <h2>
-            {weekDays[0].getMonth() + 1}월 {weekDays[0].getDate()}일 - {weekDays[6].getDate()}일
+            {months[weekDays[0].getMonth()]} {weekDays[0].getDate()} - {weekDays[6].getDate()}
           </h2>
         </div>
 
@@ -287,21 +289,23 @@ const CalendarTab: React.FC<CalendarTabProps> = ({ onEventClick, onAddEvent }) =
     const date = new Date(selectedDate);
     const dayEvents = getEventsForDate(selectedDate);
     const hours = Array.from({ length: 24 }, (_, i) => i);
+    const months = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
+    const weekdaysFull = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
 
     return (
       <div className="calendar-day-view">
         <div className="calendar-day-view-header">
           <button onClick={handleBackClick} className="calendar-back-btn">
-            ← 주 보기
+            ← Week View
           </button>
           <h2>
-            {date.getMonth() + 1}월 {date.getDate()}일 {weekdays[(date.getDay() + 6) % 7]}요일
+            {months[date.getMonth()]} {date.getDate()} {weekdaysFull[date.getDay()]}
           </h2>
           <button
             className="calendar-add-btn"
             onClick={() => onAddEvent(selectedDate)}
           >
-            + 일정 추가
+            + Add Event
           </button>
         </div>
 

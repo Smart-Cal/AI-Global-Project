@@ -18,7 +18,7 @@ interface GoalState {
   clearUserData: () => void;
 }
 
-// Goal이 활성 상태인지 확인 (completed, failed가 아닌 경우)
+// Check if Goal is active (not completed or failed)
 function isGoalActive(goal: Goal): boolean {
   return !['completed', 'failed'].includes(goal.status);
 }
@@ -93,5 +93,5 @@ export const useGoalStore = create<GoalState>()((set, get) => ({
   },
 }));
 
-// 진행률 헬퍼 함수 re-export
+// Re-export progress helper function
 export { calculateGoalProgress };
