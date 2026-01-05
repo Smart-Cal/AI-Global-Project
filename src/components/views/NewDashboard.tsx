@@ -340,12 +340,13 @@ export const NewDashboard: React.FC<NewDashboardProps> = ({ onNavigate }) => {
             background: briefing.type === 'morning'
               ? 'linear-gradient(135deg, #FEF3C7 0%, #FDE68A 100%)'
               : briefing.type === 'afternoon'
-              ? 'linear-gradient(135deg, #DBEAFE 0%, #BFDBFE 100%)'
-              : 'linear-gradient(135deg, #E0E7FF 0%, #C7D2FE 100%)',
+                ? 'linear-gradient(135deg, #DBEAFE 0%, #BFDBFE 100%)'
+                : 'linear-gradient(135deg, #E0E7FF 0%, #C7D2FE 100%)',
             border: 'none',
             position: 'relative',
           }}
         >
+          {/* Close button */}
           {/* Close button */}
           <button
             onClick={dismissBriefing}
@@ -363,7 +364,8 @@ export const NewDashboard: React.FC<NewDashboardProps> = ({ onNavigate }) => {
               alignItems: 'center',
               justifyContent: 'center',
               fontSize: '14px',
-              color: '#6B7280',
+              color: '#4B5563',
+              zIndex: 10,
             }}
           >
             ×
@@ -371,192 +373,99 @@ export const NewDashboard: React.FC<NewDashboardProps> = ({ onNavigate }) => {
 
           <div style={{ padding: '20px' }}>
             {/* Header */}
-            <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '16px' }}>
-              <div
-                style={{
-                  width: '48px',
-                  height: '48px',
-                  borderRadius: '50%',
-                  background: briefing.type === 'morning' ? '#FBBF24' : briefing.type === 'afternoon' ? '#3B82F6' : '#818CF8',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                }}
-              >
-                {briefing.type === 'morning' ? (
-                  <SunIcon size={28} style={{ color: 'white' }} />
-                ) : briefing.type === 'afternoon' ? (
-                  <CloudIcon size={28} style={{ color: 'white' }} />
-                ) : (
-                  <MoonIcon size={28} style={{ color: 'white' }} />
-                )}
-              </div>
-              <div>
-                <h3 style={{ margin: 0, fontSize: '18px', fontWeight: 600, color: '#1F2937' }}>
-                  {briefing.type === 'morning' ? 'Morning Briefing' : briefing.type === 'afternoon' ? 'Afternoon Briefing' : 'Evening Briefing'}
-                </h3>
-                <p style={{ margin: 0, fontSize: '13px', color: '#6B7280' }}>
-                  {briefing.type === 'morning' ? 'Prepare for your day' : briefing.type === 'afternoon' ? 'Check remaining schedule' : 'Wrap up your day'}
-                </p>
-              </div>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '16px' }}>
+              {briefing.type === 'morning' ? <SunIcon size={20} style={{ color: '#D97706' }} /> :
+                briefing.type === 'afternoon' ? <CloudIcon size={20} style={{ color: '#2563EB' }} /> :
+                  <MoonIcon size={20} style={{ color: '#4F46E5' }} />}
+              <h3 style={{ margin: 0, fontSize: '16px', fontWeight: 600, color: '#1F2937' }}>
+                {briefing.type === 'morning' ? 'Morning Briefing' :
+                  briefing.type === 'afternoon' ? 'Afternoon Check' :
+                    'Daily Wrap-up'}
+              </h3>
             </div>
 
-            {/* AI message */}
-            <div
-              style={{
-                background: 'rgba(255,255,255,0.7)',
+            {/* 2-Block Layout */}
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
+
+              {/* Block 1: Weather */}
+              <div style={{
+                background: 'rgba(255,255,255,0.6)',
+                backdropFilter: 'blur(4px)',
                 borderRadius: '12px',
                 padding: '16px',
-                marginBottom: '16px',
-              }}
-            >
-              <p style={{ margin: 0, fontSize: '15px', lineHeight: 1.6, color: '#374151' }}>
-                {briefing.message}
-              </p>
-            </div>
-
-            {/* Morning/Afternoon briefing: Weather info */}
-            {(briefing.type === 'morning' || briefing.type === 'afternoon') && briefing.weather && (
-              <div
-                style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '16px',
-                  background: 'rgba(255,255,255,0.5)',
-                  borderRadius: '8px',
-                  padding: '12px 16px',
-                }}
-              >
-                {getWeatherIcon(briefing.weather.condition)}
-                <div style={{ flex: 1 }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                    <span style={{ fontSize: '24px', fontWeight: 600, color: '#1F2937' }}>
-                      {briefing.weather.temperature}°C
-                    </span>
-                    <span style={{ fontSize: '14px', color: '#6B7280' }}>
-                      {briefing.weather.condition}
-                    </span>
-                    {briefing.weather.city && (
-                      <span style={{ fontSize: '12px', color: '#9CA3AF', marginLeft: '4px' }}>
-                        📍 {briefing.weather.city}
-                      </span>
-                    )}
-                  </div>
-                  {briefing.weather.recommendation && (
-                    <p style={{ margin: '4px 0 0', fontSize: '13px', color: '#6B7280' }}>
-                      {briefing.weather.recommendation}
-                    </p>
-                  )}
-                </div>
-              </div>
-            )}
-
-            {/* Evening briefing: Completion rate */}
-            {briefing.type === 'evening' && briefing.completionRate !== undefined && (
-              <div
-                style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '16px',
-                  background: 'rgba(255,255,255,0.5)',
-                  borderRadius: '8px',
-                  padding: '12px 16px',
-                }}
-              >
-                <div
-                  style={{
-                    width: '48px',
-                    height: '48px',
-                    borderRadius: '50%',
-                    background: `conic-gradient(${getProgressColor(briefing.completionRate)} ${briefing.completionRate * 3.6}deg, #E5E7EB 0deg)`,
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    position: 'relative',
-                  }}
-                >
-                  <div
-                    style={{
-                      width: '40px',
-                      height: '40px',
-                      borderRadius: '50%',
-                      background: 'white',
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      fontSize: '12px',
-                      fontWeight: 600,
-                    }}
-                  >
-                    {briefing.completionRate}%
-                  </div>
-                </div>
-                <div>
-                  <div style={{ fontSize: '14px', fontWeight: 500, color: '#1F2937' }}>
-                    Today's Completion Rate
-                  </div>
-                  <div style={{ fontSize: '13px', color: '#6B7280' }}>
-                    {briefing.completedEvents?.length || 0} events, {briefing.completedTodos?.length || 0} todos completed
-                  </div>
-                </div>
-              </div>
-            )}
-
-            {/* Evening briefing: Tomorrow's first event */}
-            {briefing.type === 'evening' && briefing.tomorrowFirstEvent && (
-              <div
-                style={{
-                  marginTop: '12px',
-                  background: 'rgba(255,255,255,0.5)',
-                  borderRadius: '8px',
-                  padding: '12px 16px',
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '12px',
-                }}
-              >
-                <CalendarIcon size={20} style={{ color: '#6366F1' }} />
-                <div>
-                  <div style={{ fontSize: '12px', color: '#6B7280' }}>Tomorrow's first event</div>
-                  <div style={{ fontSize: '14px', fontWeight: 500, color: '#1F2937' }}>
-                    {briefing.tomorrowFirstEvent.start_time && formatTime(briefing.tomorrowFirstEvent.start_time)} {briefing.tomorrowFirstEvent.title}
-                  </div>
-                </div>
-              </div>
-            )}
-
-            {/* Evening briefing: Tomorrow's weather */}
-            {briefing.type === 'evening' && briefing.tomorrowWeather && (
-              <div
-                style={{
-                  marginTop: '12px',
-                  background: 'rgba(255,255,255,0.5)',
-                  borderRadius: '8px',
-                  padding: '12px 16px',
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '12px',
-                }}
-              >
-                {getWeatherIcon(briefing.tomorrowWeather.condition)}
-                <div style={{ flex: 1 }}>
-                  <div style={{ fontSize: '12px', color: '#6B7280', display: 'flex', alignItems: 'center', gap: '6px' }}>
-                    Tomorrow's weather
-                    {briefing.tomorrowWeather.city && (
-                      <span style={{ color: '#9CA3AF' }}>📍 {briefing.tomorrowWeather.city}</span>
-                    )}
-                  </div>
-                  <div style={{ fontSize: '14px', fontWeight: 500, color: '#1F2937' }}>
-                    {briefing.tomorrowWeather.temperature}°C, {briefing.tomorrowWeather.condition}
-                  </div>
-                  {briefing.tomorrowWeather.recommendation && (
-                    <div style={{ fontSize: '12px', color: '#6B7280', marginTop: '2px' }}>
-                      {briefing.tomorrowWeather.recommendation}
+                display: 'flex',
+                alignItems: 'center',
+                gap: '12px'
+              }}>
+                {briefing.weather ? (
+                  <>
+                    <div style={{ transform: 'scale(1.2)' }}>
+                      {getWeatherIcon(briefing.weather.condition)}
                     </div>
-                  )}
-                </div>
+                    <div>
+                      <div style={{ fontSize: '20px', fontWeight: 700, color: '#1F2937' }}>
+                        {briefing.weather.temperature}°C
+                      </div>
+                      <div style={{ fontSize: '13px', color: '#4B5563', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                        {briefing.weather.condition}
+                        {briefing.weather.city && <span style={{ opacity: 0.6 }}>• {briefing.weather.city}</span>}
+                      </div>
+                      {briefing.weather.recommendation && (
+                        <div style={{ fontSize: '11px', color: '#EA580C', marginTop: '4px', fontWeight: 500 }}>
+                          {briefing.weather.recommendation}
+                        </div>
+                      )}
+                    </div>
+                  </>
+                ) : (
+                  <div style={{ fontSize: '13px', color: '#6B7280' }}>Weather unavailable</div>
+                )}
               </div>
-            )}
+
+              {/* Block 2: Schedule Summary */}
+              <div style={{
+                background: 'rgba(255,255,255,0.6)',
+                backdropFilter: 'blur(4px)',
+                borderRadius: '12px',
+                padding: '16px',
+                display: 'flex',
+                flexDirection: 'column',
+                justifyContent: 'center',
+                gap: '8px'
+              }}>
+                {(briefing.type === 'morning' || briefing.type === 'afternoon') ? (
+                  <>
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                      <span style={{ fontSize: '13px', color: '#4B5563' }}>Events</span>
+                      <span style={{ fontSize: '15px', fontWeight: 600, color: '#1F2937' }}>
+                        {briefing.todayEvents?.length || 0}
+                      </span>
+                    </div>
+                    <div style={{ width: '100%', height: '1px', background: 'rgba(0,0,0,0.05)' }} />
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                      <span style={{ fontSize: '13px', color: '#4B5563' }}>Tasks</span>
+                      <span style={{ fontSize: '15px', fontWeight: 600, color: '#1F2937' }}>
+                        {briefing.incompleteTodos?.length || 0}
+                      </span>
+                    </div>
+                  </>
+                ) : (
+                  <>
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                      <span style={{ fontSize: '13px', color: '#4B5563' }}>Completion</span>
+                      <span style={{ fontSize: '15px', fontWeight: 700, color: '#059669' }}>
+                        {briefing.completionRate}%
+                      </span>
+                    </div>
+                    <div style={{ width: '100%', height: '1px', background: 'rgba(0,0,0,0.05)' }} />
+                    <div style={{ fontSize: '12px', color: '#4B5563' }}>
+                      Next: {briefing.tomorrowFirstEvent ? formatTime(briefing.tomorrowFirstEvent.start_time) : 'No plans'}
+                    </div>
+                  </>
+                )}
+              </div>
+
+            </div>
           </div>
         </div>
       )}
