@@ -443,11 +443,11 @@ export const NewDashboard: React.FC<NewDashboardProps> = ({ onNavigate }) => {
                     <>
                       <CloudIcon size={28} style={{ color: '#3B82F6' }} />
                       <div style={{ fontSize: '15px', fontWeight: 700, color: '#1F2937', textAlign: 'center' }}>
-                        {briefing.precipitation.willSnow ? '눈 예상' : '비 예상'}
+                        {briefing.precipitation.willSnow ? 'Snow' : 'Rain'}
                       </div>
                       {briefing.precipitation.time && (
                         <div style={{ fontSize: '13px', color: '#6B7280' }}>
-                          {briefing.type === 'evening' ? '내일 ' : ''}{briefing.precipitation.time}경
+                          {briefing.type === 'evening' ? 'Tomorrow ' : ''}{briefing.precipitation.time}
                         </div>
                       )}
                     </>
@@ -455,7 +455,7 @@ export const NewDashboard: React.FC<NewDashboardProps> = ({ onNavigate }) => {
                     <>
                       <SunIcon size={28} style={{ color: '#F59E0B' }} />
                       <div style={{ fontSize: '15px', fontWeight: 600, color: '#1F2937' }}>
-                        맑음
+                        Sunny
                       </div>
                     </>
                   )
