@@ -7668,6 +7668,69 @@ textarea.form-input {
   flex: 1 1 0;
   min-width: 0;
   max-width: calc((100% - 24px) / 3);
+  display: flex;
+  flex-direction: column;
+}
+
+.mcp-carousel-cards .mcp-card-image {
+  width: 100%;
+  height: 120px;
+  flex-shrink: 0;
+  position: relative;
+  background: #f3f4f6;
+}
+
+.mcp-carousel-cards .mcp-card-image img {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  background: white;
+}
+
+.mcp-carousel-cards .mcp-card-content {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  padding: 10px;
+  min-height: 100px;
+}
+
+.mcp-carousel-cards .mcp-card-title {
+  font-size: 12px;
+  font-weight: 600;
+  line-height: 1.3;
+  margin-bottom: 6px;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  min-height: 32px;
+}
+
+.mcp-carousel-cards .mcp-card-price {
+  margin-top: auto;
+}
+
+.mcp-carousel-cards .mcp-current-price {
+  font-size: 14px;
+  font-weight: 700;
+  color: #ef4444;
+}
+
+.mcp-carousel-cards .mcp-original-price {
+  font-size: 11px;
+}
+
+.mcp-carousel-cards .mcp-card-rating {
+  font-size: 11px;
+  margin-bottom: 2px;
+}
+
+.mcp-carousel-cards .mcp-card-seller {
+  font-size: 10px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .mcp-carousel-dots {

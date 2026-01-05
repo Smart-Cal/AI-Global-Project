@@ -113,16 +113,27 @@ export class ShoppingMCP {
   }): Promise<ProductSearchResult[]> {
     const source = options.source || 'auto';
 
+    console.log('[ShoppingMCP] searchProducts called:', {
+      query: options.query,
+      source,
+      hasSerpApiKey: !!this.serpApiKey,
+      serpApiKeyLength: this.serpApiKey?.length || 0
+    });
+
     // SerpAPI 우선 시도
     if ((source === 'serpapi' || source === 'auto') && this.serpApiKey) {
       try {
+        console.log('[ShoppingMCP] Attempting SerpAPI search...');
         const results = await this.searchWithSerpAPI(options);
+        console.log('[ShoppingMCP] SerpAPI returned', results.length, 'results');
         if (results.length > 0) {
           return results;
         }
       } catch (error) {
-        console.error('[ShoppingMCP] SerpAPI error, falling back to Naver:', error);
+        console.error('[ShoppingMCP] SerpAPI error, falling back to mock:', error);
       }
+    } else {
+      console.log('[ShoppingMCP] SerpAPI skipped - no API key or source mismatch');
     }
 
     // Naver API 시도
@@ -180,10 +191,16 @@ export class ShoppingMCP {
         : `mr:1,price:1,ppr_max:${options.maxPrice}`;
     }
 
+    console.log('[ShoppingMCP] SerpAPI request params:', { ...params, api_key: '***HIDDEN***' });
+
     const response = await axios.get('https://serpapi.com/search', { params });
 
+    console.log('[ShoppingMCP] SerpAPI response status:', response.status);
+    console.log('[ShoppingMCP] SerpAPI has shopping_results:', !!response.data.shopping_results);
+    console.log('[ShoppingMCP] SerpAPI shopping_results count:', response.data.shopping_results?.length || 0);
+
     if (!response.data.shopping_results) {
-      console.log('[ShoppingMCP] No shopping results from SerpAPI');
+      console.log('[ShoppingMCP] No shopping results from SerpAPI. Response keys:', Object.keys(response.data));
       return [];
     }
 
