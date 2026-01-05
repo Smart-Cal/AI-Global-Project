@@ -2084,6 +2084,16 @@ body {
   font-weight: 500;
 }
 
+.confirm-modal-footer .btn-secondary {
+  background: #FEE2E2;
+  color: #DC2626;
+  border: 1px solid #FECACA;
+}
+
+.confirm-modal-footer .btn-secondary:hover {
+  background: #FECACA;
+}
+
 /* Event Detail Modal */
 .event-detail-category {
   display: flex;
