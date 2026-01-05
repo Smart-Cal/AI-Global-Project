@@ -11,9 +11,7 @@ import {
   ChevronRightIcon,
   SparkleIcon,
   SunIcon,
-  MoonIcon,
   CloudIcon,
-  ThermometerIcon,
 } from '../Icons';
 import * as api from '../../services/api';
 
@@ -21,25 +19,8 @@ interface NewDashboardProps {
   onNavigate: (view: 'assistant' | 'calendar' | 'schedule' | 'goal') => void;
 }
 
-// Briefing type definition
-type BriefingType = 'morning' | 'afternoon' | 'evening' | null;
-
-interface BriefingData {
-  type: BriefingType;
-  message: string;
+interface WeatherData {
   weather?: api.WeatherInfo;
-  todayEvents?: api.Event[];
-  incompleteTodos?: api.Todo[];
-  completedEvents?: api.Event[];
-  completedTodos?: api.Todo[];
-  completionRate?: number;
-  tomorrowFirstEvent?: api.Event;
-  tomorrowWeather?: api.WeatherInfo;
-  precipitation?: {
-    willRain: boolean;
-    willSnow: boolean;
-    time?: string;
-  };
 }
 
 // Time formatting helper
@@ -103,16 +84,6 @@ function getWeatherIcon(condition: string): React.ReactNode {
   return <SunIcon size={24} style={{ color: '#FBBF24' }} />;
 }
 
-// Determine briefing type based on initial access time
-function determineBriefingType(hour: number): BriefingType {
-  // 5am~12pm: Morning briefing (today's schedule + weather)
-  if (hour >= 5 && hour < 12) return 'morning';
-  // 12pm~6pm: Afternoon briefing (remaining schedule + progress)
-  if (hour >= 12 && hour < 18) return 'afternoon';
-  // 6pm~5am: Evening briefing (today's summary + tomorrow preview)
-  return 'evening';
-}
-
 export const NewDashboard: React.FC<NewDashboardProps> = ({ onNavigate }) => {
   const { user } = useAuthStore();
   const { events, getEventsByDate, loadEvents } = useEventStore();
@@ -121,11 +92,9 @@ export const NewDashboard: React.FC<NewDashboardProps> = ({ onNavigate }) => {
   const { categories } = useCategoryStore();
 
   const [isLoading, setIsLoading] = useState(true);
-  const [briefing, setBriefing] = useState<BriefingData | null>(null);
-  const [briefingLoading, setBriefingLoading] = useState(false);
-  const [briefingDismissed, setBriefingDismissed] = useState(false);
+  const [weatherData, setWeatherData] = useState<WeatherData | null>(null);
   const [userCoords, setUserCoords] = useState<{ lat: number; lon: number } | null>(null);
-  const [locationReady, setLocationReady] = useState(false); // Location verification complete status
+  const [locationReady, setLocationReady] = useState(false);
 
   const today = new Date().toISOString().split('T')[0];
   const now = new Date();
@@ -192,86 +161,23 @@ export const NewDashboard: React.FC<NewDashboardProps> = ({ onNavigate }) => {
     loadData();
   }, []);
 
-  // Load briefing
+  // Load weather only
   useEffect(() => {
-    const loadBriefing = async () => {
-      const briefingType = determineBriefingType(currentHour);
-      if (!briefingType) {
-        setBriefing(null);
-        return;
-      }
-
-      // Check if briefing has already been viewed from session storage
-      const dismissedKey = `briefing_dismissed_${briefingType}_${today}`;
-      if (sessionStorage.getItem(dismissedKey)) {
-        setBriefingDismissed(true);
-        return;
-      }
-
-      setBriefingLoading(true);
+    const loadWeather = async () => {
       try {
-        // Pass coordinates if available, otherwise undefined (server uses default city)
         const coords = userCoords || undefined;
-
-        if (briefingType === 'morning') {
-          // Morning: Today's schedule + weather
-          const data = await api.getMorningBriefing(coords);
-          setBriefing({
-            type: 'morning',
-            message: data.message,
-            weather: data.weather,
-            todayEvents: data.today_events,
-            incompleteTodos: data.incomplete_todos,
-            precipitation: data.precipitation,
-          });
-        } else if (briefingType === 'afternoon') {
-          // Afternoon: Use morning briefing data but with different message
-          const data = await api.getMorningBriefing(coords);
-          setBriefing({
-            type: 'afternoon',
-            message: data.message,
-            weather: data.weather,
-            todayEvents: data.today_events,
-            incompleteTodos: data.incomplete_todos,
-            precipitation: data.precipitation,
-          });
-        } else {
-          // Evening: Today's summary + tomorrow preview + tomorrow weather
-          const data = await api.getEveningBriefing(coords);
-          setBriefing({
-            type: 'evening',
-            message: data.message,
-            weather: data.weather, // Current weather for display
-            completedEvents: data.completed_events,
-            completedTodos: data.completed_todos,
-            completionRate: data.completion_rate,
-            tomorrowFirstEvent: data.tomorrow_first_event,
-            tomorrowWeather: data.tomorrow_weather,
-            precipitation: data.precipitation,
-          });
-        }
+        const data = await api.getMorningBriefing(coords);
+        setWeatherData({ weather: data.weather });
       } catch (error) {
-        console.error('Failed to load briefing:', error);
-        setBriefing(null);
-      } finally {
-        setBriefingLoading(false);
+        console.error('Failed to load weather:', error);
+        setWeatherData(null);
       }
     };
 
-    // Load briefing after data loading and location verification are complete
     if (!isLoading && locationReady) {
-      loadBriefing();
+      loadWeather();
     }
-  }, [isLoading, locationReady, currentHour, today, userCoords]);
-
-  // Dismiss briefing
-  const dismissBriefing = () => {
-    if (briefing?.type) {
-      const dismissedKey = `briefing_dismissed_${briefing.type}_${today}`;
-      sessionStorage.setItem(dismissedKey, 'true');
-    }
-    setBriefingDismissed(true);
-  };
+  }, [isLoading, locationReady, userCoords]);
 
   // Today's events
   const todayEvents = getEventsByDate(today).sort((a, b) => {
@@ -331,7 +237,7 @@ export const NewDashboard: React.FC<NewDashboardProps> = ({ onNavigate }) => {
           <h1 style={{ fontSize: '24px', fontWeight: 'bold', margin: 0 }}>
             {getGreeting()}, {user?.nickname || user?.name}!
           </h1>
-          {briefing?.weather && (
+          {weatherData?.weather && (
             <div style={{
               display: 'flex',
               alignItems: 'center',
@@ -340,13 +246,13 @@ export const NewDashboard: React.FC<NewDashboardProps> = ({ onNavigate }) => {
               background: '#F3F4F6',
               borderRadius: '20px'
             }}>
-              {getWeatherIcon(briefing.weather.condition)}
+              {getWeatherIcon(weatherData.weather.condition)}
               <span style={{ fontSize: '15px', fontWeight: 600, color: '#374151' }}>
-                {briefing.weather.temperature}°C
+                {weatherData.weather.temperature}°C
               </span>
-              {briefing.weather.city && (
+              {weatherData.weather.city && (
                 <span style={{ fontSize: '13px', color: '#6B7280' }}>
-                  {briefing.weather.city}
+                  {weatherData.weather.city}
                 </span>
               )}
             </div>
@@ -361,120 +267,6 @@ export const NewDashboard: React.FC<NewDashboardProps> = ({ onNavigate }) => {
           })}
         </p>
       </div>
-
-      {/* Briefing card */}
-      {briefing && !briefingDismissed && (
-        <div
-          className="card"
-          style={{
-            marginBottom: '16px',
-            background: briefing.type === 'morning'
-              ? 'linear-gradient(135deg, #FEF3C7 0%, #FDE68A 100%)'
-              : briefing.type === 'afternoon'
-                ? 'linear-gradient(135deg, #DBEAFE 0%, #BFDBFE 100%)'
-                : 'linear-gradient(135deg, #E0E7FF 0%, #C7D2FE 100%)',
-            border: 'none',
-            position: 'relative',
-          }}
-        >
-          {/* Close button */}
-          {/* Close button */}
-          <button
-            onClick={dismissBriefing}
-            style={{
-              position: 'absolute',
-              top: '12px',
-              right: '12px',
-              background: 'rgba(0,0,0,0.1)',
-              border: 'none',
-              borderRadius: '50%',
-              width: '24px',
-              height: '24px',
-              cursor: 'pointer',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              fontSize: '14px',
-              color: '#4B5563',
-              zIndex: 10,
-            }}
-          >
-            ×
-          </button>
-
-          <div style={{ padding: '20px' }}>
-            {/* Header */}
-            <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '16px' }}>
-              {briefing.type === 'morning' ? <SunIcon size={20} style={{ color: '#D97706' }} /> :
-                briefing.type === 'afternoon' ? <CloudIcon size={20} style={{ color: '#2563EB' }} /> :
-                  <MoonIcon size={20} style={{ color: '#4F46E5' }} />}
-              <h3 style={{ margin: 0, fontSize: '16px', fontWeight: 600, color: '#1F2937' }}>
-                {briefing.type === 'morning' ? 'Morning Briefing' :
-                  briefing.type === 'afternoon' ? 'Afternoon Check' :
-                    'Daily Wrap-up'}
-              </h3>
-            </div>
-
-            {/* Precipitation Alert */}
-            <div style={{
-              background: 'rgba(255,255,255,0.6)',
-              backdropFilter: 'blur(4px)',
-              borderRadius: '12px',
-              padding: '14px 16px',
-              display: 'flex',
-              alignItems: 'center',
-              gap: '12px',
-              border: briefing.precipitation?.willRain || briefing.precipitation?.willSnow ? '2px solid #60A5FA' : 'none'
-            }}>
-              {briefing.precipitation ? (
-                briefing.precipitation.willRain || briefing.precipitation.willSnow ? (
-                  <>
-                    <CloudIcon size={24} style={{ color: '#3B82F6' }} />
-                    <div>
-                      <div style={{ fontSize: '14px', fontWeight: 600, color: '#1F2937' }}>
-                        {briefing.precipitation.willSnow ? 'Snow expected' : 'Rain expected'}
-                        {briefing.type === 'evening' ? ' tomorrow' : ' today'}
-                      </div>
-                      {briefing.precipitation.time && (
-                        <div style={{ fontSize: '12px', color: '#6B7280' }}>
-                          Around {briefing.precipitation.time}
-                        </div>
-                      )}
-                    </div>
-                  </>
-                ) : (
-                  <>
-                    <SunIcon size={24} style={{ color: '#F59E0B' }} />
-                    <div style={{ fontSize: '14px', fontWeight: 500, color: '#1F2937' }}>
-                      No rain expected {briefing.type === 'evening' ? 'tomorrow' : 'today'}
-                    </div>
-                  </>
-                )
-              ) : (
-                <div style={{ fontSize: '13px', color: '#9CA3AF' }}>Checking weather...</div>
-              )}
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Briefing loading */}
-      {briefingLoading && (
-        <div
-          className="card"
-          style={{
-            marginBottom: '16px',
-            padding: '24px',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            gap: '12px',
-          }}
-        >
-          <div className="spinner" style={{ width: '20px', height: '20px' }} />
-          <span style={{ color: '#6B7280' }}>Preparing your briefing...</span>
-        </div>
-      )}
 
       {/* Main grid - 2x2 */}
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '16px' }}>
