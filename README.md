@@ -1,266 +1,386 @@
-# PALM - AI Calendar App
+# PALM - Personal AI Life Manager
 
-AI 기반 스마트 일정 및 목표 관리 애플리케이션
+<div align="center">
 
-## 주요 기능
+**Your Intelligent Life Assistant that Actually Takes Action**
 
-### AI 어시스턴트
-- **자연어 일정 추가**: "내일 3시에 강남역에서 미팅" 같은 자연어로 일정 생성
-- **스마트 질문**: 시간, 장소, 기간 등 정보가 부족하면 AI가 질문
-- **일정/TODO/Goal 자동 분류**: 입력 내용에 따라 자동으로 적절한 유형으로 분류
-- **채팅 모드 선택**: 자동, 일정, TODO, Goal, 브리핑 모드 지원
+*Beyond conversation — PALM executes tasks, manages your schedule, and connects to real-world services*
 
-### 일정 관리 (Events)
-- 월별 캘린더 뷰
-- 일정 생성/수정/삭제
-- 카테고리별 분류 (약속, 회의, 운동, 공부 등)
-- 시간 충돌 감지
+[Features](#-key-features) • [Architecture](#-architecture) • [MCP Integration](#-mcp-integration) • [Getting Started](#-getting-started) • [API Reference](#-api-reference)
 
-### 할 일 관리 (TODO)
-- TODO 생성/수정/삭제
-- 우선순위 설정 (높음/보통/낮음)
-- 카테고리 분류
-- Goal 연결
+</div>
 
-### 목표 관리 (Goal)
-- 목표 설정 및 추적
-- 목표를 TODO로 자동 분해
-- 진행률 관리
-- Chronotype 기반 스케줄링
+---
 
-### PALM 기능
-- **Goal 분해**: 큰 목표를 작은 TODO로 자동 분해
-- **Chronotype 스케줄링**: 아침형/저녁형에 맞는 최적 시간대 추천
-- **브리핑**: 오늘의 일정 및 할 일 요약
+## What is PALM?
 
-## 기술 스택
+PALM (Personal AI Life Manager) is an **AI-powered life management platform** that goes far beyond traditional chatbots. While regular LLMs like ChatGPT or Claude can only provide text-based answers, PALM is an **"Acting AI"** that actually executes tasks on your behalf.
 
-### Frontend
-- **React 18** + **TypeScript**
-- **Vite** - 빌드 도구
-- **React Router v6** - 라우팅
-- **Zustand** - 상태 관리
+### The Problem with Traditional LLMs
 
-### Backend
-- **Node.js** + **Express** + **TypeScript**
-- **Supabase** - 데이터베이스 및 인증
-- **OpenAI GPT-4o-mini** - AI 에이전트
+| Traditional LLM | PALM |
+|----------------|------|
+| "Here are some restaurant recommendations..." (text only) | Actually searches Google Maps, shows photos, ratings, and lets you add to calendar |
+| "You could schedule a meeting at 3pm..." | Checks your calendar for conflicts, creates the event, sends invites |
+| "Here's a gift idea for your friend..." | Searches real products with prices, shows images, provides purchase links |
+| Forgets context between sessions | Maintains conversation history and learns your preferences |
+| Generic responses | Personalized based on your chronotype, schedule patterns, and goals |
 
-## 프로젝트 구조
+---
+
+## Key Features
+
+### 1. Intelligent Schedule Management
+- **Natural Language Processing**: "Meeting with John tomorrow at 3pm at Starbucks" → automatically creates event
+- **Smart Conflict Detection**: AI checks for scheduling conflicts before creating events
+- **Chronotype Optimization**: Morning person? Night owl? PALM schedules tasks at your optimal times
+- **Google Calendar Sync**: Two-way sync with your existing Google Calendar
+
+### 2. Goal-Oriented Task Management
+- **Goal Decomposition**: Break down big goals into actionable tasks automatically
+- **Progress Tracking**: Visual progress bars and completion rates
+- **Smart Prioritization**: AI suggests which tasks to focus on based on deadlines and importance
+- **Linked Tasks**: Connect TODOs to goals for better organization
+
+### 3. Acting AI with MCP (Model Context Protocol)
+
+PALM implements **MCP (Model Context Protocol)** to connect AI with real-world services:
+
+#### Restaurant & Place Recommendations
+- Real-time search via **Google Maps/Places API**
+- Actual photos, ratings, reviews, and operating hours
+- Distance calculation from your location
+- One-click addition to your schedule
+
+#### Shopping & Gift Recommendations
+- Product search via **SerpAPI (Google Shopping)**
+- Real prices, images, and purchase links
+- Gift suggestions based on recipient and occasion
+- Budget-aware recommendations
+
+#### Weather-Aware Planning
+- **OpenWeather API** integration
+- Weather-based activity suggestions
+- Rain/snow alerts for outdoor events
+
+#### News & Information
+- Curated news via **News API**
+- Topic-based filtering
+- Stay informed without leaving the app
+
+### 4. Group Collaboration
+- **Group Scheduling**: Find common available times across team members
+- **Shared Goals**: Collaborate on team objectives
+- **Meeting Coordination**: AI finds optimal meeting times for everyone
+
+### 5. Life Logging
+- **Daily Diary**: AI-generated summaries of your day
+- **Activity Tracking**: Automatic logging of completed tasks
+- **Reflection Prompts**: Guided journaling for personal growth
+
+---
+
+## How PALM Differs from ChatGPT/Claude
+
+| Feature | ChatGPT/Claude | PALM |
+|---------|---------------|------|
+| **Action Execution** | Text responses only | Actually creates events, searches products, books reservations |
+| **Real-time Data** | Knowledge cutoff limitations | Live data from Google Maps, Shopping APIs, Weather |
+| **Personal Context** | Starts fresh each conversation | Remembers your schedule, preferences, goals |
+| **Calendar Integration** | None | Full Google Calendar sync |
+| **Visual Results** | Text descriptions | Rich cards with images, ratings, prices |
+| **Confirmation Flow** | N/A | Review and approve before actions are taken |
+| **Chronotype Awareness** | Generic advice | Personalized scheduling based on your body clock |
+
+### The "Acting AI" Paradigm
 
 ```
-ai-calendar-app/
-├── src/                         # Frontend 소스
-│   ├── components/              # UI 컴포넌트
-│   │   ├── views/               # 메인 뷰 컴포넌트
-│   │   │   ├── AssistantView.tsx    # AI 어시스턴트 뷰
-│   │   │   ├── CalendarView.tsx     # 캘린더 뷰
-│   │   │   ├── ScheduleView.tsx     # 일정 목록 뷰
-│   │   │   └── GoalView.tsx         # 목표 관리 뷰
-│   │   ├── tabs/                # 탭 컴포넌트
-│   │   ├── DatePicker.tsx       # 날짜 선택기
-│   │   ├── TimePicker.tsx       # 시간 선택기
-│   │   ├── ChatPanel.tsx        # 채팅 패널
+Traditional AI Flow:
+User → LLM → Text Response → User manually takes action
+
+PALM Flow:
+User → AI Agent → MCP Tools → External APIs → Formatted Results → User Confirms → Action Executed
+```
+
+---
+
+## MCP Integration
+
+### What is MCP?
+
+**Model Context Protocol (MCP)** is a framework that allows AI models to interact with external tools and services. PALM implements MCP to transform the AI from a "talking assistant" into an "acting assistant."
+
+### MCP Architecture in PALM
+
+```
+┌─────────────────────────────────────────────────────────────────┐
+│                        PALM Backend                              │
+├─────────────────────────────────────────────────────────────────┤
+│  ┌──────────────┐    ┌──────────────┐    ┌──────────────┐      │
+│  │   Router     │ → │  MCP Agent   │ → │ Orchestrator │      │
+│  │   Agent      │    │    Loop      │    │              │      │
+│  └──────────────┘    └──────────────┘    └──────────────┘      │
+│                              │                   │              │
+│                              ▼                   ▼              │
+│  ┌─────────────────────────────────────────────────────────┐   │
+│  │                    MCP Tool Registry                     │   │
+│  ├─────────────┬─────────────┬─────────────┬───────────────┤   │
+│  │  Calendar   │    Maps     │  Shopping   │     News      │   │
+│  │   Tools     │    Tools    │    Tools    │    Tools      │   │
+│  └─────────────┴─────────────┴─────────────┴───────────────┘   │
+│         │              │            │              │            │
+└─────────│──────────────│────────────│──────────────│────────────┘
+          ▼              ▼            ▼              ▼
+   ┌────────────┐ ┌────────────┐ ┌────────────┐ ┌────────────┐
+   │  Google    │ │  Google    │ │  SerpAPI   │ │  News API  │
+   │  Calendar  │ │   Maps     │ │            │ │            │
+   └────────────┘ └────────────┘ └────────────┘ └────────────┘
+```
+
+### Available MCP Tools
+
+#### Calendar Tools
+| Tool | Description |
+|------|-------------|
+| `calendar_create_event` | Create new calendar event |
+| `calendar_list_events` | List events for date range |
+| `calendar_check_conflicts` | Check for scheduling conflicts |
+| `calendar_get_free_busy` | Find available time slots |
+| `calendar_update_event` | Modify existing event |
+| `calendar_delete_event` | Remove event |
+
+#### Maps Tools
+| Tool | Description |
+|------|-------------|
+| `maps_search_places` | Search for places by query |
+| `maps_recommend_restaurants` | Get restaurant recommendations with photos |
+| `maps_get_place_details` | Get detailed place information |
+| `maps_get_distance` | Calculate distance/duration between locations |
+| `maps_find_midpoint` | Find meeting point for multiple people |
+
+#### Shopping Tools
+| Tool | Description |
+|------|-------------|
+| `shopping_search` | Search products on Google Shopping |
+| `shopping_recommend_gifts` | Get gift recommendations |
+| `shopping_compare_prices` | Compare prices across sellers |
+| `shopping_goal_recommendations` | Products related to your goals |
+
+#### Integrated Tools
+| Tool | Description |
+|------|-------------|
+| `plan_group_meeting` | Coordinate group schedules + find venue |
+| `prepare_special_day` | Plan special occasions (restaurant + gift) |
+
+---
+
+## Architecture
+
+### Technology Stack
+
+#### Frontend
+- **React 18** + **TypeScript** - UI Framework
+- **Vite** - Build tool & dev server
+- **Zustand** - State management
+- **React Router v6** - Navigation
+
+#### Backend
+- **Node.js** + **Express** + **TypeScript** - API Server
+- **OpenAI GPT-4o** - AI Engine
+- **Supabase** - Database & Authentication
+
+#### External APIs
+- **Google Calendar API** - Calendar sync
+- **Google Maps/Places API** - Location services
+- **SerpAPI** - Google Shopping search
+- **OpenWeather API** - Weather data
+- **News API** - News aggregation
+
+### Project Structure
+
+```
+palm/
+├── src/                          # Frontend
+│   ├── components/
+│   │   ├── views/
+│   │   │   ├── AssistantView.tsx    # AI Chat with MCP cards
+│   │   │   ├── CalendarView.tsx     # Calendar UI
+│   │   │   ├── DashboardView.tsx    # Dashboard with weather
+│   │   │   └── GoalView.tsx         # Goal management
 │   │   └── ...
-│   ├── pages/                   # 페이지 컴포넌트
-│   │   ├── AuthPage.tsx         # 로그인/회원가입
-│   │   └── AuthCallback.tsx     # OAuth 콜백
-│   ├── services/                # API 서비스
-│   │   └── api.ts               # Backend API 호출
-│   ├── store/                   # Zustand 스토어
-│   │   ├── authStore.ts         # 인증 상태
-│   │   └── eventStore.ts        # 일정/TODO/Goal 상태
-│   ├── types/                   # TypeScript 타입
-│   └── styles/                  # CSS 스타일
+│   ├── services/
+│   │   └── api.ts                   # Backend API client
+│   └── store/                       # Zustand stores
 │
-├── backend/                     # Backend 소스
+├── backend/
 │   └── src/
-│       ├── agents/              # AI 에이전트
-│       │   ├── agentLoop.ts     # OpenAI Function Calling 기반 Agent
-│       │   ├── orchestrator.ts  # 에이전트 조율
-│       │   ├── parserAgent.ts   # 자연어 파싱
-│       │   ├── schedulerAgent.ts # 스케줄링
-│       │   ├── plannerAgent.ts  # 계획 생성
-│       │   └── tools/           # 에이전트 도구
-│       │       ├── calendarTools.ts  # 캘린더 관련 도구
-│       │       └── palmTools.ts      # PALM 도구 (Goal 분해, Chronotype 등)
-│       ├── routes/              # API 라우트
-│       │   ├── auth.ts          # 인증 API
-│       │   ├── events.ts        # 일정 API
-│       │   ├── todos.ts         # TODO API
-│       │   ├── goals.ts         # Goal API
-│       │   ├── categories.ts    # 카테고리 API
-│       │   └── chat.ts          # AI 채팅 API
-│       ├── services/            # 서비스
-│       │   └── database.ts      # Supabase 데이터베이스
-│       ├── middleware/          # 미들웨어
-│       │   └── auth.ts          # JWT 인증
-│       └── types/               # 타입 정의
-│           └── index.ts         # 전체 타입
+│       ├── agents/                  # AI Agents
+│       │   ├── mcpAgentLoop.ts      # Main MCP agent
+│       │   ├── orchestrator.ts      # Agent orchestration
+│       │   ├── parserAgent.ts       # NLP parsing
+│       │   └── tools/               # Tool definitions
+│       ├── mcp/                     # MCP Implementations
+│       │   ├── googleCalendar.ts    # Calendar MCP
+│       │   ├── googleMaps.ts        # Maps MCP
+│       │   ├── shopping.ts          # Shopping MCP
+│       │   ├── news.ts              # News MCP
+│       │   └── orchestrator.ts      # MCP orchestrator
+│       ├── routes/                  # API Routes
+│       └── services/                # Business logic
 ```
 
-## 설치 및 실행
+---
 
-### 요구 사항
+## Getting Started
+
+### Prerequisites
 - Node.js 18+
-- npm 또는 yarn
+- npm or yarn
+- Supabase account
+- API keys for external services
 
-### Frontend 설치 및 실행
-
-```bash
-# 의존성 설치
-npm install
-
-# 개발 서버 실행
-npm run dev
-
-# 프로덕션 빌드
-npm run build
-```
-
-### Backend 설치 및 실행
+### Installation
 
 ```bash
-cd backend
+# Clone the repository
+git clone https://github.com/Smart-Cal/AI-Global-Project.git
+cd palm
 
-# 의존성 설치
-npm install
+# Install all dependencies
+npm run install:all
 
-# 개발 서버 실행
-npm run dev
-
-# 프로덕션 빌드
-npm run build
-npm start
+# Start development servers
+npm run dev:all
 ```
 
-## 환경 변수 설정
+### Environment Variables
 
-### Frontend (.env)
-
+#### Frontend (.env)
 ```env
 VITE_API_URL=http://localhost:3001/api
+VITE_SUPABASE_URL=your-supabase-url
+VITE_SUPABASE_KEY=your-supabase-anon-key
 ```
 
-### Backend (.env)
-
+#### Backend (backend/.env)
 ```env
+# Required - Core Services
 PORT=3001
+FRONTEND_URL=http://localhost:5173
 SUPABASE_URL=your-supabase-url
 SUPABASE_SERVICE_KEY=your-supabase-service-key
+SUPABASE_ANON_KEY=your-supabase-anon-key
 OPENAI_API_KEY=your-openai-api-key
 JWT_SECRET=your-jwt-secret
+
+# Optional - Enhanced Features
+OPENWEATHER_API_KEY=your-openweather-api-key
+
+# Optional - MCP Integration
 GOOGLE_CLIENT_ID=your-google-client-id
+GOOGLE_CLIENT_SECRET=your-google-client-secret
+GOOGLE_REDIRECT_URI=http://localhost:3001/api/auth/google/callback
+GOOGLE_MAPS_API_KEY=your-google-maps-api-key
+SERPAPI_API_KEY=your-serpapi-api-key
+NEWS_API_KEY=your-news-api-key
 ```
 
-## 데이터베이스 스키마 (Supabase)
+---
 
-### users
-| 컬럼 | 타입 | 설명 |
-|------|------|------|
-| id | uuid | PK |
-| email | text | 이메일 (unique) |
-| name | text | 이름 |
-| nickname | text | 닉네임 |
-| avatar_url | text | 프로필 이미지 |
-| is_active | boolean | 활성 상태 |
-| last_login_at | timestamp | 마지막 로그인 |
-| created_at | timestamp | 생성일 |
+## API Reference
 
-### events
-| 컬럼 | 타입 | 설명 |
-|------|------|------|
-| id | uuid | PK |
-| user_id | uuid | FK (users.id) |
-| category_id | uuid | FK (categories.id) |
-| title | text | 일정 제목 |
-| description | text | 설명 |
-| event_date | date | 날짜 |
-| start_time | time | 시작 시간 |
-| end_time | time | 종료 시간 |
-| is_all_day | boolean | 종일 여부 |
-| location | text | 장소 |
-| is_completed | boolean | 완료 여부 |
-| completed_at | timestamp | 완료 시간 |
-| created_at | timestamp | 생성일 |
+### Chat API
+| Endpoint | Method | Description |
+|----------|--------|-------------|
+| `/api/chat` | POST | Send message to AI (returns MCP data) |
+| `/api/chat/confirm-events` | POST | Confirm and save pending events |
+| `/api/chat/confirm-todos` | POST | Confirm and save pending TODOs |
+| `/api/chat/confirm-goals` | POST | Confirm and save pending goals |
 
-### todos
-| 컬럼 | 타입 | 설명 |
-|------|------|------|
-| id | uuid | PK |
-| user_id | uuid | FK (users.id) |
-| category_id | uuid | FK (categories.id) |
-| goal_id | uuid | FK (goals.id) |
-| title | text | 할 일 제목 |
-| description | text | 설명 |
-| deadline | date | 마감일 |
-| duration | integer | 예상 소요 시간 (분) |
-| priority | text | 우선순위 (high/medium/low) |
-| is_completed | boolean | 완료 여부 |
-| completed_at | timestamp | 완료 시간 |
-| created_at | timestamp | 생성일 |
+### Events API
+| Endpoint | Method | Description |
+|----------|--------|-------------|
+| `/api/events` | GET | List events |
+| `/api/events` | POST | Create event |
+| `/api/events/:id` | PUT | Update event |
+| `/api/events/:id` | DELETE | Delete event |
 
-### goals
-| 컬럼 | 타입 | 설명 |
-|------|------|------|
-| id | uuid | PK |
-| user_id | uuid | FK (users.id) |
-| category_id | uuid | FK (categories.id) |
-| title | text | 목표 제목 |
-| description | text | 설명 |
-| target_date | date | 목표 날짜 |
-| priority | text | 우선순위 (high/medium/low) |
-| progress | integer | 진행률 (0-100) |
-| is_active | boolean | 활성 여부 |
-| created_at | timestamp | 생성일 |
-| updated_at | timestamp | 수정일 |
+### Goals API
+| Endpoint | Method | Description |
+|----------|--------|-------------|
+| `/api/goals` | GET | List goals |
+| `/api/goals` | POST | Create goal |
+| `/api/goals/:id/decompose` | POST | AI decompose goal into tasks |
 
-### categories
-| 컬럼 | 타입 | 설명 |
-|------|------|------|
-| id | uuid | PK |
-| user_id | uuid | FK (users.id) |
-| name | text | 카테고리 이름 |
-| color | text | 색상 코드 |
-| is_default | boolean | 기본 카테고리 여부 |
-| created_at | timestamp | 생성일 |
+### Groups API
+| Endpoint | Method | Description |
+|----------|--------|-------------|
+| `/api/groups` | GET/POST | List/Create groups |
+| `/api/groups/:id/chat` | POST | Group AI assistant |
+| `/api/groups/:id/find-time` | POST | Find common available times |
 
-## API 엔드포인트
+---
 
-### 인증
-- `POST /api/auth/google` - Google OAuth 로그인
-- `GET /api/auth/me` - 현재 사용자 정보
+## Use Cases
 
-### 일정
-- `GET /api/events` - 일정 목록 조회
-- `POST /api/events` - 일정 생성
-- `PUT /api/events/:id` - 일정 수정
-- `DELETE /api/events/:id` - 일정 삭제
-- `PATCH /api/events/:id/complete` - 일정 완료 처리
+### 1. Planning a Birthday Dinner
+```
+User: "I want to plan a birthday dinner for my girlfriend next Saturday"
 
-### TODO
-- `GET /api/todos` - TODO 목록 조회
-- `POST /api/todos` - TODO 생성
-- `PUT /api/todos/:id` - TODO 수정
-- `DELETE /api/todos/:id` - TODO 삭제
-- `PATCH /api/todos/:id/complete` - TODO 완료 처리
+PALM:
+1. Checks your calendar for conflicts
+2. Searches restaurants with romantic atmosphere
+3. Shows cards with photos, ratings, prices
+4. Recommends gift ideas based on budget
+5. Creates calendar event after your confirmation
+```
 
-### Goal
-- `GET /api/goals` - Goal 목록 조회
-- `POST /api/goals` - Goal 생성
-- `PUT /api/goals/:id` - Goal 수정
-- `DELETE /api/goals/:id` - Goal 삭제
+### 2. Team Meeting Coordination
+```
+User: "Schedule a team meeting with john@example.com and jane@example.com next week"
 
-### 카테고리
-- `GET /api/categories` - 카테고리 목록 조회
-- `POST /api/categories` - 카테고리 생성
+PALM:
+1. Checks all members' calendar availability
+2. Finds overlapping free slots
+3. Suggests meeting locations (midpoint)
+4. Creates event and sends invites
+```
 
-### AI 채팅
-- `POST /api/chat` - AI 메시지 전송 (일정/TODO/Goal 생성)
-- `POST /api/chat/confirm-events` - 일정 확인 및 저장
-- `POST /api/chat/confirm-todos` - TODO 확인 및 저장
-- `POST /api/chat/confirm-goals` - Goal 확인 및 저장
+### 3. Goal Achievement
+```
+User: "I want to learn Korean in 6 months"
 
-## 라이선스
+PALM:
+1. Creates goal with target date
+2. Decomposes into weekly tasks
+3. Schedules study sessions based on your chronotype
+4. Recommends learning resources
+5. Tracks progress over time
+```
 
-MIT
+---
+
+## Roadmap
+
+- [ ] Voice input/output
+- [ ] Mobile app (React Native)
+- [ ] More MCP integrations (Uber, OpenTable, etc.)
+- [ ] Team workspace features
+- [ ] AI-powered analytics and insights
+- [ ] Multi-language support
+
+---
+
+## License
+
+MIT License - see [LICENSE](LICENSE) for details.
+
+---
+
+<div align="center">
+
+**PALM - Because your AI assistant should do more than just talk.**
+
+Made with ❤️ by Smart-Cal Team
+
+</div>
