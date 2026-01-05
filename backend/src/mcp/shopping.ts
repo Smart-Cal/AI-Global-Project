@@ -167,8 +167,8 @@ export class ShoppingMCP {
       engine: 'google_shopping',
       q: options.query,
       num: options.display || 10,
-      hl: 'ko',  // 한국어
-      gl: 'kr', // 한국
+      hl: 'en',  // English
+      gl: 'us', // United States (international products)
     };
 
     if (options.minPrice) {
@@ -219,7 +219,7 @@ export class ShoppingMCP {
       image: item.thumbnail || 'https://via.placeholder.com/200',
       link: item.link || item.product_link || '#',
       mall: item.source || item.seller || 'Unknown',
-      category: item.category || '쇼핑',
+      category: item.category || 'Shopping',
       rating: item.rating || undefined,
       reviewCount: item.reviews || undefined,
       isRocket: false,
@@ -463,47 +463,47 @@ export class ShoppingMCP {
   }
 
   /**
-   * Mock 데이터 (API 키 없을 때)
+   * Mock data (when no API key)
    */
   private getMockSearchResults(query: string): ProductSearchResult[] {
     const mockProducts: ProductSearchResult[] = [
       {
         id: 'mock-1',
-        title: `${query} 베스트셀러 상품`,
-        price: 29900,
-        originalPrice: 39900,
+        title: `${query} Best Seller`,
+        price: 2990,
+        originalPrice: 3990,
         discountRate: 25,
         image: 'https://via.placeholder.com/200',
         link: 'https://example.com/product/1',
-        mall: '쿠팡',
-        category: '생활용품',
+        mall: 'Amazon',
+        category: 'General',
         rating: 4.7,
         reviewCount: 1234,
-        isRocket: true,
+        isRocket: false,
         isFreeShipping: true
       },
       {
         id: 'mock-2',
-        title: `${query} 인기 상품`,
-        price: 19900,
+        title: `${query} Popular Item`,
+        price: 1990,
         image: 'https://via.placeholder.com/200',
         link: 'https://example.com/product/2',
-        mall: '네이버쇼핑',
-        category: '생활용품',
+        mall: 'eBay',
+        category: 'General',
         rating: 4.5,
         reviewCount: 892,
         isFreeShipping: true
       },
       {
         id: 'mock-3',
-        title: `${query} 프리미엄`,
-        price: 49900,
-        originalPrice: 59900,
+        title: `${query} Premium`,
+        price: 4990,
+        originalPrice: 5990,
         discountRate: 17,
         image: 'https://via.placeholder.com/200',
         link: 'https://example.com/product/3',
-        mall: 'SSG',
-        category: '프리미엄',
+        mall: 'Walmart',
+        category: 'Premium',
         rating: 4.8,
         reviewCount: 567
       }

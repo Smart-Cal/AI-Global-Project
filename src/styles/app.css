@@ -7615,6 +7615,89 @@ textarea.form-input {
   color: var(--text-muted);
 }
 
+/* ==============================================
+   MCP Carousel (3 cards with navigation)
+   ============================================== */
+
+.mcp-carousel-container {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 4px 0 16px;
+}
+
+.mcp-carousel-btn {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  border: 1px solid var(--border-light);
+  background: white;
+  color: var(--text-primary);
+  font-size: 24px;
+  font-weight: 300;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s;
+  flex-shrink: 0;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+}
+
+.mcp-carousel-btn:hover:not(.disabled) {
+  background: var(--primary);
+  color: white;
+  border-color: var(--primary);
+}
+
+.mcp-carousel-btn.disabled {
+  opacity: 0.3;
+  cursor: not-allowed;
+}
+
+.mcp-carousel-cards {
+  display: flex;
+  gap: 12px;
+  flex: 1;
+  overflow: hidden;
+  justify-content: flex-start;
+}
+
+.mcp-carousel-cards .mcp-card {
+  flex: 1 1 0;
+  min-width: 0;
+  max-width: calc((100% - 24px) / 3);
+}
+
+.mcp-carousel-dots {
+  position: absolute;
+  bottom: 0;
+  left: 50%;
+  transform: translateX(-50%);
+  display: flex;
+  gap: 6px;
+}
+
+.mcp-carousel-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--border-light);
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.mcp-carousel-dot.active {
+  background: var(--primary);
+  width: 20px;
+  border-radius: 4px;
+}
+
+.mcp-carousel-dot:hover:not(.active) {
+  background: var(--text-muted);
+}
+
 /* Responsive for cards slider */
 @media (max-width: 768px) {
   .mcp-cards-slider {
@@ -7644,5 +7727,20 @@ textarea.form-input {
 
   .mcp-news-image {
     height: 120px;
+  }
+
+  /* Carousel responsive */
+  .mcp-carousel-container {
+    gap: 4px;
+  }
+
+  .mcp-carousel-btn {
+    width: 28px;
+    height: 28px;
+    font-size: 18px;
+  }
+
+  .mcp-carousel-cards .mcp-card {
+    max-width: calc((100% - 16px) / 2);
   }
 }

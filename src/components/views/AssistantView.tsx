@@ -103,6 +103,9 @@ const AssistantView: React.FC = () => {
   const [isCreatingCategory, setIsCreatingCategory] = useState(false);
   const [showColorPalette, setShowColorPalette] = useState(false);
 
+  // Carousel state for MCP data
+  const [carouselIndices, setCarouselIndices] = useState<{ [key: string]: number }>({});
+
   // Color palette
   const colorPalette = [
     '#ef4444', // Red
@@ -1398,6 +1401,73 @@ const AssistantView: React.FC = () => {
     );
   };
 
+  // Carousel navigation helper
+  const CARDS_PER_PAGE = 3;
+  const MAX_PAGES = 3; // 3 pages x 3 cards = 9 items max
+
+  const getCarouselIndex = (key: string) => carouselIndices[key] || 0;
+
+  const handleCarouselNav = (key: string, direction: 'prev' | 'next', totalItems: number) => {
+    const maxPages = Math.min(Math.ceil(totalItems / CARDS_PER_PAGE), MAX_PAGES);
+    setCarouselIndices(prev => {
+      const current = prev[key] || 0;
+      if (direction === 'next') {
+        return { ...prev, [key]: Math.min(current + 1, maxPages - 1) };
+      } else {
+        return { ...prev, [key]: Math.max(current - 1, 0) };
+      }
+    });
+  };
+
+  // Render carousel with navigation
+  const renderCarousel = (
+    key: string,
+    items: any[],
+    renderCard: (item: any, idx: number, globalIdx: number) => React.ReactNode
+  ) => {
+    const currentPage = getCarouselIndex(key);
+    const maxItems = CARDS_PER_PAGE * MAX_PAGES; // 9 items max
+    const limitedItems = items.slice(0, maxItems);
+    const totalPages = Math.ceil(limitedItems.length / CARDS_PER_PAGE);
+    const startIdx = currentPage * CARDS_PER_PAGE;
+    const visibleItems = limitedItems.slice(startIdx, startIdx + CARDS_PER_PAGE);
+    const hasPrev = currentPage > 0;
+    const hasNext = currentPage < totalPages - 1;
+
+    return (
+      <div className="mcp-carousel-container">
+        <button
+          className={`mcp-carousel-btn mcp-carousel-prev ${!hasPrev ? 'disabled' : ''}`}
+          onClick={() => hasPrev && handleCarouselNav(key, 'prev', limitedItems.length)}
+          disabled={!hasPrev}
+        >
+          ‹
+        </button>
+        <div className="mcp-carousel-cards">
+          {visibleItems.map((item, idx) => renderCard(item, idx, startIdx + idx))}
+        </div>
+        <button
+          className={`mcp-carousel-btn mcp-carousel-next ${!hasNext ? 'disabled' : ''}`}
+          onClick={() => hasNext && handleCarouselNav(key, 'next', limitedItems.length)}
+          disabled={!hasNext}
+        >
+          ›
+        </button>
+        {totalPages > 1 && (
+          <div className="mcp-carousel-dots">
+            {Array.from({ length: totalPages }).map((_, i) => (
+              <span
+                key={i}
+                className={`mcp-carousel-dot ${i === currentPage ? 'active' : ''}`}
+                onClick={() => setCarouselIndices(prev => ({ ...prev, [key]: i }))}
+              />
+            ))}
+          </div>
+        )}
+      </div>
+    );
+  };
+
   // Render MCP data ("Acting AI" results)
   const renderMCPData = (mcpData: MCPResponseData) => {
     const hasRestaurants = mcpData.restaurants && mcpData.restaurants.length > 0;
@@ -1411,6 +1481,9 @@ const AssistantView: React.FC = () => {
       return null;
     }
 
+    const placeItems = mcpData.restaurants || mcpData.places || [];
+    const productItems = mcpData.gifts || mcpData.products || [];
+
     return (
       <div className="mcp-data-container">
         {/* Restaurant/Place recommendations */}
@@ -1419,37 +1492,35 @@ const AssistantView: React.FC = () => {
             <h4 className="mcp-section-title">
               {hasRestaurants ? '🍽️ Restaurant Recommendations' : '📍 Place Recommendations'}
             </h4>
-            <div className="mcp-cards-slider">
-              {(mcpData.restaurants || mcpData.places || []).map((place: MCPPlaceResult, idx: number) => (
-                <div key={place.id || idx} className="mcp-card mcp-place-card">
-                  {place.photos && place.photos[0] && (
-                    <div className="mcp-card-image">
-                      <img src={place.photos[0]} alt={place.name} />
+            {renderCarousel('places', placeItems, (place: MCPPlaceResult, idx: number, globalIdx: number) => (
+              <div key={place.id || globalIdx} className="mcp-card mcp-place-card">
+                {place.photos && place.photos[0] && (
+                  <div className="mcp-card-image">
+                    <img src={place.photos[0]} alt={place.name} />
+                  </div>
+                )}
+                <div className="mcp-card-content">
+                  <div className="mcp-card-rank">{globalIdx + 1}</div>
+                  <div className="mcp-card-title">{place.name}</div>
+                  <div className="mcp-card-details">
+                    {place.rating && <span className="mcp-rating">⭐ {place.rating}</span>}
+                    {place.reviewCount && <span className="mcp-reviews">({place.reviewCount})</span>}
+                    {place.priceLevel && <span className="mcp-price-level">{place.priceLevel}</span>}
+                  </div>
+                  <div className="mcp-card-address">{place.address}</div>
+                  {place.distance && (
+                    <div className="mcp-card-distance">
+                      📍 {place.distance} {place.duration && `(${place.duration})`}
                     </div>
                   )}
-                  <div className="mcp-card-content">
-                    <div className="mcp-card-rank">{idx + 1}</div>
-                    <div className="mcp-card-title">{place.name}</div>
-                    <div className="mcp-card-details">
-                      {place.rating && <span className="mcp-rating">⭐ {place.rating}</span>}
-                      {place.reviewCount && <span className="mcp-reviews">({place.reviewCount})</span>}
-                      {place.priceLevel && <span className="mcp-price-level">{place.priceLevel}</span>}
-                    </div>
-                    <div className="mcp-card-address">{place.address}</div>
-                    {place.distance && (
-                      <div className="mcp-card-distance">
-                        📍 {place.distance} {place.duration && `(${place.duration})`}
-                      </div>
-                    )}
-                    {place.openNow !== undefined && (
-                      <span className={`mcp-place-status ${place.openNow ? 'open' : 'closed'}`}>
-                        {place.openNow ? 'Open' : 'Closed'}
-                      </span>
-                    )}
-                  </div>
+                  {place.openNow !== undefined && (
+                    <span className={`mcp-place-status ${place.openNow ? 'open' : 'closed'}`}>
+                      {place.openNow ? 'Open' : 'Closed'}
+                    </span>
+                  )}
                 </div>
-              ))}
-            </div>
+              </div>
+            ))}
           </div>
         )}
 
@@ -1459,60 +1530,58 @@ const AssistantView: React.FC = () => {
             <h4 className="mcp-section-title">
               {hasGifts ? '🎁 Gift Recommendations' : '🛒 Product Recommendations'}
             </h4>
-            <div className="mcp-cards-slider">
-              {(mcpData.gifts || mcpData.products || []).map((product: MCPProductResult, idx: number) => {
-                const imageUrl = product.imageUrl || product.image;
-                const productLink = product.productUrl || product.link;
-                const sellerName = product.seller || product.mall;
+            {renderCarousel('products', productItems, (product: MCPProductResult, idx: number, globalIdx: number) => {
+              const imageUrl = product.imageUrl || product.image;
+              const productLink = product.productUrl || product.link;
+              const sellerName = product.seller || product.mall;
 
-                return (
-                  <a
-                    key={product.id || idx}
-                    href={productLink || '#'}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="mcp-card mcp-product-card"
-                    style={{ textDecoration: 'none', color: 'inherit' }}
-                  >
-                    {imageUrl && (
-                      <div className="mcp-card-image">
-                        <img src={imageUrl} alt={product.title} />
-                        {product.discountRate && product.discountRate > 0 && (
-                          <span className="mcp-discount-badge">-{product.discountRate}%</span>
-                        )}
-                      </div>
-                    )}
-                    <div className="mcp-card-content">
-                      <div className="mcp-card-title" title={product.title}>
-                        {product.title.length > 40 ? product.title.substring(0, 40) + '...' : product.title}
-                      </div>
-                      <div className="mcp-card-price">
-                        <span className="mcp-current-price">
-                          {product.price.toLocaleString()} KRW
-                        </span>
-                        {product.originalPrice && product.originalPrice > product.price && (
-                          <span className="mcp-original-price">
-                            {product.originalPrice.toLocaleString()} KRW
-                          </span>
-                        )}
-                      </div>
-                      {product.rating && (
-                        <div className="mcp-card-rating">
-                          ⭐ {product.rating}
-                          {product.reviewCount && <span className="mcp-review-count">({product.reviewCount})</span>}
-                        </div>
-                      )}
-                      {sellerName && (
-                        <div className="mcp-card-seller">
-                          🏪 {sellerName}
-                          {product.isFreeShipping && <span className="mcp-free-shipping">Free Shipping</span>}
-                        </div>
+              return (
+                <a
+                  key={product.id || globalIdx}
+                  href={productLink || '#'}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="mcp-card mcp-product-card"
+                  style={{ textDecoration: 'none', color: 'inherit' }}
+                >
+                  {imageUrl && (
+                    <div className="mcp-card-image">
+                      <img src={imageUrl} alt={product.title} />
+                      {product.discountRate && product.discountRate > 0 && (
+                        <span className="mcp-discount-badge">-{product.discountRate}%</span>
                       )}
                     </div>
-                  </a>
-                );
-              })}
-            </div>
+                  )}
+                  <div className="mcp-card-content">
+                    <div className="mcp-card-title" title={product.title}>
+                      {product.title.length > 40 ? product.title.substring(0, 40) + '...' : product.title}
+                    </div>
+                    <div className="mcp-card-price">
+                      <span className="mcp-current-price">
+                        ${product.price.toLocaleString()}
+                      </span>
+                      {product.originalPrice && product.originalPrice > product.price && (
+                        <span className="mcp-original-price">
+                          ${product.originalPrice.toLocaleString()}
+                        </span>
+                      )}
+                    </div>
+                    {product.rating && (
+                      <div className="mcp-card-rating">
+                        ⭐ {product.rating}
+                        {product.reviewCount && <span className="mcp-review-count">({product.reviewCount})</span>}
+                      </div>
+                    )}
+                    {sellerName && (
+                      <div className="mcp-card-seller">
+                        🏪 {sellerName}
+                        {product.isFreeShipping && <span className="mcp-free-shipping">Free Shipping</span>}
+                      </div>
+                    )}
+                  </div>
+                </a>
+              );
+            })}
           </div>
         )}
 
