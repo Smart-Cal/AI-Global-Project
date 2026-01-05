@@ -4,7 +4,7 @@ const openai = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY
 });
 
-export type IntentType = 'event' | 'todo' | 'goal' | 'briefing' | 'general' | 'clarification';
+export type IntentType = 'event' | 'todo' | 'goal' | 'briefing' | 'general' | 'clarification' | 'shopping' | 'places' | 'news';
 
 export interface RouterResult {
   intent: IntentType;
@@ -27,6 +27,21 @@ export interface RouterResult {
     // 할일용
     deadline?: string;
     estimatedTime?: number;
+
+    // 쇼핑용
+    productQuery?: string;
+    minPrice?: number;
+    maxPrice?: number;
+
+    // 장소용
+    placeQuery?: string;
+    placeType?: string;
+    nearLocation?: string;
+
+    // 뉴스용
+    newsQuery?: string;
+    newsCategory?: string;
+    timeRange?: string;  // 'overnight', 'today', 'week'
   };
   missingInfo?: string[];
   clarificationQuestion?: string;
@@ -57,8 +72,31 @@ export async function routeIntent(
 - "todo": 해야 할 일, 작업, 태스크 추가
 - "goal": 목표 설정. 키워드: ~하고 싶어, ~할래, ~할 거야, 목표, 달성, 감량, 성공
 - "briefing": 오늘 일정 확인, 뭐 있어, 알려줘
-- "general": 일반 대화, 질문 (위 4개에 해당하지 않을 때만!)
+- "shopping": 상품 검색, 쇼핑 추천, 물건 찾기, 구매 관련
+- "places": 장소 검색, 맛집 추천, 근처 ~, 어디 가면 좋을까
+- "news": 뉴스 요약, 지난 밤 뉴스, 최신 소식, 오늘의 뉴스
+- "general": 일반 대화, 질문 (위에 해당하지 않을 때만!)
 - "clarification": 정보가 너무 부족해서 질문 필요
+
+## shopping으로 분류해야 하는 경우
+- "~상품 추천해줘" → shopping
+- "~살까?" → shopping
+- "~가격 비교" → shopping
+- "~추천해줘" + 제품명 → shopping
+- 예: "러닝화 추천해줘", "10만원대 운동화", "노트북 가격 비교"
+
+## places로 분류해야 하는 경우
+- "근처 맛집" → places
+- "~어디가 좋아?" → places
+- "~추천해줘" + 장소/레스토랑 → places
+- 예: "강남역 근처 맛집", "조용한 카페 추천", "데이트 장소"
+
+## news로 분류해야 하는 경우
+- "지난 밤 뉴스" → news
+- "오늘 뉴스" → news
+- "최신 소식" → news
+- "뉴스 정리해줘" → news
+- 예: "어제 무슨 일 있었어?", "뉴스 브리핑", "테크 뉴스 알려줘"
 
 ## goal로 분류해야 하는 경우 (매우 중요!)
 - "~하고 싶어" → goal (예: "5키로 감량하고 싶어")
@@ -90,7 +128,7 @@ export async function routeIntent(
 
 ## 응답 형식 (JSON)
 {
-  "intent": "event" | "todo" | "goal" | "briefing" | "general" | "clarification",
+  "intent": "event" | "todo" | "goal" | "briefing" | "shopping" | "places" | "news" | "general" | "clarification",
   "confidence": 0.0-1.0,
   "extractedInfo": {
     "title": "추출된 제목",
@@ -101,7 +139,16 @@ export async function routeIntent(
     "location": "장소",
     "category": "카테고리",
     "priority": "high" | "medium" | "low",
-    "description": "설명"
+    "description": "설명",
+    "productQuery": "상품 검색어 (쇼핑용)",
+    "minPrice": 0,
+    "maxPrice": 100000,
+    "placeQuery": "장소 검색어 (장소용)",
+    "placeType": "restaurant | cafe | etc",
+    "nearLocation": "근처 위치",
+    "newsQuery": "뉴스 검색어 (뉴스용)",
+    "newsCategory": "business | technology | sports | etc",
+    "timeRange": "overnight | today | week"
   },
   "missingInfo": ["없는 정보 목록"],
   "clarificationQuestion": "질문이 필요한 경우에만"
@@ -118,6 +165,22 @@ export async function routeIntent(
 → intent: "event"
 → extractedInfo: { title: "팀 미팅", datetime: "내일T15:00:00", category: "업무" }
 → missingInfo: []
+
+입력: "러닝화 추천해줘"
+→ intent: "shopping"
+→ extractedInfo: { productQuery: "러닝화", category: "스포츠" }
+
+입력: "강남역 근처 맛집 추천해줘"
+→ intent: "places"
+→ extractedInfo: { placeQuery: "맛집", placeType: "restaurant", nearLocation: "강남역" }
+
+입력: "지난 밤에 있었던 뉴스들을 정리해줘"
+→ intent: "news"
+→ extractedInfo: { timeRange: "overnight" }
+
+입력: "테크 뉴스 알려줘"
+→ intent: "news"
+→ extractedInfo: { newsCategory: "technology" }
 
 입력: "운동하고 싶어"
 → intent: "clarification"

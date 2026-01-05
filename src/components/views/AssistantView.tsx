@@ -20,6 +20,7 @@ import {
   type MCPResponseData,
   type MCPPlaceResult,
   type MCPProductResult,
+  type MCPNewsResult,
 } from '../../services/api';
 import DatePicker from '../DatePicker';
 import TimePicker from '../TimePicker';
@@ -1403,9 +1404,10 @@ const AssistantView: React.FC = () => {
     const hasPlaces = mcpData.places && mcpData.places.length > 0;
     const hasProducts = mcpData.products && mcpData.products.length > 0;
     const hasGifts = mcpData.gifts && mcpData.gifts.length > 0;
+    const hasNews = mcpData.news && mcpData.news.length > 0;
     const hasAvailableSlots = mcpData.availableSlots && mcpData.availableSlots.length > 0;
 
-    if (!hasRestaurants && !hasPlaces && !hasProducts && !hasGifts && !hasAvailableSlots) {
+    if (!hasRestaurants && !hasPlaces && !hasProducts && !hasGifts && !hasNews && !hasAvailableSlots) {
       return null;
     }
 
@@ -1417,20 +1419,25 @@ const AssistantView: React.FC = () => {
             <h4 className="mcp-section-title">
               {hasRestaurants ? '🍽️ Restaurant Recommendations' : '📍 Place Recommendations'}
             </h4>
-            <div className="mcp-places-list">
+            <div className="mcp-cards-slider">
               {(mcpData.restaurants || mcpData.places || []).map((place: MCPPlaceResult, idx: number) => (
-                <div key={place.id || idx} className="mcp-place-card">
-                  <div className="mcp-place-rank">{idx + 1}</div>
-                  <div className="mcp-place-info">
-                    <div className="mcp-place-name">{place.name}</div>
-                    <div className="mcp-place-details">
-                      {place.rating && <span className="mcp-place-rating">⭐ {place.rating}</span>}
-                      {place.reviewCount && <span className="mcp-place-reviews">({place.reviewCount})</span>}
-                      {place.priceLevel && <span className="mcp-place-price">{place.priceLevel}</span>}
+                <div key={place.id || idx} className="mcp-card mcp-place-card">
+                  {place.photos && place.photos[0] && (
+                    <div className="mcp-card-image">
+                      <img src={place.photos[0]} alt={place.name} />
                     </div>
-                    <div className="mcp-place-address">{place.address}</div>
+                  )}
+                  <div className="mcp-card-content">
+                    <div className="mcp-card-rank">{idx + 1}</div>
+                    <div className="mcp-card-title">{place.name}</div>
+                    <div className="mcp-card-details">
+                      {place.rating && <span className="mcp-rating">⭐ {place.rating}</span>}
+                      {place.reviewCount && <span className="mcp-reviews">({place.reviewCount})</span>}
+                      {place.priceLevel && <span className="mcp-price-level">{place.priceLevel}</span>}
+                    </div>
+                    <div className="mcp-card-address">{place.address}</div>
                     {place.distance && (
-                      <div className="mcp-place-distance">
+                      <div className="mcp-card-distance">
                         📍 {place.distance} {place.duration && `(${place.duration})`}
                       </div>
                     )}
@@ -1452,28 +1459,99 @@ const AssistantView: React.FC = () => {
             <h4 className="mcp-section-title">
               {hasGifts ? '🎁 Gift Recommendations' : '🛒 Product Recommendations'}
             </h4>
-            <div className="mcp-products-list">
-              {(mcpData.gifts || mcpData.products || []).map((product: MCPProductResult, idx: number) => (
-                <div key={product.id || idx} className="mcp-product-card">
-                  <div className="mcp-product-rank">{idx + 1}</div>
-                  <div className="mcp-product-info">
-                    <div className="mcp-product-title">{product.title}</div>
-                    <div className="mcp-product-price">
-                      <span className="mcp-product-current-price">
-                        {product.price.toLocaleString()}{product.currency || '원'}
-                      </span>
-                      {product.originalPrice && product.originalPrice > product.price && (
-                        <span className="mcp-product-original-price">
-                          {product.originalPrice.toLocaleString()}{product.currency || '원'}
+            <div className="mcp-cards-slider">
+              {(mcpData.gifts || mcpData.products || []).map((product: MCPProductResult, idx: number) => {
+                const imageUrl = product.imageUrl || product.image;
+                const productLink = product.productUrl || product.link;
+                const sellerName = product.seller || product.mall;
+
+                return (
+                  <a
+                    key={product.id || idx}
+                    href={productLink || '#'}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="mcp-card mcp-product-card"
+                    style={{ textDecoration: 'none', color: 'inherit' }}
+                  >
+                    {imageUrl && (
+                      <div className="mcp-card-image">
+                        <img src={imageUrl} alt={product.title} />
+                        {product.discountRate && product.discountRate > 0 && (
+                          <span className="mcp-discount-badge">-{product.discountRate}%</span>
+                        )}
+                      </div>
+                    )}
+                    <div className="mcp-card-content">
+                      <div className="mcp-card-title" title={product.title}>
+                        {product.title.length > 40 ? product.title.substring(0, 40) + '...' : product.title}
+                      </div>
+                      <div className="mcp-card-price">
+                        <span className="mcp-current-price">
+                          {product.price.toLocaleString()}원
+                        </span>
+                        {product.originalPrice && product.originalPrice > product.price && (
+                          <span className="mcp-original-price">
+                            {product.originalPrice.toLocaleString()}원
+                          </span>
+                        )}
+                      </div>
+                      {product.rating && (
+                        <div className="mcp-card-rating">
+                          ⭐ {product.rating}
+                          {product.reviewCount && <span className="mcp-review-count">({product.reviewCount})</span>}
+                        </div>
+                      )}
+                      {sellerName && (
+                        <div className="mcp-card-seller">
+                          🏪 {sellerName}
+                          {product.isFreeShipping && <span className="mcp-free-shipping">무료배송</span>}
+                        </div>
+                      )}
+                    </div>
+                  </a>
+                );
+              })}
+            </div>
+          </div>
+        )}
+
+        {/* 뉴스 */}
+        {hasNews && (
+          <div className="mcp-section news-section">
+            <h4 className="mcp-section-title">📰 뉴스</h4>
+            <div className="mcp-cards-slider mcp-news-slider">
+              {mcpData.news!.map((article, idx) => (
+                <a
+                  key={article.id || idx}
+                  href={article.url}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="mcp-card mcp-news-card"
+                  style={{ textDecoration: 'none', color: 'inherit' }}
+                >
+                  {article.imageUrl && (
+                    <div className="mcp-card-image mcp-news-image">
+                      <img src={article.imageUrl} alt={article.title} />
+                    </div>
+                  )}
+                  <div className="mcp-card-content">
+                    <div className="mcp-card-title mcp-news-title">
+                      {article.title.length > 60 ? article.title.substring(0, 60) + '...' : article.title}
+                    </div>
+                    {article.description && (
+                      <div className="mcp-news-description">
+                        {article.description.length > 80 ? article.description.substring(0, 80) + '...' : article.description}
+                      </div>
+                    )}
+                    <div className="mcp-news-meta">
+                      <span className="mcp-news-source">{article.source}</span>
+                      {article.publishedAt && (
+                        <span className="mcp-news-date">
+                          {new Date(article.publishedAt).toLocaleDateString('ko-KR')}
                         </span>
                       )}
                     </div>
-                    {product.rating && (
-                      <div className="mcp-product-rating">
-                        ⭐ {product.rating}
-                        {product.reviewCount && <span>({product.reviewCount})</span>}
-                      </div>
-                    )}
                     {product.seller && (
                       <div className="mcp-product-seller">{product.seller}</div>
                     )}
@@ -1488,7 +1566,7 @@ const AssistantView: React.FC = () => {
                       </a>
                     )}
                   </div>
-                </div>
+                </a>
               ))}
             </div>
           </div>

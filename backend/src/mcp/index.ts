@@ -6,12 +6,14 @@
  * 지원하는 MCP 서버:
  * 1. Google Calendar MCP - 일정 관리, Free/Busy 조회
  * 2. Google Maps MCP - 장소 검색, 거리 계산
- * 3. Shopping MCP - 상품 검색, 가격 비교
+ * 3. Shopping MCP - 상품 검색, 가격 비교 (SerpAPI + Naver)
+ * 4. News MCP - 뉴스 검색, 브리핑 (NewsAPI + SerpAPI)
  */
 
 export { GoogleCalendarMCP, getGoogleCalendarMCP, type CalendarEvent as GCalEvent, type FreeBusyResult } from './googleCalendar.js';
 export { GoogleMapsMCP, getGoogleMapsMCP, type PlaceSearchResult, type PlaceDetails, type DistanceResult } from './googleMaps.js';
 export { ShoppingMCP, getShoppingMCP, type ProductSearchResult, type ProductDetails } from './shopping.js';
+export { NewsMCP, getNewsMCP, type NewsArticle, type NewsBriefing } from './news.js';
 export { MCPOrchestrator, getMCPOrchestrator, type MCPToolCall, type MCPToolResult, type MCPConfig } from './orchestrator.js';
 
 // MCP 도구 정의 (OpenAI Function Calling용)

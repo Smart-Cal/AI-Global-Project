@@ -30,6 +30,7 @@ import {
 // MCP 모듈
 import { MCPOrchestrator, getMCPOrchestrator, MCPToolCall, MCPToolResult } from '../mcp/index.js';
 import { mcpToolDefinitions, toolCategories } from '../mcp/toolDefinitions.js';
+import { getNewsMCP } from '../mcp/news.js';
 
 const openai = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY
@@ -40,6 +41,8 @@ type ExtendedIntentType = IntentType |
   'place_recommendation' |
   'group_schedule' |
   'shopping' |
+  'places' |
+  'news' |
   'gift_recommendation' |
   'special_day' |
   'complex';
@@ -331,6 +334,7 @@ export class MCPAgentLoop {
 
     switch (intent) {
       case 'place_recommendation':
+      case 'places':
         return await this.handlePlaceRecommendation(extractedInfo);
 
       case 'group_schedule':
@@ -338,6 +342,9 @@ export class MCPAgentLoop {
 
       case 'shopping':
         return await this.handleShopping(extractedInfo);
+
+      case 'news':
+        return await this.handleNews(extractedInfo);
 
       case 'gift_recommendation':
         return await this.handleGiftRecommendation(extractedInfo);
@@ -604,6 +611,78 @@ export class MCPAgentLoop {
       message,
       mcp_data: { gifts }
     };
+  }
+
+  /**
+   * 뉴스 브리핑 처리
+   */
+  private async handleNews(info: any): Promise<AgentResponse> {
+    const newsMcp = getNewsMCP();
+
+    try {
+      let articles;
+      let title = '뉴스 브리핑';
+
+      if (info.timeRange === 'overnight') {
+        // 지난 밤 뉴스
+        articles = await newsMcp.getOvernightNews();
+        title = '지난 밤 뉴스';
+      } else if (info.newsCategory) {
+        // 카테고리별 뉴스
+        articles = await newsMcp.getTopHeadlines({
+          category: info.newsCategory as any,
+          pageSize: 10
+        });
+        title = `${info.newsCategory} 뉴스`;
+      } else if (info.newsQuery) {
+        // 키워드 검색
+        articles = await newsMcp.searchNews({
+          query: info.newsQuery,
+          pageSize: 10
+        });
+        title = `"${info.newsQuery}" 관련 뉴스`;
+      } else {
+        // 기본: 최신 헤드라인
+        articles = await newsMcp.getTopHeadlines({ pageSize: 10 });
+        title = '오늘의 헤드라인';
+      }
+
+      if (!articles || articles.length === 0) {
+        return {
+          message: '뉴스를 가져오는데 문제가 있었어요. 잠시 후 다시 시도해주세요.',
+          needs_user_input: true
+        };
+      }
+
+      let message = `📰 ${title}\n\n`;
+
+      articles.slice(0, 5).forEach((article, idx) => {
+        const emoji = idx === 0 ? '🔥' : idx === 1 ? '📌' : idx === 2 ? '📍' : '•';
+        message += `${emoji} **${article.title}**\n`;
+        if (article.description) {
+          const shortDesc = article.description.length > 80
+            ? article.description.substring(0, 80) + '...'
+            : article.description;
+          message += `   ${shortDesc}\n`;
+        }
+        message += `   📰 ${article.source}\n\n`;
+      });
+
+      if (articles.length > 5) {
+        message += `외 ${articles.length - 5}개의 뉴스가 더 있어요.`;
+      }
+
+      return {
+        message,
+        mcp_data: { news: articles }
+      };
+    } catch (error) {
+      console.error('[MCPAgentLoop] News error:', error);
+      return {
+        message: '뉴스를 가져오는데 문제가 있었어요. 잠시 후 다시 시도해주세요.',
+        needs_user_input: true
+      };
+    }
   }
 
   /**
