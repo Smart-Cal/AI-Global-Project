@@ -3269,11 +3269,8 @@ textarea.form-input {
 
 .calendar-main {
   flex: 1;
-  overflow: hidden;
+  overflow: auto;
   padding: 20px;
-  display: flex;
-  flex-direction: column;
-  min-height: 0;
 }
 
 /* Month View */
@@ -3378,10 +3375,9 @@ textarea.form-input {
 
 /* Week View */
 .calendar-week {
-  height: 100%;
+  height: calc(100vh - 180px); /* Fixed height for week view */
   display: flex;
   flex-direction: column;
-  min-height: 0; /* Important for flex child to allow scrolling */
   overflow: hidden;
 }
 
@@ -3420,7 +3416,7 @@ textarea.form-input {
   border: 1px solid var(--border-light);
   border-radius: var(--border-radius);
   overflow: hidden;
-  min-height: 0; /* Important for flex child to allow scrolling */
+  min-height: 0;
 }
 
 /* Fixed header row */
@@ -3511,7 +3507,7 @@ textarea.form-input {
   display: flex;
   overflow-y: auto;
   overflow-x: hidden;
-  min-height: 0; /* Important for flex child to allow scrolling */
+  min-height: 0;
 }
 
 .calendar-time-column {
