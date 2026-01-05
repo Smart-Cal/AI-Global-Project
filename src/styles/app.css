@@ -1958,6 +1958,25 @@ body {
   cursor: not-allowed;
 }
 
+.chat-mic-btn {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  background: var(--bg-hover);
+  color: var(--text-secondary);
+  border: none;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.15s;
+}
+
+.chat-mic-btn:hover {
+  background: var(--bg-active);
+  color: var(--primary);
+}
+
 /* Quick Prompts */
 .quick-prompts {
   display: flex;
