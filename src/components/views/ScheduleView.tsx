@@ -25,7 +25,7 @@ interface ScheduleViewProps {
 
 const ScheduleView: React.FC<ScheduleViewProps> = ({ onEventClick, onAddEvent, onAddTodo }) => {
   const { events, loadEvents } = useEventStore();
-  const { todos, fetchTodos, toggleComplete } = useTodoStore();
+  const { todos, fetchTodos, toggleComplete, deleteTodo } = useTodoStore();
   const { categories, fetchCategories, getCategoryById, deleteCategory } = useCategoryStore();
   const { showToast } = useToast();
 
@@ -301,34 +301,64 @@ const ScheduleView: React.FC<ScheduleViewProps> = ({ onEventClick, onAddEvent, o
                 </div>
               ) : (
                 <div className="schedule-todos-list">
-                  {filteredTodos.map(todo => (
-                    <div
-                      key={todo.id}
-                      className={`schedule-todo-item ${todo.is_completed ? 'completed' : ''}`}
-                    >
-                      <button
-                        className={`schedule-todo-checkbox ${todo.is_completed ? 'checked' : ''}`}
-                        onClick={() => todo.id && toggleComplete(todo.id)}
-                      >
-                        {todo.is_completed && '✓'}
-                      </button>
-                      <div className="schedule-todo-content">
-                        <div className="schedule-todo-title">{todo.title}</div>
-                        {getDeadlineDate(todo.deadline) && (
-                          <div className="schedule-todo-due">
-                            {formatDate(getDeadlineDate(todo.deadline)!)}
-                            {getDeadlineTime(todo.deadline) && ` ${getDeadlineTime(todo.deadline)}`}
-                          </div>
-                        )}
-                      </div>
+                  {filteredTodos.map(todo => {
+                    const todoCategory = todo.category_id ? getCategoryById(todo.category_id) : null;
+                    return (
                       <div
-                        className="schedule-todo-priority"
-                        style={{ backgroundColor: getPriorityColor(todo.priority) }}
+                        key={todo.id}
+                        className={`schedule-todo-item ${todo.is_completed ? 'completed' : ''}`}
                       >
-                        {todo.priority === 'high' ? 'High' : todo.priority === 'medium' ? 'Medium' : 'Low'}
+                        <button
+                          className={`schedule-todo-checkbox ${todo.is_completed ? 'checked' : ''}`}
+                          onClick={() => todo.id && toggleComplete(todo.id)}
+                        >
+                          {todo.is_completed && '✓'}
+                        </button>
+                        <div className="schedule-todo-content">
+                          <div className="schedule-todo-title">{todo.title}</div>
+                          <div className="schedule-todo-meta">
+                            {getDeadlineDate(todo.deadline) && (
+                              <span className="schedule-todo-due">
+                                {formatDate(getDeadlineDate(todo.deadline)!)}
+                                {getDeadlineTime(todo.deadline) && ` ${getDeadlineTime(todo.deadline)}`}
+                              </span>
+                            )}
+                            {todoCategory && (
+                              <span
+                                className="schedule-todo-category"
+                                style={{
+                                  backgroundColor: todoCategory.color + '20',
+                                  color: todoCategory.color,
+                                  borderColor: todoCategory.color
+                                }}
+                              >
+                                {todoCategory.name}
+                              </span>
+                            )}
+                          </div>
+                        </div>
+                        <div
+                          className="schedule-todo-priority"
+                          style={{ backgroundColor: getPriorityColor(todo.priority) }}
+                        >
+                          {todo.priority === 'high' ? 'High' : todo.priority === 'medium' ? 'Medium' : 'Low'}
+                        </div>
+                        <button
+                          className="schedule-todo-delete"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            if (todo.id && confirm('Delete this todo?')) {
+                              deleteTodo(todo.id);
+                              showToast('Todo deleted', 'success');
+                            }
+                          }}
+                          title="Delete todo"
+                        >
+                          ×
+                        </button>
                       </div>
-                    </div>
-                  ))}
+                    );
+                  })}
                 </div>
               )}
             </div>

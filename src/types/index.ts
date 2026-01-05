@@ -67,6 +67,7 @@ export interface Todo {
   id?: string;
   user_id: string;
   goal_id?: string;               // Linked Goal
+  category_id?: string;           // Category
   title: string;
   description?: string;
   deadline?: string;              // Deadline (ISO datetime)
