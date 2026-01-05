@@ -4,36 +4,36 @@
 // ==============================================
 
 // ==============================================
-// Chronotype & Priority 상수
+// Chronotype & Priority constants
 // ==============================================
 
 export type Chronotype = 'early_morning' | 'morning' | 'afternoon' | 'evening' | 'night';
 
-// 레거시 호환 Chronotype (3단계)
+// Legacy compatible Chronotype (3 levels)
 export type LegacyChronotype = 'morning' | 'evening' | 'neutral';
 
-// Chronotype 시간대 정의
+// Chronotype timezone definitions
 export const CHRONOTYPE_HOURS: Record<Chronotype, { start: number; end: number }> = {
   early_morning: { start: 5, end: 9 },
   morning: { start: 9, end: 12 },
   afternoon: { start: 12, end: 17 },
   evening: { start: 17, end: 21 },
-  night: { start: 21, end: 2 }, // 다음날 2시까지
+  night: { start: 21, end: 2 }, // Until 2 AM next day
 };
 
 export type EventPriority = 1 | 2 | 3 | 4 | 5;
 
-// Priority 정의
-// 1: 낮음 (언제든 이동/취소 가능) - 청소, 넷플릭스
-// 2: 보통-낮음 (가능하면 유지) - 개인 운동
-// 3: 보통 (기본값) - 일반 약속
-// 4: 높음 (웬만하면 변경 불가) - 중요 미팅
-// 5: 절대 (절대 변경 불가) - 시험, 면접
+// Priority definitions
+// 1: Low (Can be moved/cancelled anytime) - Cleaning, Netflix
+// 2: Medium-Low (Keep if possible) - Personal workout
+// 3: Medium (Default) - General appointment
+// 4: High (Rarely changeable) - Important meeting
+// 5: Critical (Absolutely unchangeable) - Exam, Interview
 
 export type GoalStatus = 'planning' | 'scheduled' | 'in_progress' | 'completed' | 'failed';
 
 // ==============================================
-// User types (구글 로그인 전용)
+// User types (Google Login only)
 // ==============================================
 export interface User {
   id: string;
@@ -41,8 +41,8 @@ export interface User {
   name: string;
   nickname?: string;
   avatar_url?: string;
-  location?: string;              // 날씨 API용 도시명 (예: "Seoul")
-  chronotype: Chronotype;         // 집중 시간대
+  location?: string;              // City name for Weather API (e.g. "Seoul")
+  chronotype: Chronotype;         // Focus time zone
   is_active?: boolean;
   last_login_at?: string;
   created_at?: string;
@@ -61,7 +61,7 @@ export interface Category {
 }
 
 // ==============================================
-// Goal types (Deadline 기반 목표)
+// Goal types (Deadline based)
 // ==============================================
 export interface Goal {
   id: string;
@@ -69,66 +69,66 @@ export interface Goal {
   category_id?: string;
   title: string;
   description?: string;
-  target_date: string;            // 마감일 (필수, YYYY-MM-DD)
+  target_date: string;            // Target Date (Required, YYYY-MM-DD)
   priority: 'high' | 'medium' | 'low';
-  status: GoalStatus;             // 목표 상태
-  total_estimated_time: number;   // 총 예상 시간 (분)
-  completed_time: number;         // 완료된 시간 (분)
+  status: GoalStatus;             // Goal status
+  total_estimated_time: number;   // Total estimated time (minutes)
+  completed_time: number;         // Completed time (minutes)
   created_at?: string;
   updated_at?: string;
 }
 
-// 진행률 계산 헬퍼
+// Progress calculation helper
 export function calculateGoalProgress(goal: Goal): number {
   if (goal.total_estimated_time === 0) return 0;
   return Math.round((goal.completed_time / goal.total_estimated_time) * 100);
 }
 
 // ==============================================
-// Todo types (부분 완료 추적)
+// Todo types (Partial completion tracking)
 // ==============================================
 export interface Todo {
   id: string;
   user_id: string;
-  goal_id?: string;               // 연결된 Goal
+  goal_id?: string;               // Linked Goal
   title: string;
   description?: string;
 
-  // 마감 관련
-  deadline?: string;              // 마감 시각 (ISO datetime)
-  is_hard_deadline: boolean;      // true면 절대 밀릴 수 없음
+  // Deadline related
+  deadline?: string;              // Deadline (ISO datetime)
+  is_hard_deadline: boolean;      // If true, cannot be moved
 
-  // 시간 관련
-  estimated_time?: number;        // 예상 시간 (분)
-  completed_time: number;         // 완료된 시간 (분)
-  is_divisible: boolean;          // 분할 가능 여부
+  // Time related
+  estimated_time?: number;        // Estimated time (minutes)
+  completed_time: number;         // Completed time (minutes)
+  is_divisible: boolean;          // Can be divided
 
-  // 상태
+  // Status
   priority: 'high' | 'medium' | 'low';
   is_completed: boolean;
   completed_at?: string;
 
-  // 반복 (기존 호환)
+  // Recurrence (Legacy compatible)
   is_recurring?: boolean;
   recurrence_pattern?: string;
 
   created_at?: string;
 }
 
-// Todo 진행률 계산 헬퍼
+// Todo progress calculation helper
 export function calculateTodoProgress(todo: Todo): number {
   if (!todo.estimated_time || todo.estimated_time === 0) return todo.is_completed ? 100 : 0;
   return Math.round((todo.completed_time / todo.estimated_time) * 100);
 }
 
 // ==============================================
-// Event types (Fixed/Flexible 구분)
+// Event types (Fixed/Flexible distinction)
 // ==============================================
 export interface Event {
   id: string;
   user_id: string;
   category_id?: string;
-  related_todo_id?: string;       // 연결된 Todo
+  related_todo_id?: string;       // Linked Todo
   title: string;
   description?: string;
   event_date: string;             // YYYY-MM-DD
@@ -137,8 +137,8 @@ export interface Event {
   is_all_day: boolean;
   location?: string;
 
-  // 유동성 관련
-  is_fixed: boolean;              // true: 고정, false: 유동
+  // Flexibility related
+  is_fixed: boolean;              // true: Fixed, false: Flexible
   priority: EventPriority;        // 1~5
 
   is_completed: boolean;
@@ -146,7 +146,7 @@ export interface Event {
   created_at?: string;
 }
 
-// Event duration 계산 헬퍼 (분 단위)
+// Event duration calculation helper (in minutes)
 export function calculateEventDuration(event: Event): number {
   if (event.is_all_day || !event.start_time || !event.end_time) return 0;
 
@@ -157,10 +157,10 @@ export function calculateEventDuration(event: Event): number {
 }
 
 // ==============================================
-// 레거시 호환 타입 (DB 형식과의 호환성)
+// Legacy compatible types (Compatibility with DB format)
 // ==============================================
 
-// DB에서 직접 가져온 Event (event_date, start_time, end_time 형식)
+// Event directly from DB (event_date, start_time, end_time format)
 export interface DBEvent {
   id: string;
   user_id: string;
@@ -180,7 +180,7 @@ export interface DBEvent {
   created_at?: string;
 }
 
-// 레거시 Event (datetime, duration 형식 - orchestrator 등에서 사용)
+// Legacy Event (datetime, duration format - used in orchestrator, etc.)
 export interface LegacyEvent {
   id: string;
   user_id: string;
@@ -188,7 +188,7 @@ export interface LegacyEvent {
   title: string;
   description?: string;
   datetime: string;               // ISO datetime
-  duration: number;               // 분 단위
+  duration: number;               // minutes
   type: 'fixed' | 'personal' | 'goal';
   location?: string;
   is_completed: boolean;
@@ -196,7 +196,7 @@ export interface LegacyEvent {
   created_at?: string;
 }
 
-// DBEvent를 LegacyEvent로 변환
+// Convert DBEvent to LegacyEvent
 export function dbEventToLegacy(dbEvent: DBEvent): LegacyEvent {
   const datetime = `${dbEvent.event_date}T${dbEvent.start_time || '09:00'}:00`;
   let duration = 60;
@@ -223,7 +223,7 @@ export function dbEventToLegacy(dbEvent: DBEvent): LegacyEvent {
   };
 }
 
-// LegacyEvent를 DBEvent로 변환
+// Convert LegacyEvent to DBEvent
 export function legacyToDbEvent(event: Partial<LegacyEvent>): Partial<DBEvent> {
   const dbEvent: Partial<DBEvent> = {
     user_id: event.user_id,
@@ -233,7 +233,7 @@ export function legacyToDbEvent(event: Partial<LegacyEvent>): Partial<DBEvent> {
     is_completed: event.is_completed ?? false,
     is_all_day: false,
     is_fixed: event.type === 'fixed',
-    priority: 3, // 기본값
+    priority: 3, // Default
   };
 
   if (event.datetime) {
@@ -253,16 +253,16 @@ export function legacyToDbEvent(event: Partial<LegacyEvent>): Partial<DBEvent> {
 }
 
 // ==============================================
-// Life Log types (AI 일기)
+// Life Log types (AI Diary)
 // ==============================================
 export interface LifeLog {
   id: string;
   user_id: string;
   log_date: string;               // YYYY-MM-DD
-  summary?: string;               // 한 줄 요약
-  content: string;                // AI 작성 일기 본문
-  mood?: string;                  // 이모지 (😊, 😐, 😢 등)
-  tags?: string[];                // 태그 배열
+  summary?: string;               // One line summary
+  content: string;                // AI written diary content
+  mood?: string;                  // Emoji (😊, 😐, 😢 etc.)
+  tags?: string[];                // Tag array
   created_at?: string;
   updated_at?: string;
 }
@@ -273,7 +273,7 @@ export interface LifeLog {
 export interface Group {
   id: string;
   name: string;
-  invite_code: string;           // 디스코드 스타일 초대 코드 (예: "ABC123")
+  invite_code: string;           // Discord style invite code (e.g. "ABC123")
   created_by: string;
   created_at?: string;
 }
@@ -296,7 +296,7 @@ export interface GroupInvitation {
   responded_at?: string;
 }
 
-// Group 매칭 결과
+// Group matching result
 export interface GroupMatchSlot {
   date: string;                   // YYYY-MM-DD
   start_time: string;             // HH:MM

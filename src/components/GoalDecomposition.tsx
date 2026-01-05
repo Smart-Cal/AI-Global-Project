@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { useGoalStore, calculateGoalProgress } from '../store/goalStore';
 import { useTodoStore } from '../store/todoStore';

@@ -25,11 +25,11 @@ export async function processEvent(
   // 필수 정보 체크: 제목, 날짜/시간
   if (!extractedInfo.title || !extractedInfo.datetime) {
     const missing = [];
-    if (!extractedInfo.title) missing.push('일정 제목');
-    if (!extractedInfo.datetime) missing.push('날짜와 시간');
+    if (!extractedInfo.title) missing.push('Event Title');
+    if (!extractedInfo.datetime) missing.push('Date and Time');
 
     return {
-      message: `일정을 추가하려면 ${missing.join(', ')}이 필요해요. 알려주세요!`,
+      message: `To add an event, I need ${missing.join(', ')}. Please tell me!`,
       needs_user_input: true
     };
   }
@@ -52,7 +52,7 @@ export async function processEvent(
   };
 
   return {
-    message: `"${event.title}" 일정을 추가할까요?`,
+    message: `Shall I add the event "${event.title}"?`,
     events_to_create: [event]
   };
 }
@@ -69,7 +69,7 @@ export async function processGoal(
   // 필수 정보 체크: 제목
   if (!extractedInfo.title) {
     return {
-      message: '어떤 목표를 세우고 싶으신가요?',
+      message: 'What goal would you like to set?',
       needs_user_input: true
     };
   }
@@ -77,7 +77,7 @@ export async function processGoal(
   // 기한이 없으면 질문
   if (!extractedInfo.targetDate) {
     return {
-      message: `"${extractedInfo.title}" 목표 좋네요! 언제까지 달성하고 싶으신가요?`,
+      message: `Great goal "${extractedInfo.title}"! When do you want to achieve it by?`,
       needs_user_input: true
     };
   }
@@ -92,7 +92,7 @@ export async function processGoal(
   };
 
   return {
-    message: `"${goal.title}" 목표를 ${goal.target_date}까지 설정할까요?`,
+    message: `Shall I set the goal "${goal.title}" by ${goal.target_date}?`,
     goals_to_create: [goal]
   };
 }
@@ -109,7 +109,7 @@ export async function processTodo(
   // 필수 정보 체크: 제목
   if (!extractedInfo.title) {
     return {
-      message: '어떤 할 일을 추가할까요?',
+      message: 'What task would you like to add?',
       needs_user_input: true
     };
   }
@@ -124,7 +124,7 @@ export async function processTodo(
   };
 
   return {
-    message: `"${todo.title}" 할 일을 추가할까요?`,
+    message: `Shall I add the task "${todo.title}"?`,
     todos_to_create: [todo]
   };
 }
@@ -143,38 +143,38 @@ export async function processBriefing(
 
   let briefing = '';
 
-  // 오늘 일정
+  // Today's Events
   if (todayEvents.length === 0) {
-    briefing += '오늘은 예정된 일정이 없어요.\n';
+    briefing += 'No events scheduled for today.\n';
   } else {
-    briefing += `오늘 일정 ${todayEvents.length}개:\n`;
+    briefing += `Today's Events (${todayEvents.length}):\n`;
     todayEvents.forEach(e => {
       const time = e.datetime?.split('T')[1]?.slice(0, 5) || '';
       briefing += `• ${time ? time + ' ' : ''}${e.title}\n`;
     });
   }
 
-  // 할 일
+  // Todos
   if (incompleteTodos.length > 0) {
-    briefing += `\n미완료 할 일 ${incompleteTodos.length}개:\n`;
+    briefing += `\nIncomplete Tasks (${incompleteTodos.length}):\n`;
     incompleteTodos.slice(0, 3).forEach(t => {
       briefing += `• ${t.title}\n`;
     });
     if (incompleteTodos.length > 3) {
-      briefing += `  외 ${incompleteTodos.length - 3}개...\n`;
+      briefing += `  and ${incompleteTodos.length - 3} more...\n`;
     }
   }
 
-  // 진행 중 목표
+  // Active Goals
   if (activeGoals.length > 0) {
-    briefing += `\n진행 중인 목표 ${activeGoals.length}개:\n`;
+    briefing += `\nActive Goals (${activeGoals.length}):\n`;
     activeGoals.slice(0, 2).forEach(g => {
       briefing += `• ${g.title}\n`;
     });
   }
 
   return {
-    message: briefing.trim() || '오늘의 일정과 할 일이 없어요. 새로 추가해볼까요?'
+    message: briefing.trim() || 'No events or tasks for today. Shall we add some?'
   };
 }
 
@@ -191,15 +191,17 @@ export async function processGeneral(
       messages: [
         {
           role: 'system',
-          content: `당신은 PALM 캘린더의 AI 비서입니다. 친절하게 대화하고, 일정/목표/할일 관리를 도와주세요.
+          content: `You are the AI assistant for PALM. Converse in a friendly manner and help with schedule/goal/task management.
 
-가능한 도움:
-- 일정 추가/조회
-- 목표 설정
-- 할 일 관리
-- 브리핑
+Capabilities:
+- Add/View Events
+- Set Goals
+- Manage Tasks
+- Briefing
 
-간단하고 친근하게 응답하세요.`
+IMPORTANT: ALWAYS respond in English.
+Keep response simple and friendly.
+`
         },
         { role: 'user', content: userMessage }
       ],
@@ -207,11 +209,11 @@ export async function processGeneral(
     });
 
     return {
-      message: response.choices[0]?.message?.content || '무엇을 도와드릴까요?'
+      message: response.choices[0]?.message?.content || 'How can I help you?'
     };
   } catch (error) {
     return {
-      message: '무엇을 도와드릴까요? 일정, 목표, 할 일 관리를 도와드릴 수 있어요.'
+      message: 'How can I help you? I can assist with schedules, goals, and tasks.'
     };
   }
 }

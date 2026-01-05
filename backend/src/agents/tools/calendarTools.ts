@@ -23,9 +23,9 @@ export async function getEvents(
 
   let summary = '';
   if (events.length === 0) {
-    summary = startDate ? `${startDate}부터 ${endDate || '이후'}까지 일정이 없습니다.` : '등록된 일정이 없습니다.';
+    summary = startDate ? `No events from ${startDate} to ${endDate || 'after'}.` : 'No events registered.';
   } else {
-    summary = `총 ${events.length}개의 일정이 있습니다.`;
+    summary = `Total ${events.length} events found.`;
   }
 
   return { events, summary };
@@ -57,9 +57,9 @@ export async function checkConflicts(
   let message = '';
   if (hasConflict) {
     const titles = conflictingEvents.map(e => e.title).join(', ');
-    message = `해당 시간에 "${titles}" 일정이 있어 충돌합니다.`;
+    message = `Conflict with event(s): "${titles}" at that time.`;
   } else {
-    message = '해당 시간에 충돌하는 일정이 없습니다.';
+    message = 'No conflicting events at that time.';
   }
 
   return { hasConflict, conflictingEvents, message };
@@ -123,9 +123,9 @@ export async function findFreeSlots(
 
   let message = '';
   if (slots.length === 0) {
-    message = `${date}에 ${requiredDuration}분 이상의 빈 시간이 없습니다.`;
+    message = `No free slots of ${requiredDuration} minutes or more on ${date}.`;
   } else {
-    message = `${date}에 ${slots.length}개의 빈 시간대가 있습니다.`;
+    message = `Found ${slots.length} free slots on ${date}.`;
   }
 
   return { slots, message };
@@ -141,9 +141,9 @@ export async function getGoals(userId: string): Promise<{ goals: Goal[]; summary
 
   let summary = '';
   if (activeGoals.length === 0) {
-    summary = '현재 활성화된 목표가 없습니다.';
+    summary = 'No active goals.';
   } else {
-    summary = `활성 목표 ${activeGoals.length}개: ${activeGoals.map(g => g.title).join(', ')}`;
+    summary = `Active Goals (${activeGoals.length}): ${activeGoals.map(g => g.title).join(', ')}`;
   }
 
   return { goals: activeGoals, summary };
@@ -164,10 +164,10 @@ export async function suggestScheduleForGoal(
 
   // 활동 유형별 기본 설정
   const activityDefaults: { [key: string]: { duration: number; preferredHour: number } } = {
-    '운동': { duration: 60, preferredHour: 7 },
-    '공부': { duration: 120, preferredHour: 10 },
-    '독서': { duration: 60, preferredHour: 21 },
-    '명상': { duration: 30, preferredHour: 6 },
+    'workout': { duration: 60, preferredHour: 7 },
+    'study': { duration: 120, preferredHour: 10 },
+    'reading': { duration: 60, preferredHour: 21 },
+    'meditation': { duration: 30, preferredHour: 6 },
     default: { duration: 60, preferredHour: 14 }
   };
 
@@ -206,9 +206,9 @@ export async function suggestScheduleForGoal(
 
   let message = '';
   if (suggestions.length === 0) {
-    message = `${goalTitle}을 위한 빈 시간을 찾지 못했습니다.`;
+    message = `Could not find free time for ${goalTitle}.`;
   } else {
-    message = `${goalTitle}을 위해 ${suggestions.length}개의 시간대를 추천합니다.`;
+    message = `Recommending ${suggestions.length} slots for ${goalTitle}.`;
   }
 
   return { suggestions, message };
@@ -222,17 +222,17 @@ export const calendarToolDefinitions = [
     type: 'function' as const,
     function: {
       name: 'get_events',
-      description: '사용자의 일정을 조회합니다. 특정 기간의 일정을 확인할 때 사용합니다.',
+      description: 'Retrieve user schedules. Used to check events for a specific period.',
       parameters: {
         type: 'object',
         properties: {
           start_date: {
             type: 'string',
-            description: '조회 시작 날짜 (YYYY-MM-DD 형식)'
+            description: 'Start date (YYYY-MM-DD)'
           },
           end_date: {
             type: 'string',
-            description: '조회 종료 날짜 (YYYY-MM-DD 형식)'
+            description: 'End date (YYYY-MM-DD)'
           }
         },
         required: []
@@ -243,17 +243,17 @@ export const calendarToolDefinitions = [
     type: 'function' as const,
     function: {
       name: 'check_conflicts',
-      description: '특정 날짜/시간에 충돌하는 일정이 있는지 확인합니다.',
+      description: 'Check for conflicting events at a specific date/time.',
       parameters: {
         type: 'object',
         properties: {
           datetime: {
             type: 'string',
-            description: '확인할 날짜/시간 (ISO 형식, 예: 2024-01-15T14:00:00)'
+            description: 'Date/Time to check (ISO format, e.g., 2024-01-15T14:00:00)'
           },
           duration: {
             type: 'number',
-            description: '일정 소요 시간 (분 단위)'
+            description: 'Duration (minutes)'
           }
         },
         required: ['datetime', 'duration']
@@ -264,17 +264,17 @@ export const calendarToolDefinitions = [
     type: 'function' as const,
     function: {
       name: 'find_free_slots',
-      description: '특정 날짜의 빈 시간대를 찾습니다.',
+      description: 'Find free time slots for a specific date.',
       parameters: {
         type: 'object',
         properties: {
           date: {
             type: 'string',
-            description: '확인할 날짜 (YYYY-MM-DD 형식)'
+            description: 'Date to check (YYYY-MM-DD)'
           },
           required_duration: {
             type: 'number',
-            description: '필요한 최소 시간 (분 단위, 기본값 60)'
+            description: 'Minimum required duration (minutes, default 60)'
           }
         },
         required: ['date']
@@ -285,7 +285,7 @@ export const calendarToolDefinitions = [
     type: 'function' as const,
     function: {
       name: 'get_goals',
-      description: '사용자의 목표를 조회합니다.',
+      description: 'Retrieve user goals.',
       parameters: {
         type: 'object',
         properties: {},
@@ -297,21 +297,21 @@ export const calendarToolDefinitions = [
     type: 'function' as const,
     function: {
       name: 'suggest_schedule_for_goal',
-      description: '목표 달성을 위한 일정을 빈 시간에 추천합니다.',
+      description: 'Recommend schedule for goal achievement in free time slots.',
       parameters: {
         type: 'object',
         properties: {
           goal_title: {
             type: 'string',
-            description: '목표 제목'
+            description: 'Goal Title'
           },
           activity_type: {
             type: 'string',
-            description: '활동 유형 (운동, 공부, 독서, 명상 등)'
+            description: 'Activity Type (workout, study, reading, meditation, etc.)'
           },
           days_ahead: {
             type: 'number',
-            description: '추천할 기간 (일 수, 기본값 7)'
+            description: 'Days ahead to recommend (default 7)'
           }
         },
         required: ['goal_title', 'activity_type']

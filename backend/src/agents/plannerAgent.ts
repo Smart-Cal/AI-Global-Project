@@ -24,48 +24,50 @@ export async function createPlan(
   const availableHours = context?.available_hours_per_day ?? 2;
   const preferredTime = context?.preferred_time ?? 'morning';
 
-  const systemPrompt = `당신은 목표를 달성 가능한 세부 계획으로 분해하는 Planner Agent입니다.
+  const systemPrompt = `You are a Planner Agent who breaks down goals into achievable detailed plans.
 
-목표: ${goalDescription}
-마감일: ${deadline}
-하루 가용 시간: ${availableHours}시간
-선호 시간대: ${preferredTime === 'morning' ? '오전' : preferredTime === 'afternoon' ? '오후' : '저녁'}
+Goal: ${goalDescription}
+Deadline: ${deadline}
+Daily Available Hours: ${availableHours} hours
+Preferred Time: ${preferredTime === 'morning' ? 'Morning' : preferredTime === 'afternoon' ? 'Afternoon' : 'Evening'}
 
-기존 일정:
+Existing Events:
 ${JSON.stringify(existingEvents.map(e => ({
-  title: e.title,
-  datetime: e.datetime
-})).slice(0, 20), null, 2)}
+    title: e.title,
+    datetime: e.datetime
+  })).slice(0, 20), null, 2)}
 
-다음 JSON 형식으로 상세 계획을 생성하세요:
+Create a detailed plan in the following JSON format:
 {
-  "goal_title": "목표 제목",
+  "goal_title": "Goal Title",
   "items": [
     {
-      "title": "세부 작업 제목",
+      "title": "Subtask Title",
       "date": "YYYY-MM-DD",
       "duration": 60,
       "order": 1
     }
   ],
   "total_duration": 300,
-  "strategy": "목표 달성을 위한 전략 설명"
+  "strategy": "Strategy description for achieving the goal"
 }
 
-계획 수립 규칙:
-1. 마감일까지 균등하게 분배
-2. 난이도가 높은 작업은 초반에 배치
-3. 복습/정리 시간 포함
-4. 휴식 시간 고려
-5. 기존 일정과 충돌 방지
-6. 각 세부 작업은 명확하고 실행 가능해야 함`;
+Planning Rules:
+1. Distribute evenly until the deadline
+2. Place difficult tasks early
+3. Include review/organization time
+4. Consider break times
+5. Avoid conflicts with existing events
+6. Each subtask must be clear and actionable
+
+IMPORTANT: Output valid JSON only. Respond in English.`;
 
   try {
     const response = await openai.chat.completions.create({
       model: 'gpt-4o-mini',
       messages: [
         { role: 'system', content: systemPrompt },
-        { role: 'user', content: '위 목표를 달성하기 위한 상세 계획을 세워주세요.' }
+        { role: 'user', content: 'Please create a detailed plan to achieve the goal above.' }
       ],
       response_format: { type: 'json_object' },
       temperature: 0.5
@@ -83,7 +85,7 @@ ${JSON.stringify(existingEvents.map(e => ({
       goal_title: goalDescription,
       items: [],
       total_duration: 0,
-      strategy: '계획 생성 중 오류가 발생했습니다.'
+      strategy: 'An error occurred while generating the plan.'
     };
   }
 }
@@ -112,15 +114,16 @@ export async function decomposeGoal(
   }
 
   // AI로 분해
-  const systemPrompt = `주어진 목표를 3-5개의 세부 작업으로 분해하세요.
+  const systemPrompt = `Decompose the given goal into 3-5 subtasks.
 
-목표: ${goalTitle}
+Goal: ${goalTitle}
 
-JSON 배열로 응답하세요:
+Respond as a JSON array:
 [
-  { "title": "세부 작업 1", "duration": 30 },
-  { "title": "세부 작업 2", "duration": 30 }
-]`;
+  { "title": "Subtask 1", "duration": 30 },
+  { "title": "Subtask 2", "duration": 30 }
+]
+IMPORTANT: Output valid JSON only. Respond in English.`;
 
   try {
     const response = await openai.chat.completions.create({
@@ -180,7 +183,7 @@ export async function createStudyPlan(
 
   for (let i = 1; i <= chapters; i++) {
     items.push({
-      title: `${subject} ${i}장 학습`,
+      title: `Study ${subject} Chapter ${i}`,
       date: currentDate.toISOString().split('T')[0],
       duration: dailyHours * 60,
       order: i
@@ -191,7 +194,7 @@ export async function createStudyPlan(
   // 복습일 추가
   if (daysUntilExam > chapters + 1) {
     items.push({
-      title: `${subject} 전체 복습`,
+      title: `Review ${subject} (All)`,
       date: new Date(exam.getTime() - 24 * 60 * 60 * 1000).toISOString().split('T')[0],
       duration: dailyHours * 60,
       order: chapters + 1
@@ -199,10 +202,10 @@ export async function createStudyPlan(
   }
 
   return {
-    goal_title: `${subject} 시험 준비`,
+    goal_title: `${subject} Exam Prep`,
     items,
     total_duration: items.reduce((sum, item) => sum + item.duration, 0),
-    strategy: `${chapters}개 챕터를 하루에 하나씩 학습하고, 시험 전날 전체 복습을 진행합니다.`
+    strategy: `Study one chapter (${chapters} total) per day, and review everything the day before the exam.`
   };
 }
 
@@ -229,7 +232,7 @@ function createIntensivePlan(
     const endChapter = startChapter + todayChapters - 1;
 
     items.push({
-      title: `${subject} ${startChapter}${todayChapters > 1 ? `~${endChapter}` : ''}장 학습`,
+      title: `Study ${subject} Ch ${startChapter}${todayChapters > 1 ? `-${endChapter}` : ''}`,
       date: currentDate.toISOString().split('T')[0],
       duration: dailyHours * 60,
       order: order++
@@ -240,9 +243,9 @@ function createIntensivePlan(
   }
 
   return {
-    goal_title: `${subject} 시험 준비 (집중 모드)`,
+    goal_title: `${subject} Exam Prep (Intensive)`,
     items,
     total_duration: items.reduce((sum, item) => sum + item.duration, 0),
-    strategy: `시간이 촉박하여 하루에 ${chaptersPerDay}개 챕터씩 집중 학습합니다. 충분한 휴식을 취하세요.`
+    strategy: `Time is tight! Study ${chaptersPerDay} chapters per day. Get enough rest.`
   };
 }

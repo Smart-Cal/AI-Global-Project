@@ -157,7 +157,7 @@ export class MCPAgentLoop {
     } catch (error) {
       console.error('[MCPAgentLoop] Error:', error);
       return {
-        message: '죄송합니다. 다시 한번 말씀해주세요.',
+        message: 'Sorry, please say that again.',
         needs_user_input: true
       };
     }
@@ -175,103 +175,106 @@ export class MCPAgentLoop {
       categories: string[];
     }
   ): Promise<ExtendedRouterResult> {
-    const systemPrompt = `당신은 사용자 의도를 파악하고 필요한 도구를 결정하는 전문 분석가입니다.
+    const systemPrompt = `You are an expert analyst who understands user intent and determines necessary tools.
 
-## 역할
-1. 사용자 발화에서 의도(intent) 파악
-2. 필요한 도구 결정 (내부 도구 vs MCP 도구)
-3. 발화에서 정보 추출
+## Role
+1. Identify intent from user input
+2. Decide necessary tools (Internal vs MCP tools)
+3. Extract information from input
 
-## 의도 분류
+## Intent Classification
 
-### 기본 의도 (내부 처리)
-- "event": 일정/약속 추가 (내부 캘린더)
-- "todo": 할 일 추가
-- "goal": 목표 설정
-- "briefing": 오늘 일정 확인
-- "general": 일반 대화
+### Basic Intents (Internal)
+- "event": Add event/appointment (Internal Calendar)
+- "todo": Add task
+- "goal": Set goal
+- "briefing": Check today's schedule
+- "general": General conversation
 
-### MCP 필요 의도 (외부 서비스 연동)
-- "place_recommendation": 장소 추천 필요 (맛집, 카페, 모임 장소)
-- "group_schedule": 그룹 일정 조율 (여러 사람의 시간 맞추기)
-- "shopping": 상품 검색/추천
-- "gift_recommendation": 선물 추천
-- "special_day": 특별한 날 준비 (생일, 기념일)
-- "complex": 여러 기능 복합 (일정 + 장소 추천 등)
+### MCP Intents (External Integration)
+- "place_recommendation": Need place recommendation (restaurant, cafe, meeting spot)
+- "group_schedule": Coordinate group schedule
+- "shopping": Search/Recommend products
+- "gift_recommendation": Recommend gifts
+- "special_day": Prepare for special day (birthday, anniversary)
+- "complex": Complex scenario (Event + Place recommendation, etc.)
 
-## MCP 도구 결정
+## MCP Tool Decision
 
-### Calendar MCP (Google Calendar 연동)
-필요한 경우:
-- "캘린더에 추가", "구글 캘린더"
-- 그룹 일정 조율, Free/Busy 확인
-- 외부 캘린더와 동기화
+### Calendar MCP (Google Calendar)
+Required when:
+- "Add to calendar", "Google Calendar"
+- Group scheduling, Free/Busy check
+- Sync with external calendar
 
-### Maps MCP (장소 서비스)
-필요한 경우:
-- "맛집 추천", "카페 찾아줘"
-- "어디서 만날까", "중간 지점"
-- "거리 얼마나", "몇 분 걸려"
+### Maps MCP (Place Services)
+Required when:
+- "Recommend restaurant", "Find cafe"
+- "Where should we meet", "Midpoint"
+- "How far", "How many minutes"
 
 ### Shopping MCP
-필요한 경우:
-- "상품 검색", "가격 비교"
-- "선물 추천", "뭐 사야 해"
-- 목표와 연계된 용품 추천
+Required when:
+- "Search product", "Compare prices"
+- "Recommend gift", "What should I buy"
+- Recommend items related to goals
 
-## 현재 정보
-- 오늘: ${context.today}
-- 이번 달 마지막 날: ${context.endOfMonth}
-- 이번 주 일요일: ${context.endOfWeek}
+## Current Info
+- Today: ${context.today}
+- End of Month: ${context.endOfMonth}
+- End of Week: ${context.endOfWeek}
 
-## 응답 형식 (JSON)
+## Response Format (JSON)
 {
-  "intent": "의도",
+  "intent": "intent_type",
   "confidence": 0.0-1.0,
   "extractedInfo": {
-    "title": "제목",
+    "title": "title",
     "datetime": "YYYY-MM-DDTHH:mm:ss",
     "targetDate": "YYYY-MM-DD",
-    "location": "장소/지역",
-    "area": "지역명 (장소추천용)",
-    "cuisine": "음식종류",
-    "groupName": "그룹명",
+    "location": "location/area",
+    "area": "area_name (for recommendation)",
+    "cuisine": "food_type",
+    "groupName": "group_name",
     "memberEmails": ["email1@..."],
-    "searchQuery": "검색어",
-    "budget": 숫자,
-    "recipient": "선물대상",
-    "occasion": "이벤트종류"
+    "searchQuery": "query",
+    "budget": number,
+    "recipient": "recipient",
+    "occasion": "occasion_type"
   },
-  "requiredMcpTools": ["필요한 MCP 도구명"],
+  "requiredMcpTools": ["tool_name"],
   "isActionRequired": true/false,
-  "missingInfo": ["부족한 정보"],
-  "clarificationQuestion": "질문 (필요시)"
+  "missingInfo": ["missing_info"],
+  "clarificationQuestion": "question (if needed)"
 }
 
-## 예시
+## Examples
 
-입력: "대학동기들이랑 다음주 홍대에서 밥 먹자"
+Input: "Let's eat at Hongdae with college friends next week"
 → intent: "complex"
 → requiredMcpTools: ["calendar_get_free_busy", "maps_recommend_restaurants"]
-→ extractedInfo: { groupName: "대학동기", area: "홍대" }
+→ extractedInfo: { groupName: "College Friends", area: "Hongdae" }
 → isActionRequired: true
 
-입력: "홍대 맛집 추천해줘"
+Input: "Recommend a restaurant in Hongdae"
 → intent: "place_recommendation"
 → requiredMcpTools: ["maps_recommend_restaurants"]
-→ extractedInfo: { area: "홍대" }
+→ extractedInfo: { area: "Hongdae" }
 
-입력: "여자친구 생일 선물 뭐가 좋을까"
+Input: "What should I buy for my girlfriend's birthday?"
 → intent: "gift_recommendation"
 → requiredMcpTools: ["shopping_recommend_gifts"]
 → extractedInfo: { recipient: "female", occasion: "birthday" }
 
-입력: "내일 3시에 팀 미팅"
+Input: "Team meeting tomorrow at 3 PM"
 → intent: "event"
 → requiredMcpTools: []
-→ extractedInfo: { title: "팀 미팅", datetime: "..." }
+→ extractedInfo: { title: "Team Meeting", datetime: "..." }
 
-반드시 JSON만 출력하세요.`;
+IMPORTANT:
+1. ALWAYS output valid JSON only.
+2. EXTRACT English values if possible, or keep original if specific names.
+3. LANGUAGE: The follow-up response will be in English.`;
 
     try {
       const response = await openai.chat.completions.create({
@@ -399,7 +402,7 @@ export class MCPAgentLoop {
 
       case 'clarification':
         return {
-          message: routerResult.clarificationQuestion || '좀 더 자세히 말씀해 주시겠어요?',
+          message: routerResult.clarificationQuestion || 'Could you please be more specific?',
           needs_user_input: true
         };
 
@@ -430,7 +433,7 @@ export class MCPAgentLoop {
 
     if (!result.success) {
       return {
-        message: `장소 검색 중 문제가 발생했어요. 다시 시도해주세요.`,
+        message: `I encountered an issue while searching for places. Please try again.`,
         needs_user_input: true
       };
     }
@@ -439,25 +442,25 @@ export class MCPAgentLoop {
 
     if (restaurants.length === 0) {
       return {
-        message: `${info.area || '해당 지역'}에서 맛집을 찾지 못했어요. 다른 지역을 알려주세요.`,
+        message: `I couldn't find any places in ${info.area || 'that area'}. Please try another location.`,
         needs_user_input: true
       };
     }
 
     // 결과 포맷팅
-    let message = `${info.area || '해당 지역'} 맛집 추천해드릴게요! 🍽️\n\n`;
+    let message = `Here are some recommendations for ${info.area || 'the area'}! 🍽️\n\n`;
 
     restaurants.slice(0, 5).forEach((r: any, idx: number) => {
       const medal = idx === 0 ? '🥇' : idx === 1 ? '🥈' : idx === 2 ? '🥉' : `${idx + 1}.`;
       message += `${medal} **${r.name}**\n`;
       if (r.rating) message += `   ⭐ ${r.rating}`;
-      if (r.userRatingsTotal) message += ` (리뷰 ${r.userRatingsTotal}개)`;
+      if (r.userRatingsTotal) message += ` (${r.userRatingsTotal} reviews)`;
       message += '\n';
       if (r.address) message += `   📍 ${r.address}\n`;
       message += '\n';
     });
 
-    message += '어디로 갈까요? 일정에 추가해드릴까요?';
+    message += 'Where would you like to go? Shall I add it to your schedule?';
 
     return {
       message,
@@ -472,7 +475,7 @@ export class MCPAgentLoop {
   private async handleGroupSchedule(info: any): Promise<AgentResponse> {
     if (!info.memberEmails || info.memberEmails.length === 0) {
       return {
-        message: `그룹 일정을 조율하려면 멤버들의 이메일이 필요해요. 누구와 함께 하시나요?`,
+        message: `I need member emails to coordinate the schedule. Who are you meeting with?`,
         needs_user_input: true
       };
     }
@@ -494,7 +497,7 @@ export class MCPAgentLoop {
 
     if (!result.success) {
       return {
-        message: `일정 조회 중 문제가 발생했어요. Google Calendar 연동을 확인해주세요.`,
+        message: `I encountered an issue checking the schedule. Please check the Google Calendar integration.`,
         needs_user_input: true
       };
     }
@@ -503,23 +506,23 @@ export class MCPAgentLoop {
 
     if (!availableSlots || availableSlots.length === 0) {
       return {
-        message: `아쉽게도 모두 가능한 시간을 찾지 못했어요. 다른 기간을 확인해볼까요?`,
+        message: `I couldn't find a time where everyone is available. Shall we check another date?`,
         needs_user_input: true
       };
     }
 
-    let message = `${info.groupName || '그룹'} 일정 확인했어요! 📅\n\n`;
-    message += `✅ 모두 가능한 시간:\n`;
+    let message = `I checked the schedule for ${info.groupName || 'the group'}! 📅\n\n`;
+    message += `✅ Available times:\n`;
 
     availableSlots.slice(0, 5).forEach((slot: any) => {
       message += `• ${slot.date} ${slot.startTime} - ${slot.endTime}\n`;
     });
 
     if (availableSlots.length > 5) {
-      message += `외 ${availableSlots.length - 5}개 시간대...\n`;
+      message += `and ${availableSlots.length - 5} more slots...\n`;
     }
 
-    message += `\n어떤 시간이 좋으세요?`;
+    message += `\nWhich time works best for you?`;
 
     return {
       message,
@@ -545,22 +548,22 @@ export class MCPAgentLoop {
 
     if (!result.success || !result.data?.products?.length) {
       return {
-        message: `상품을 찾지 못했어요. 다른 검색어로 시도해볼까요?`,
+        message: `I couldn't find any products. Shall we try a different search term?`,
         needs_user_input: true
       };
     }
 
     const products = result.data.products;
 
-    let message = `상품 검색 결과예요! 🛒\n\n`;
+    let message = `Here are the search results! 🛒\n\n`;
 
     products.slice(0, 5).forEach((p: any, idx: number) => {
       message += `${idx + 1}. **${p.title}**\n`;
-      message += `   💰 ${p.price.toLocaleString()}원`;
-      if (p.discountRate) message += ` (${p.discountRate}% 할인)`;
+      message += `   💰 ${p.price.toLocaleString()} KRW`;
+      if (p.discountRate) message += ` (${p.discountRate}% off)`;
       message += '\n';
       if (p.rating) message += `   ⭐ ${p.rating}`;
-      if (p.reviewCount) message += ` (리뷰 ${p.reviewCount}개)`;
+      if (p.reviewCount) message += ` (${p.reviewCount} reviews)`;
       message += '\n';
       message += `   🏪 ${p.mall}\n\n`;
     });
@@ -589,23 +592,23 @@ export class MCPAgentLoop {
 
     if (!result.success || !result.data?.gifts?.length) {
       return {
-        message: `선물 추천이 어려워요. 조금 더 구체적으로 알려주시겠어요? (받는 분, 상황, 예산 등)`,
+        message: `It's hard to recommend a gift. Could you give me more details? (Recipient, Occasion, Budget, etc.)`,
         needs_user_input: true
       };
     }
 
     const gifts = result.data.gifts;
 
-    let message = `선물 추천해드릴게요! 🎁\n\n`;
+    let message = `Here are some gift recommendations! 🎁\n\n`;
 
     gifts.slice(0, 5).forEach((g: any, idx: number) => {
       message += `${idx + 1}. **${g.title}**\n`;
-      message += `   💰 ${g.price.toLocaleString()}원\n`;
+      message += `   💰 ${g.price.toLocaleString()} KRW\n`;
       if (g.rating) message += `   ⭐ ${g.rating}\n`;
       message += '\n';
     });
 
-    message += '마음에 드는 선물이 있으세요?';
+    message += 'Do you like any of these gifts?';
 
     return {
       message,
@@ -621,35 +624,35 @@ export class MCPAgentLoop {
 
     try {
       let articles;
-      let title = '뉴스 브리핑';
+      let title = 'News Briefing';
 
       if (info.timeRange === 'overnight') {
-        // 지난 밤 뉴스
+        // Last night's news
         articles = await newsMcp.getOvernightNews();
-        title = '지난 밤 뉴스';
+        title = 'Overnight News';
       } else if (info.newsCategory) {
-        // 카테고리별 뉴스
+        // Category news
         articles = await newsMcp.getTopHeadlines({
           category: info.newsCategory as any,
           pageSize: 10
         });
-        title = `${info.newsCategory} 뉴스`;
+        title = `${info.newsCategory} News`;
       } else if (info.newsQuery) {
-        // 키워드 검색
+        // Keyword Search
         articles = await newsMcp.searchNews({
           query: info.newsQuery,
           pageSize: 10
         });
-        title = `"${info.newsQuery}" 관련 뉴스`;
+        title = `News related to "${info.newsQuery}"`;
       } else {
-        // 기본: 최신 헤드라인
+        // Default: Headlines
         articles = await newsMcp.getTopHeadlines({ pageSize: 10 });
-        title = '오늘의 헤드라인';
+        title = 'Today\'s Headlines';
       }
 
       if (!articles || articles.length === 0) {
         return {
-          message: '뉴스를 가져오는데 문제가 있었어요. 잠시 후 다시 시도해주세요.',
+          message: 'I had trouble fetching the news. Please try again later.',
           needs_user_input: true
         };
       }
@@ -669,7 +672,7 @@ export class MCPAgentLoop {
       });
 
       if (articles.length > 5) {
-        message += `외 ${articles.length - 5}개의 뉴스가 더 있어요.`;
+        message += `and ${articles.length - 5} more stories.`;
       }
 
       return {
@@ -679,7 +682,7 @@ export class MCPAgentLoop {
     } catch (error) {
       console.error('[MCPAgentLoop] News error:', error);
       return {
-        message: '뉴스를 가져오는데 문제가 있었어요. 잠시 후 다시 시도해주세요.',
+        message: 'I had trouble fetching the news. Please try again later.',
         needs_user_input: true
       };
     }
@@ -704,27 +707,27 @@ export class MCPAgentLoop {
 
     if (!result.success) {
       return {
-        message: `특별한 날 준비를 도와드리고 싶은데, 조금 더 정보가 필요해요. 언제, 누구를 위한 것인지 알려주세요!`,
+        message: `I want to help with your special day, but I need more info. Please tell me when and who it is for!`,
         needs_user_input: true
       };
     }
 
     const { recommendedRestaurants, recommendedGifts, existingEvents } = result.data;
 
-    let message = `특별한 날 준비를 도와드릴게요! 🎉\n\n`;
+    let message = `I'll help you prepare for the special day! 🎉\n\n`;
 
-    // 기존 일정 확인
+    // Existing Events
     if (existingEvents?.length > 0) {
-      message += `⚠️ 해당 날짜에 이미 일정이 있어요:\n`;
+      message += `⚠️ You already have events on that day:\n`;
       existingEvents.forEach((e: any) => {
         message += `• ${e.summary}\n`;
       });
       message += '\n';
     }
 
-    // 레스토랑 추천
+    // Restaurant Recommendations
     if (recommendedRestaurants?.length > 0) {
-      message += `🍽️ 추천 레스토랑:\n`;
+      message += `🍽️ Restaurant Recommendations:\n`;
       recommendedRestaurants.slice(0, 3).forEach((r: any, idx: number) => {
         message += `${idx + 1}. ${r.name}`;
         if (r.rating) message += ` ⭐${r.rating}`;
@@ -733,15 +736,15 @@ export class MCPAgentLoop {
       message += '\n';
     }
 
-    // 선물 추천
+    // Gift Recommendations
     if (recommendedGifts?.length > 0) {
-      message += `🎁 추천 선물:\n`;
+      message += `🎁 Gift Recommendations:\n`;
       recommendedGifts.slice(0, 3).forEach((g: any, idx: number) => {
-        message += `${idx + 1}. ${g.title} - ${g.price.toLocaleString()}원\n`;
+        message += `${idx + 1}. ${g.title} - ${g.price.toLocaleString()} KRW\n`;
       });
     }
 
-    message += '\n일정과 예약을 도와드릴까요?';
+    message += '\nShall I help with schedule and reservations?';
 
     return {
       message,
@@ -766,10 +769,10 @@ export class MCPAgentLoop {
     if (requiredTools.includes('calendar_get_free_busy') && info.memberEmails) {
       const scheduleResult = await this.handleGroupSchedule(info);
       if (scheduleResult.mcp_data?.availableSlots) {
-        message += `📅 일정 확인 완료!\n`;
+        message += `📅 Schedule checked!\n`;
         const slots = scheduleResult.mcp_data.availableSlots.slice(0, 3);
         slots.forEach((s: any) => {
-          message += `• ${s.date} ${s.startTime} 가능\n`;
+          message += `• ${s.date} ${s.startTime} available\n`;
         });
         message += '\n';
         mcpData.availableSlots = scheduleResult.mcp_data.availableSlots;
@@ -780,7 +783,7 @@ export class MCPAgentLoop {
     if (requiredTools.includes('maps_recommend_restaurants') && info.area) {
       const placeResult = await this.handlePlaceRecommendation(info);
       if (placeResult.mcp_data?.restaurants) {
-        message += `🍽️ ${info.area} 맛집 추천!\n`;
+        message += `🍽️ ${info.area} Restaurant Recommendations!\n`;
         placeResult.mcp_data.restaurants.slice(0, 3).forEach((r: any, idx: number) => {
           message += `${idx + 1}. ${r.name}`;
           if (r.rating) message += ` ⭐${r.rating}`;
@@ -795,9 +798,9 @@ export class MCPAgentLoop {
     if (requiredTools.includes('shopping_search') || requiredTools.includes('shopping_goal_recommendations')) {
       const shoppingResult = await this.handleShopping(info);
       if (shoppingResult.mcp_data?.products) {
-        message += `🛒 관련 상품!\n`;
+        message += `🛒 Related Products!\n`;
         shoppingResult.mcp_data.products.slice(0, 2).forEach((p: any, idx: number) => {
-          message += `${idx + 1}. ${p.title} - ${p.price.toLocaleString()}원\n`;
+          message += `${idx + 1}. ${p.title} - ${p.price.toLocaleString()} KRW\n`;
         });
         mcpData.products = shoppingResult.mcp_data.products;
       }

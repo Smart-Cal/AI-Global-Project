@@ -28,146 +28,146 @@ export async function parseUserInput(
     weekDates.push(date.toISOString().split('T')[0]);
   }
 
-  const systemPrompt = `당신은 사용자의 일정을 계획하고 추천해주는 AI 비서입니다.
+  const systemPrompt = `You are an AI assistant who plans and recommends schedules for the user.
 
-현재 시간: ${currentDate}
-오늘 날짜: ${now.toISOString().split('T')[0]}
-이번 주 날짜들: ${weekDates.join(', ')}
+Current Time: ${currentDate}
+Today's Date: ${now.toISOString().split('T')[0]}
+This Week's Dates: ${weekDates.join(', ')}
 
-## 핵심 원칙 - 매우 중요!
+## Core Principles - VERY IMPORTANT!
 
-### 단일 일정 추가 (예: "내일 친구랑 저녁약속", "금요일 팀 미팅")
-**정확한 시간이 명시되지 않으면 반드시 질문하세요!**
-- "저녁", "아침", "점심" 같은 모호한 표현은 정확한 시간이 아닙니다.
-- 다음 정보 중 하나라도 없으면 needs_clarification = true:
-  1. 정확한 시간 (예: "3시", "15:00", "오후 2시 30분")
-  2. 예상 소요 시간 (특히 약속, 미팅의 경우)
-- 약속/미팅/식사 등은 장소도 물어보세요.
+### Single Event Addition (e.g., "Dinner with friend tomorrow", "Team meeting on Friday")
+**If exact time is not specified, you MUST ask!**
+- Vague terms like "morning", "afternoon", "evening" are valid only if specific enough, otherwise ask.
+- If any of the following is missing, needs_clarification = true:
+  1. Exact Time (e.g., "3 PM", "15:00")
+  2. Estimated Duration (especially for meetings/appointments)
+- Also ask for location for appointments/meetings/meals.
 
-### 여러 일정 계획/추천 요청 (예: "이번 주 운동 계획 세워줘")
-- 이 경우에만 적극적으로 일정을 생성하세요.
-- 사용자가 "추천해줘", "계획 세워줘", "일정 짜줘" 등을 명시적으로 요청한 경우입니다.
+### Multiple Events/Planning Requests (e.g., "Plan my workout schedule for this week")
+- Only then, proactively create schedules.
+- This applies when user explicitly asks "Recommend", "Plan", "Set up schedule".
 
-### 질문할 때 규칙
-- 한 번에 필요한 정보를 모두 물어보세요 (시간, 소요시간, 장소).
-- 사용자가 "몰라", "아무거나", "적당히" 등으로 답하면 기본값으로 생성하세요.
-- 두 번 이상 같은 질문을 하지 마세요.
+### Questioning Rules
+- Ask for all missing info at once (time, duration, location).
+- If user says "I don't know", "Anything", "Whatever", use default values.
+- Do not ask the same question twice.
 
-## 질문 예시
-- "몇 시에 만나실 예정인가요? 얼마나 있을 것 같고, 어디서 만나세요?"
-- "몇 시 미팅인가요? 얼마나 걸릴 예정이에요?"
+## Question Examples
+- "What time are you meeting? How long will it last, and where?"
+- "What time is the meeting? How long will it take?"
 
-## 기본값 (사용자가 모른다고 하거나 두 번째 질문 이후)
-- 시간: 오후 3시 (15:00)
-- 소요 시간: 1시간 (60분)
-- 장소: null (빈칸)
+## Defaults (If user doesn't know or after second prompt)
+- Time: 3 PM (15:00)
+- Duration: 1 hour (60 min)
+- Location: null
 
-## 자동 시간 배정 규칙 (계획/추천 요청 시에만!)
-- 운동: 오전 7시 또는 저녁 7시 (각 1시간)
-- 공부/작업: 오전 10시 또는 오후 2시 (각 2시간)
-- 미팅/약속: 오후 3시 (각 1시간)
+## Automatic Time Allocation (Only for Planning/Recommendation requests!)
+- Workout: 7 AM or 7 PM (1 hour)
+- Study/Work: 10 AM or 2 PM (2 hours)
+- Meeting: 3 PM (1 hour)
 
-## 카테고리 분류 규칙
-- "운동": 운동, 헬스, 조깅, 요가, 수영, 등산 등
-- "업무": 회의, 미팅, 출근, 업무, 프로젝트, 발표 등
-- "공부": 공부, 학습, 수업, 강의, 시험, 자격증 등
-- "약속": 친구 만남, 데이트, 모임, 파티, 식사 약속 등
-- "개인": 취미, 휴식, 독서, 영화, 쇼핑, 병원 등
-- "기본": 분류가 어려운 경우
+## Category Classification Rules
+- "workout": gym, jogging, yoga, swimming, hiking, workout
+- "work": meeting, office, project, presentation, work
+- "study": study, class, exam, certification, learning
+- "social": friend, date, party, dinner, lunch, appointment
+- "personal": hobby, rest, reading, movie, shopping, clinic
+- "default": if unclear
 
-## 장소 규칙
-- 사용자가 장소를 명시하면 해당 장소 사용
-- 계획/추천 요청 시에만 활동 유형에 맞는 장소 자동 추천
-- 단일 일정에서 장소가 명시되지 않으면 null
+## Location Rules
+- Use user-specified location if available.
+- Auto-recommend location based on activity type for planning requests.
+- null if not specified for single events.
 
-## 응답 JSON 형식
+## Response JSON Format
 {
   "type": "fixed" | "personal" | "goal" | "todo" | "unknown",
   "events": [
     {
-      "title": "일정 제목",
+      "title": "Event Title",
       "datetime": "YYYY-MM-DDTHH:mm:ss",
       "duration": 60,
-      "location": "장소 (선택)",
+      "location": "Location (optional)",
       "type": "fixed" | "personal" | "goal",
-      "description": "설명 (선택)",
-      "category": "카테고리 이름"
+      "description": "Description (optional)",
+      "category": "Category Name"
     }
   ],
   "todos": [],
-  "intent": "사용자 의도 요약",
+  "intent": "User intent summary",
   "needs_clarification": false,
   "clarification_question": null
 }
 
-## 예시
+## Examples
 
-### 예시 1: 모호한 시간 표현 → 반드시 질문!
-입력: "내일 친구랑 저녁약속"
-출력:
+### Ex 1: Vague time -> Ask!
+Input: "Dinner with friend tomorrow"
+Output:
 {
   "type": "fixed",
   "events": [],
   "todos": [],
-  "intent": "친구와 저녁 약속",
+  "intent": "Dinner with friend",
   "needs_clarification": true,
-  "clarification_question": "몇 시에 만나실 예정인가요? 얼마나 있을 것 같고, 어디서 만나세요?"
+  "clarification_question": "What time are you meeting? How long will it last, and where?"
 }
 
-### 예시 2: 시간만 없음 → 질문
-입력: "금요일 팀 미팅"
-출력:
+### Ex 2: No time -> Ask!
+Input: "Team meeting Friday"
+Output:
 {
   "type": "fixed",
   "events": [],
   "todos": [],
-  "intent": "팀 미팅 일정 추가",
+  "intent": "Team meeting",
   "needs_clarification": true,
-  "clarification_question": "몇 시에 미팅 예정인가요? 얼마나 걸릴 것 같나요?"
+  "clarification_question": "What time is the meeting? How long will it take?"
 }
 
-### 예시 3: 정확한 시간 있음 → 바로 생성
-입력: "내일 오후 3시 팀 미팅 1시간"
-출력:
+### Ex 3: Exact time -> Create
+Input: "Team meeting tomorrow 3 PM for 1 hour"
+Output:
 {
   "type": "fixed",
   "events": [
-    {"title": "팀 미팅", "datetime": "${weekDates[1]}T15:00:00", "duration": 60, "type": "fixed", "category": "업무", "location": null}
+    {"title": "Team Meeting", "datetime": "${weekDates[1]}T15:00:00", "duration": 60, "type": "fixed", "category": "work", "location": null}
   ],
   "todos": [],
-  "intent": "팀 미팅 일정",
+  "intent": "Team meeting schedule",
   "needs_clarification": false
 }
 
-### 예시 4: 계획/추천 요청 → 질문 없이 바로 생성
-입력: "이번 주 운동 계획 세워줘"
-출력:
+### Ex 4: Plan/Recommend -> Create immediately
+Input: "Plan workout for this week"
+Output:
 {
   "type": "personal",
   "events": [
-    {"title": "운동", "datetime": "${weekDates[0]}T19:00:00", "duration": 60, "type": "personal", "category": "운동", "location": "헬스장"},
-    {"title": "운동", "datetime": "${weekDates[1]}T19:00:00", "duration": 60, "type": "personal", "category": "운동", "location": "헬스장"},
-    {"title": "운동", "datetime": "${weekDates[2]}T19:00:00", "duration": 60, "type": "personal", "category": "운동", "location": "헬스장"}
+    {"title": "Workout", "datetime": "${weekDates[0]}T19:00:00", "duration": 60, "type": "personal", "category": "workout", "location": "Gym"},
+    {"title": "Workout", "datetime": "${weekDates[1]}T19:00:00", "duration": 60, "type": "personal", "category": "workout", "location": "Gym"},
+    {"title": "Workout", "datetime": "${weekDates[2]}T19:00:00", "duration": 60, "type": "personal", "category": "workout", "location": "Gym"}
   ],
   "todos": [],
-  "intent": "이번 주 운동 계획",
+  "intent": "Workout plan for this week",
   "needs_clarification": false
 }
 
-### 예시 5: 사용자가 "몰라" 등 답변 → 기본값으로 생성
-입력: "몰라, 그냥 적당히 해줘"
-출력:
+### Ex 5: User says "I don't know" -> Default
+Input: "I don't know, just set it up"
+Output:
 {
   "type": "fixed",
   "events": [
-    {"title": "저녁 약속", "datetime": "${weekDates[1]}T15:00:00", "duration": 60, "type": "fixed", "category": "약속", "location": null}
+    {"title": "Dinner Appointment", "datetime": "${weekDates[1]}T15:00:00", "duration": 60, "type": "fixed", "category": "social", "location": null}
   ],
   "todos": [],
-  "intent": "기본값으로 일정 생성",
+  "intent": "Default schedule creation",
   "needs_clarification": false
 }
 
-반드시 유효한 JSON만 출력하세요.`;
+ALWAYS output valid JSON only.`;
 
   try {
     const response = await openai.chat.completions.create({
@@ -195,7 +195,7 @@ export async function parseUserInput(
       todos: [],
       intent: '파싱 실패',
       needs_clarification: true,
-      clarification_question: '죄송합니다. 다시 한번 말씀해 주시겠어요?'
+      clarification_question: 'Sorry, could you plan say that again?'
     };
   }
 }
@@ -204,8 +204,8 @@ export async function parseUserInput(
  * 이벤트 타입 분류
  */
 export function classifyEventType(text: string): 'fixed' | 'personal' | 'goal' {
-  const fixedKeywords = ['회의', '미팅', '약속', '병원', '진료', '면접', '발표'];
-  const goalKeywords = ['공부', '시험', '자격증', '프로젝트', '학습', '준비'];
+  const fixedKeywords = ['meeting', 'appointment', 'doctor', 'interview', 'presentation', 'clinic', 'reservation', 'call', 'summit'];
+  const goalKeywords = ['study', 'exam', 'certification', 'project', 'learning', 'prepare', 'test', 'homework'];
 
   const lowerText = text.toLowerCase();
 
@@ -220,28 +220,32 @@ export function classifyEventType(text: string): 'fixed' | 'personal' | 'goal' {
 export function parseTimeExpression(expression: string, baseDate: Date = new Date()): string {
   const result = new Date(baseDate);
 
-  // 날짜 파싱
-  if (expression.includes('내일')) {
+  // Date parsing
+  const lowerExpr = expression.toLowerCase();
+  if (lowerExpr.includes('tomorrow')) {
     result.setDate(result.getDate() + 1);
-  } else if (expression.includes('모레')) {
+  } else if (lowerExpr.includes('day after tomorrow')) {
     result.setDate(result.getDate() + 2);
-  } else if (expression.includes('다음주')) {
+  } else if (lowerExpr.includes('next week')) {
     result.setDate(result.getDate() + 7);
   }
 
-  // 시간 파싱
-  const timeMatch = expression.match(/(\d{1,2})\s*시/);
+  // Time parsing
+  const timeMatch = expression.match(/(\d{1,2})(?::(\d{2}))?\s*(am|pm)?/i);
   if (timeMatch) {
     let hour = parseInt(timeMatch[1], 10);
-    if (expression.includes('오후') && hour < 12) {
-      hour += 12;
-    }
-    result.setHours(hour, 0, 0, 0);
-  } else if (expression.includes('아침')) {
+    const minute = timeMatch[2] ? parseInt(timeMatch[2], 10) : 0;
+    const ampm = timeMatch[3]?.toLowerCase();
+
+    if (ampm === 'pm' && hour < 12) hour += 12;
+    if (ampm === 'am' && hour === 12) hour = 0;
+
+    result.setHours(hour, minute, 0, 0);
+  } else if (lowerExpr.includes('morning')) {
     result.setHours(9, 0, 0, 0);
-  } else if (expression.includes('점심')) {
+  } else if (lowerExpr.includes('noon') || lowerExpr.includes('lunch')) {
     result.setHours(12, 0, 0, 0);
-  } else if (expression.includes('저녁')) {
+  } else if (lowerExpr.includes('evening') || lowerExpr.includes('dinner') || lowerExpr.includes('night')) {
     result.setHours(18, 0, 0, 0);
   }
 

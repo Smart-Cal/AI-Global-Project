@@ -16,8 +16,8 @@ const openai = new OpenAI({
 
 /**
  * Main Orchestrator
- * 역할: 전체 대화 흐름 관리 및 하위 Agent 조율
- * 기능: 사용자 의도 파악, 적절한 Agent 호출, 응답 생성
+ * Role: Manage overall conversation flow and orchestrate sub-agents
+ * Function: Understand user intent, call appropriate agents, generate responses
  */
 export class MainOrchestrator {
   private context: OrchestratorContext;
@@ -112,7 +112,7 @@ export class MainOrchestrator {
         scheduled_date: new Date().toISOString().split('T')[0],
         scheduled_time: '09:00',
         duration: t.estimated_time || 30,
-        reason: '임시 배치'
+        reason: 'Temporary placement'
       }));
     }
 
@@ -141,9 +141,9 @@ export class MainOrchestrator {
 
     if (needsDecomposition) {
       return {
-        message: '나눠서 하고 싶은 거 있어? 예를 들어 "화장실, 방, 거실" 이렇게 알려줘!',
+        message: 'Is there anything specific you want to break down? For example, "Bathroom, Bedroom, Living room".',
         needs_user_input: true,
-        suggestions: ['세부 항목 입력 대기중']
+        suggestions: ['Waiting for details']
       };
     }
 
@@ -233,18 +233,20 @@ export class MainOrchestrator {
     const activeGoalsCount = this.context.goals.filter(g => !['completed', 'failed'].includes(g.status)).length;
     const incompleteTodosCount = this.context.todos.filter(t => !t.is_completed).length;
 
-    const systemPrompt = `당신은 PALM(Personal AI Life Manager)의 AI 비서입니다.
+    const systemPrompt = `You are the AI assistant for PALM (Personal AI Life Manager).
 
-사용자의 일정과 목표를 관리하고 최적화하는 것이 당신의 역할입니다.
+Your role is to manage and optimize the user's schedule and goals.
 
-현재 사용자 정보:
-- 오늘 일정: ${todayEventsCount}개
-- 진행 중인 목표: ${activeGoalsCount}개
-- 미완료 Todo: ${incompleteTodosCount}개
+Current User Info:
+- Today's Events: ${todayEventsCount}
+- Active Goals: ${activeGoalsCount}
+- Incomplete Todos: ${incompleteTodosCount}
 
-친근하고 도움이 되는 어조로 대화하세요.
-일정 등록, 목표 설정, Todo 관리에 대한 도움을 제공하세요.
-응답은 간결하게 2-3문장으로 하세요.`;
+IMPORTANT Rules:
+1. LANGUAGE: ALWAYS respond in English. No matter what language the user uses, your response MUST be in English.
+2. Tone: Friendly and helpful.
+3. Provide help with scheduling, goal setting, and Todo management.
+4. Keep responses concise (2-3 sentences).`;
 
     try {
       const response = await openai.chat.completions.create({
@@ -259,12 +261,12 @@ export class MainOrchestrator {
       });
 
       return {
-        message: response.choices[0]?.message?.content || '죄송합니다, 다시 말씀해주세요.'
+        message: response.choices[0]?.message?.content || 'Sorry, please say that again.'
       };
     } catch (error) {
       console.error('General conversation error:', error);
       return {
-        message: '일정이나 할 일을 추가하고 싶으시면 말씀해주세요!'
+        message: 'Please let me know if you want to add any schedules or tasks!'
       };
     }
   }
@@ -301,11 +303,11 @@ export class MainOrchestrator {
         if (!e.datetime) return e.title;
         const date = new Date(e.datetime);
         const dayName = weekdays[date.getDay()];
-        const timeStr = date.toLocaleTimeString('ko-KR', { hour: '2-digit', minute: '2-digit' });
-        return `${dayName}요일 ${timeStr} - ${e.title}`;
+        const timeStr = date.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' });
+        return `${dayName} ${timeStr} - ${e.title}`;
       }).join('\n');
 
-      return `아래와 같은 일정은 어떠세요? 📅\n\n${scheduleList}\n\n추가하고 싶은 일정을 선택해주세요!`;
+      return `How about these schedules? 📅\n\n${scheduleList}\n\nPlease select the ones you want to add!`;
     }
 
     // 간단한 템플릿 기반 응답
@@ -314,36 +316,36 @@ export class MainOrchestrator {
         let msg = '';
         if (events.length > 0) {
           const event = events[0];
-          const dateStr = event.datetime ? new Date(event.datetime).toLocaleDateString('ko-KR') : '오늘';
-          const timeStr = event.datetime ? new Date(event.datetime).toLocaleTimeString('ko-KR', { hour: '2-digit', minute: '2-digit' }) : '';
-          msg = `${dateStr} ${timeStr}에 "${event.title}" 일정은 어떠세요?`;
+          const dateStr = event.datetime ? new Date(event.datetime).toLocaleDateString('en-US') : 'Today';
+          const timeStr = event.datetime ? new Date(event.datetime).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' }) : '';
+          msg = `How about adding "${event.title}" on ${dateStr} at ${timeStr}?`;
         }
         if (todos.length > 0 && scheduled_items.length > 0) {
           const todoItem = scheduled_items[0];
           const scheduledTime = todoItem.scheduled_time || '09:00';
-          msg += ` "${todos[0].title}"는 ${scheduledTime}에 배치해드릴까요?`;
+          msg += ` Shall I schedule "${todos[0].title}" at ${scheduledTime}?`;
         }
-        return msg || '아래 일정을 확인해주세요!';
+        return msg || 'Please check the schedule below!';
 
       case 'todo_created':
-        if (todos.length === 0) return '할 일을 확인해주세요!';
+        if (todos.length === 0) return 'Please check the tasks!';
         const todoMsg = todos.map(t => `"${t.title}"`).join(', ');
-        return `${todoMsg}을(를) 추가할까요? 시간은 최적으로 배치해드릴게요.`;
+        return `Shall I add ${todoMsg}? I'll find the best time for them.`;
 
       case 'goal_planned':
-        if (events.length === 0 && todos.length === 0) return '목표 계획을 세워봤어요!';
-        let planMsg = '아래와 같이 계획해봤어요:\n';
+        if (events.length === 0 && todos.length === 0) return 'I planned your goal!';
+        let planMsg = 'Here is the plan:\n';
         if (events.length > 0) {
-          planMsg += `"${events[0].title}" 일정`;
+          planMsg += `"${events[0].title}" schedule`;
         }
         if (todos.length > 0) {
-          planMsg += ` + 관련 할 일 ${todos.length}개`;
+          planMsg += ` + ${todos.length} related tasks`;
         }
-        planMsg += '\n\n추가하시겠어요?';
+        planMsg += '\n\nWould you like to add these?';
         return planMsg;
 
       default:
-        return '확인해주세요!';
+        return 'Please confirm!';
     }
   }
 
@@ -372,18 +374,18 @@ export class MainOrchestrator {
       scheduled_date: new Date().toISOString().split('T')[0],
       scheduled_time: '09:00',
       duration: t.estimated_time || 30,
-      reason: '임시 배치'
+      reason: 'Temporary placement'
     }));
 
     const totalDuration = todosToCreate.reduce((sum, t) => sum + (t.estimated_time || 30), 0);
-    const message = `각각 30분씩 잡아뒀어! 총 ${totalDuration}분 예상되는데, 몰아서 할까 아니면 나눠서 할까?`;
+    const message = `I estimated 30 mins each! Total ${totalDuration} mins expected. Should we do it all at once or split it up?`;
 
     return {
       message,
       todos_to_create: todosToCreate,
       todos_to_schedule: scheduledItems,
       needs_user_input: true,
-      suggestions: ['몰아서', '나눠서', '시간 직접 지정']
+      suggestions: ['All at once', 'Split up', 'Set time manually']
     };
   }
 }

@@ -37,14 +37,14 @@ const ACTIVITY_SETTINGS: Record<string, {
   preferChronotype: 'focus' | 'energy' | 'wind_down';
   category: string;
 }> = {
-  '운동': { duration: 60, preferChronotype: 'energy', category: '운동' },
-  '공부': { duration: 120, preferChronotype: 'focus', category: '공부' },
-  '독서': { duration: 60, preferChronotype: 'wind_down', category: '개인' },
-  '명상': { duration: 30, preferChronotype: 'wind_down', category: '개인' },
-  '회의': { duration: 60, preferChronotype: 'focus', category: '업무' },
-  '미팅': { duration: 60, preferChronotype: 'focus', category: '업무' },
-  '작업': { duration: 120, preferChronotype: 'focus', category: '업무' },
-  default: { duration: 60, preferChronotype: 'focus', category: '기본' }
+  'workout': { duration: 60, preferChronotype: 'energy', category: 'workout' },
+  'study': { duration: 120, preferChronotype: 'focus', category: 'study' },
+  'reading': { duration: 60, preferChronotype: 'wind_down', category: 'personal' },
+  'meditation': { duration: 30, preferChronotype: 'wind_down', category: 'personal' },
+  'meeting': { duration: 60, preferChronotype: 'focus', category: 'work' },
+  'conference': { duration: 60, preferChronotype: 'focus', category: 'work' },
+  'work': { duration: 120, preferChronotype: 'focus', category: 'work' },
+  default: { duration: 60, preferChronotype: 'focus', category: 'general' }
 };
 
 // DBEvent를 LegacyEvent로 변환 (types/index.ts에서 가져온 함수 사용)
@@ -72,24 +72,24 @@ export async function decomposeGoalToTodos(
 
   // 활동 유형별 분해 전략
   const strategies: Record<string, { steps: string[]; durations: number[] }> = {
-    '공부': {
-      steps: ['개념 학습', '연습 문제 풀이', '복습', '모의 테스트'],
+    'study': {
+      steps: ['Concept Learning', 'Practice Problems', 'Review', 'Mock Test'],
       durations: [90, 60, 45, 60]
     },
-    '운동': {
-      steps: ['워밍업', '본 운동', '쿨다운', '스트레칭'],
+    'workout': {
+      steps: ['Warm-up', 'Main Workout', 'Cool-down', 'Stretching'],
       durations: [10, 40, 10, 15]
     },
-    '프로젝트': {
-      steps: ['기획 및 설계', '구현', '테스트', '리뷰 및 개선'],
+    'project': {
+      steps: ['Planning & Design', 'Implementation', 'Testing', 'Review & Refactor'],
       durations: [60, 120, 60, 30]
     },
-    '자격증': {
-      steps: ['이론 공부', '기출문제 풀이', '오답 노트 정리', '모의고사'],
+    'exam': {
+      steps: ['Theory Study', 'Past Papers', 'Review Errors', 'Mock Exam'],
       durations: [90, 60, 30, 60]
     },
     default: {
-      steps: ['준비', '실행', '정리', '검토'],
+      steps: ['Preparation', 'Execution', 'Cleanup', 'Review'],
       durations: [30, 60, 20, 15]
     }
   };
@@ -106,17 +106,17 @@ export async function decomposeGoalToTodos(
   // 일정에 따른 추천 빈도 계산
   let frequency = '';
   if (daysUntilTarget <= 7) {
-    frequency = '매일';
+    frequency = 'daily';
   } else if (daysUntilTarget <= 30) {
-    frequency = '주 3-4회';
+    frequency = '3-4 times a week';
   } else {
-    frequency = '주 2-3회';
+    frequency = '2-3 times a week';
   }
 
   return {
     todos,
-    strategy: `${goalTitle}을 위해 ${frequency} ${todos.length}단계로 진행하는 것을 추천합니다.`,
-    message: `"${goalTitle}" 목표를 ${todos.length}개의 세부 작업으로 분해했습니다. D-${daysUntilTarget}일 남았으므로 ${frequency} 수행을 권장합니다.`
+    strategy: `For ${goalTitle}, we recommend doing it ${frequency} in ${todos.length} steps.`,
+    message: `Decomposed "${goalTitle}" into ${todos.length} subtasks. With ${daysUntilTarget} days left, we recommend doing it ${frequency}.`
   };
 }
 
@@ -136,27 +136,27 @@ export function getOptimalTimeForActivity(
   switch (settings.preferChronotype) {
     case 'focus':
       targetHours = prefs.focus_hours;
-      reason = '집중력이 가장 높은 시간대';
+      reason = 'most focused time';
       break;
     case 'energy':
       targetHours = prefs.energy_peak;
-      reason = '에너지가 가장 높은 시간대';
+      reason = 'highest energy time';
       break;
     case 'wind_down':
       targetHours = prefs.wind_down;
-      reason = '하루를 마무리하기 좋은 시간대';
+      reason = 'best for winding down';
       break;
     default:
       targetHours = prefs.focus_hours;
-      reason = '권장 시간대';
+      reason = 'recommended time';
   }
 
-  // 가장 이른 시간 선택
+  // Pick earliest
   const hour = targetHours[0];
 
   return {
     hour,
-    reason: `${chronotype === 'morning' ? '아침형' : chronotype === 'evening' ? '저녁형' : '중립형'} 사용자의 ${reason}입니다.`
+    reason: `This is the ${reason} for a ${chronotype} person.`
   };
 }
 
@@ -206,8 +206,8 @@ export async function scheduleWithChronotype(
   return {
     suggestions,
     message: suggestions.length > 0
-      ? `${activityType}을 위해 ${suggestions.length}개의 최적 시간대를 찾았습니다. (${reason})`
-      : `${daysAhead}일 내에 적합한 시간대를 찾지 못했습니다.`
+      ? `Found ${suggestions.length} optimal slots for ${activityType}. (${reason})`
+      : `Could not find suitable slots within ${daysAhead} days.`
   };
 }
 
@@ -240,42 +240,42 @@ export async function generateBriefing(
   const suggestions: string[] = [];
 
   if (type === 'morning') {
-    // 아침 브리핑
+    // Morning Briefing
     const hour = today.getHours();
     if (hour < 10) {
-      greeting = '좋은 아침이에요! ☀️';
+      greeting = 'Good morning! ☀️';
     } else {
-      greeting = '안녕하세요!';
+      greeting = 'Hello!';
     }
 
     if (todayEvents.length === 0) {
-      schedule_summary = '오늘은 등록된 일정이 없어요.';
-      suggestions.push('오늘 목표를 세워보는 건 어떨까요?');
+      schedule_summary = 'No events scheduled for today.';
+      suggestions.push('How about setting some goals for today?');
     } else {
       const events = todayEvents.map(dbEventToEvent);
       const eventList = events
         .sort((a, b) => new Date(a.datetime).getTime() - new Date(b.datetime).getTime())
         .slice(0, 3)
         .map(e => {
-          const time = new Date(e.datetime).toLocaleTimeString('ko-KR', { hour: '2-digit', minute: '2-digit' });
+          const time = new Date(e.datetime).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: false });
           return `${time} ${e.title}`;
         })
         .join(', ');
-      schedule_summary = `오늘 ${todayEvents.length}개의 일정이 있어요: ${eventList}`;
+      schedule_summary = `You have ${todayEvents.length} events today: ${eventList}`;
     }
 
     if (incompleteTodos.length > 0) {
-      todo_summary = `완료하지 않은 할 일이 ${incompleteTodos.length}개 있어요.`;
-      suggestions.push('할 일을 확인하고 우선순위를 정해보세요.');
+      todo_summary = `You have ${incompleteTodos.length} pending tasks.`;
+      suggestions.push('Check your tasks and prioritize them.');
     } else {
-      todo_summary = '모든 할 일을 완료했어요! 👏';
+      todo_summary = 'All tasks completed! 👏';
     }
 
   } else {
-    // 저녁 브리핑
-    greeting = '오늘 하루도 수고하셨어요! 🌙';
+    // Evening Briefing
+    greeting = 'Good evening! 🌙';
 
-    // 오늘 완료된 일정 확인
+    // Check completed todos today
     const completedToday = todos.filter(t =>
       t.is_completed &&
       t.completed_at &&
@@ -283,23 +283,23 @@ export async function generateBriefing(
     );
 
     if (completedToday.length > 0) {
-      schedule_summary = `오늘 ${completedToday.length}개의 작업을 완료했어요.`;
+      schedule_summary = `You completed ${completedToday.length} tasks today.`;
     } else {
-      schedule_summary = '오늘 일정을 확인해주세요.';
+      schedule_summary = 'Check your schedule done for today.';
     }
 
-    // 내일 일정 미리보기
+    // Tomorrow preview
     if (tomorrowEvents.length > 0) {
       const events = tomorrowEvents.map(dbEventToEvent);
       const firstEvent = events.sort((a, b) =>
         new Date(a.datetime).getTime() - new Date(b.datetime).getTime()
       )[0];
-      const time = new Date(firstEvent.datetime).toLocaleTimeString('ko-KR', { hour: '2-digit', minute: '2-digit' });
-      todo_summary = `내일 첫 일정은 ${time}에 "${firstEvent.title}"이에요.`;
-      suggestions.push('내일 일정을 미리 확인하고 준비하세요.');
+      const time = new Date(firstEvent.datetime).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: false });
+      todo_summary = `Tomorrow's first event is "${firstEvent.title}" at ${time}.`;
+      suggestions.push('Check tomorrow\'s schedule and prepare.');
     } else {
-      todo_summary = '내일은 등록된 일정이 없어요.';
-      suggestions.push('내일 계획을 세워보는 건 어떨까요?');
+      todo_summary = 'No events scheduled for tomorrow.';
+      suggestions.push('How about planning for tomorrow?');
     }
   }
 
@@ -345,13 +345,13 @@ export async function generateWeeklyReview(
   const suggestions: string[] = [];
 
   if (completedEvents < 5) {
-    suggestions.push('더 많은 일정을 계획해보세요.');
+    suggestions.push('Plan more events.');
   }
   if (activeGoals === 0) {
-    suggestions.push('새로운 목표를 설정해보세요.');
+    suggestions.push('Set some new goals.');
   }
   if (completedTodos > 10) {
-    suggestions.push('훌륭해요! 이 페이스를 유지하세요.');
+    suggestions.push('Great job! Keep up the pace.');
   }
 
   return {
@@ -359,7 +359,7 @@ export async function generateWeeklyReview(
     completed_todos: completedTodos,
     active_goals: activeGoals,
     suggestions,
-    message: `지난 주 리뷰:\n- 완료한 일정: ${completedEvents}개\n- 완료한 할 일: ${completedTodos}개\n- 활성 목표: ${activeGoals}개`
+    message: `Weekly Review:\n- Completed Events: ${completedEvents}\n- Completed Tasks: ${completedTodos}\n- Active Goals: ${activeGoals}`
   };
 }
 
@@ -371,25 +371,25 @@ export const palmToolDefinitions = [
     type: 'function' as const,
     function: {
       name: 'decompose_goal',
-      description: '장기 목표를 세부 작업(Todo)으로 분해합니다. 목표 달성을 위한 단계별 계획을 생성합니다.',
+      description: 'Decompose a long-term goal into subtasks (Todos). Creates a step-by-step plan.',
       parameters: {
         type: 'object',
         properties: {
           goal_title: {
             type: 'string',
-            description: '목표 제목 (예: "토익 900점", "10kg 감량")'
+            description: 'Goal Title (e.g. "TOEIC 900", "Lose 10kg")'
           },
           goal_description: {
             type: 'string',
-            description: '목표에 대한 설명'
+            description: 'Description of the goal'
           },
           target_date: {
             type: 'string',
-            description: '목표 달성 예정일 (YYYY-MM-DD)'
+            description: 'Target Date (YYYY-MM-DD)'
           },
           activity_type: {
             type: 'string',
-            description: '활동 유형 (공부, 운동, 프로젝트, 자격증 등)'
+            description: 'Activity Type (study, workout, project, exam, etc.)'
           }
         },
         required: ['goal_title', 'target_date', 'activity_type']
@@ -400,22 +400,22 @@ export const palmToolDefinitions = [
     type: 'function' as const,
     function: {
       name: 'smart_schedule',
-      description: 'Chronotype(아침형/저녁형)을 고려하여 최적의 시간대에 활동을 스케줄링합니다.',
+      description: 'Schedule activities at optimal times considering user Chronotype.',
       parameters: {
         type: 'object',
         properties: {
           activity_type: {
             type: 'string',
-            description: '활동 유형 (운동, 공부, 독서, 회의 등)'
+            description: 'Activity Type (workout, study, reading, meeting, etc.)'
           },
           chronotype: {
             type: 'string',
             enum: ['morning', 'evening', 'neutral'],
-            description: '사용자의 생체리듬 유형'
+            description: 'User Chronotype'
           },
           days_ahead: {
             type: 'number',
-            description: '추천할 기간 (일 수, 기본값 7)'
+            description: 'Days ahead to recommend (default 7)'
           }
         },
         required: ['activity_type']
@@ -426,14 +426,14 @@ export const palmToolDefinitions = [
     type: 'function' as const,
     function: {
       name: 'get_briefing',
-      description: '아침 또는 저녁 브리핑을 생성합니다. 오늘의 일정, 할 일, 제안사항을 요약합니다.',
+      description: 'Generate morning or evening briefing. Summarizes today\'s schedule, tasks, and suggestions.',
       parameters: {
         type: 'object',
         properties: {
           type: {
             type: 'string',
             enum: ['morning', 'evening'],
-            description: '브리핑 유형'
+            description: 'Briefing Type'
           }
         },
         required: ['type']
@@ -444,7 +444,7 @@ export const palmToolDefinitions = [
     type: 'function' as const,
     function: {
       name: 'get_weekly_review',
-      description: '지난 주의 활동을 리뷰하고 요약합니다.',
+      description: 'Review and summarize last week\'s activities.',
       parameters: {
         type: 'object',
         properties: {},

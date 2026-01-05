@@ -24,7 +24,7 @@ import ChronotypeSettings from './components/ChronotypeSettings';
 import { MenuIcon, PlusIcon, SearchIcon } from './components/Icons';
 import type { CalendarView as CalendarViewType, CalendarEvent, Goal } from './types';
 
-// View types - groups 추가
+// View types - added groups
 type AppView = 'dashboard' | 'assistant' | 'calendar' | 'schedule' | 'goal' | 'groups' | 'group-detail';
 
 const ProtectedRoute: React.FC<{ children: React.ReactNode }> = ({ children }) => {
@@ -47,7 +47,7 @@ const ProtectedRoute: React.FC<{ children: React.ReactNode }> = ({ children }) =
 };
 
 const MainLayout: React.FC = () => {
-  // 기본 뷰를 dashboard로 변경
+  // Set default view to dashboard
   const [currentView, setCurrentView] = useState<AppView>('dashboard');
   const [calendarView, setCalendarView] = useState<CalendarViewType>('month');
   const [sidebarOpen, setSidebarOpen] = useState(false);
@@ -61,7 +61,7 @@ const MainLayout: React.FC = () => {
   const [searchModalOpen, setSearchModalOpen] = useState(false);
   const [chronotypeModalOpen, setChronotypeModalOpen] = useState(false);
 
-  // 키보드 단축키: Ctrl+K로 검색 모달 열기
+  // Keyboard shortcut: Ctrl+K to open search modal
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       if ((e.ctrlKey || e.metaKey) && e.key === 'k') {
@@ -205,7 +205,7 @@ const MainLayout: React.FC = () => {
     }
   };
 
-  // 사이드바용 뷰 매핑 (기존 SidebarView와 호환)
+  // View mapping for Sidebar (Compatible with existing SidebarView)
   const sidebarViewMap: Record<string, AppView> = {
     'dashboard': 'dashboard',
     'assistant': 'assistant',
@@ -220,7 +220,7 @@ const MainLayout: React.FC = () => {
     setCurrentView(mappedView);
   };
 
-  // 현재 뷰를 사이드바 뷰로 변환
+  // Convert current view to sidebar view
   const getSidebarView = () => {
     switch (currentView) {
       case 'dashboard': return 'dashboard';

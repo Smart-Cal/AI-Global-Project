@@ -353,7 +353,7 @@ export async function scheduleTodos(
     scheduled_items: scheduledItems,
     unscheduled_todos: unscheduledTodos,
     conflicts: unscheduledTodos.length > 0
-      ? [`${unscheduledTodos.length}개의 Todo를 배치할 시간이 부족합니다.`]
+      ? [`Not enough time to schedule ${unscheduledTodos.length} Todos.`]
       : [],
     suggestions: generateSuggestions(scheduledItems, unscheduledTodos, user_chronotype)
   };
@@ -370,13 +370,13 @@ function generateScheduleReason(
   const reasons: string[] = [];
 
   if (slot.chronotype_score >= 80) {
-    reasons.push(`${chronotype} 집중 시간대`);
+    reasons.push(`${chronotype} Focus Time`);
   } else if (slot.chronotype_score >= 50) {
-    reasons.push('적절한 시간대');
+    reasons.push('Good Time');
   }
 
   if (todo.priority === 'high') {
-    reasons.push('고 우선순위');
+    reasons.push('High Priority');
   }
 
   if (todo.deadline) {
@@ -384,11 +384,11 @@ function generateScheduleReason(
       (new Date(todo.deadline).getTime() - new Date(slot.date).getTime()) / (1000 * 60 * 60 * 24)
     );
     if (daysUntil <= 1) {
-      reasons.push('마감 임박');
+      reasons.push('Deadline Approaching');
     }
   }
 
-  return reasons.join(', ') || '빈 시간 활용';
+  return reasons.join(', ') || 'Free Time';
 }
 
 /**
@@ -443,18 +443,18 @@ function generateSuggestions(
   const suggestions: string[] = [];
 
   if (unscheduled.length > 0) {
-    suggestions.push('일부 작업을 배치하지 못했습니다. 기존 일정을 조정하거나 마감일을 연장해보세요.');
+    suggestions.push('Some tasks could not be scheduled. Please adjust existing events or extend deadlines.');
   }
 
   const chronotypeNames: Record<Chronotype, string> = {
-    early_morning: '이른 아침 (05-09시)',
-    morning: '오전 (09-12시)',
-    afternoon: '오후 (12-17시)',
-    evening: '저녁 (17-21시)',
-    night: '밤 (21-02시)'
+    early_morning: 'Early Morning (05-09)',
+    morning: 'Morning (09-12)',
+    afternoon: 'Afternoon (12-17)',
+    evening: 'Evening (17-21)',
+    night: 'Night (21-02)'
   };
 
-  suggestions.push(`당신의 집중 시간대는 ${chronotypeNames[chronotype]}입니다. 중요한 작업은 이 시간에 배치되었습니다.`);
+  suggestions.push(`Your focus time is ${chronotypeNames[chronotype]}. Important tasks are scheduled during this time.`);
 
   return suggestions;
 }
@@ -478,65 +478,67 @@ export async function scheduleWithAI(
     new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString().split('T')[0]
   );
 
-  const systemPrompt = `당신은 PALM의 Scheduler Agent입니다.
-사용자의 Chronotype과 우선순위를 고려하여 최적의 시간을 배치합니다.
+  const systemPrompt = `You are valid Scheduler Agent for PALM.
+Optimize schedule based on user's Chronotype and priorities.
 
-## 사용자 정보
+## User Info
 - Chronotype: ${user.chronotype}
-- 집중 시간대: ${JSON.stringify(CHRONOTYPE_HOURS[user.chronotype])}
+- Focus Hours: ${JSON.stringify(CHRONOTYPE_HOURS[user.chronotype])}
 
-## 현재 일정
+## Current Events
 ${JSON.stringify(events.map(e => ({
-  title: e.title,
-  date: e.event_date,
-  start: e.start_time,
-  end: e.end_time,
-  is_fixed: e.is_fixed,
-  priority: e.priority
-})), null, 2)}
+    title: e.title,
+    date: e.event_date,
+    start: e.start_time,
+    end: e.end_time,
+    is_fixed: e.is_fixed,
+    priority: e.priority
+  })), null, 2)}
 
-## 빈 시간 슬롯 (Chronotype 점수 포함)
+## Available Slots (with Chronotype score)
 ${JSON.stringify(availableSlots.slice(0, 20), null, 2)}
 
-## 배치할 Todo
+## Todos to Schedule
 ${JSON.stringify(todos.map(t => ({
-  id: t.id,
-  title: t.title,
-  deadline: t.deadline,
-  estimated_time: t.estimated_time,
-  is_divisible: t.is_divisible,
-  priority: t.priority
-})), null, 2)}
+    id: t.id,
+    title: t.title,
+    deadline: t.deadline,
+    estimated_time: t.estimated_time,
+    is_divisible: t.is_divisible,
+    priority: t.priority
+  })), null, 2)}
 
-## 스케줄링 규칙
-1. Chronotype 점수가 높은 시간대에 고 우선순위 작업 배치
-2. 마감일 임박한 작업 우선 처리
-3. 분할 불가능한 작업은 연속 시간 확보
-4. 유동(is_fixed=false) 일정은 이동 제안 가능
+## Scheduling Rules
+1. Place high priority tasks in high Chronotype score slots
+2. Prioritize tasks with approaching deadlines
+3. Keep indivisible tasks continuous
+4. Can suggest moving non-fixed (is_fixed=false) events
 
-다음 JSON 형식으로 응답:
+Respond in JSON format:
 {
   "scheduled_items": [
     {
       "todo_id": "uuid",
-      "title": "제목",
+      "title": "Title",
       "scheduled_date": "YYYY-MM-DD",
       "scheduled_time": "HH:MM",
       "duration": 60,
-      "reason": "배치 이유"
+      "reason": "Reason"
     }
   ],
-  "unscheduled_todos": ["배치 못한 todo_id"],
-  "conflicts": ["충돌 설명"],
-  "suggestions": ["제안 사항"]
-}`;
+  "unscheduled_todos": ["List of unscheduled todo_ids"],
+  "conflicts": ["Description of conflicts"],
+  "suggestions": ["Suggestions"]
+}
+
+IMPORTANT: Output valid JSON only. Respond in English.`;
 
   try {
     const response = await openai.chat.completions.create({
       model: 'gpt-4o-mini',
       messages: [
         { role: 'system', content: systemPrompt },
-        { role: 'user', content: '위 Todo들을 최적으로 스케줄링해주세요.' }
+        { role: 'user', content: 'Please optimize the schedule for the above Todos.' }
       ],
       response_format: { type: 'json_object' },
       temperature: 0.3

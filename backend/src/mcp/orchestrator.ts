@@ -132,7 +132,7 @@ export class MCPOrchestrator {
         return {
           success: true,
           data: {
-            message: `일정을 생성했습니다: "${args.title}"`,
+            message: `Event created: "${args.title}"`,
             event
           },
           toolName: name
@@ -165,8 +165,8 @@ export class MCPOrchestrator {
             hasConflicts: conflicts.length > 0,
             conflicts,
             message: conflicts.length > 0
-              ? `${conflicts.length}개의 일정과 충돌합니다: ${conflicts.map(c => c.summary).join(', ')}`
-              : '충돌하는 일정이 없습니다.'
+              ? `Conflicts with ${conflicts.length} events: ${conflicts.map(c => c.summary).join(', ')}`
+              : 'No conflicting events.'
           },
           toolName: name
         };
@@ -220,7 +220,7 @@ export class MCPOrchestrator {
         return {
           success: true,
           data: {
-            message: '일정을 수정했습니다.',
+            message: 'Event updated.',
             event
           },
           toolName: name
@@ -232,7 +232,7 @@ export class MCPOrchestrator {
         return {
           success: deleted,
           data: {
-            message: deleted ? '일정을 삭제했습니다.' : '일정 삭제에 실패했습니다.'
+            message: deleted ? 'Event deleted.' : 'Failed to delete event.'
           },
           toolName: name
         };
@@ -283,7 +283,7 @@ export class MCPOrchestrator {
         return {
           success: !!details,
           data: details,
-          error: details ? undefined : '장소 정보를 찾을 수 없습니다.',
+          error: details ? undefined : 'Place details not found.',
           toolName: name
         };
       }
@@ -297,7 +297,7 @@ export class MCPOrchestrator {
         return {
           success: !!distance,
           data: distance,
-          error: distance ? undefined : '거리를 계산할 수 없습니다.',
+          error: distance ? undefined : 'Cannot calculate distance.',
           toolName: name
         };
       }
@@ -310,7 +310,7 @@ export class MCPOrchestrator {
         return {
           success: !!midpoint,
           data: midpoint,
-          error: midpoint ? undefined : '중간 지점을 찾을 수 없습니다.',
+          error: midpoint ? undefined : 'Cannot find midpoint.',
           toolName: name
         };
       }
@@ -370,7 +370,7 @@ export class MCPOrchestrator {
         return {
           success: !!comparison,
           data: comparison,
-          error: comparison ? undefined : '상품을 찾을 수 없습니다.',
+          error: comparison ? undefined : 'Product not found.',
           toolName: name
         };
       }
@@ -489,8 +489,8 @@ export class MCPOrchestrator {
           },
           recommendedPlaces,
           suggestion: bestSlots.length > 0
-            ? `${groupName} 모임은 ${bestSlots[0].date} ${bestSlots[0].startTime}에 가능합니다. ${recommendedPlaces.length > 0 ? `장소는 ${recommendedPlaces[0].name} 어떠세요?` : ''}`
-            : `${availableSlots.length}개의 가능한 시간대를 찾았습니다.`
+            ? `${groupName} meeting is possible on ${bestSlots[0].date} at ${bestSlots[0].startTime}. ${recommendedPlaces.length > 0 ? `How about ${recommendedPlaces[0].name}?` : ''}`
+            : `Found ${availableSlots.length} available slots.`
         },
         toolName: 'plan_group_meeting'
       };
