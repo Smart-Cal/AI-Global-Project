@@ -324,21 +324,32 @@ export class MCPOrchestrator {
           limit: args.limit || 6
         });
 
-        // Transform to frontend-friendly format with photos and category
-        const transformedRestaurants = restaurants.map((r: PlaceSearchResult) => ({
-          id: r.placeId,
+        console.log('[MCPOrchestrator] Restaurant results:', restaurants.map(r => ({
           name: r.name,
-          address: r.address,
-          rating: r.rating,
-          reviewCount: r.userRatingsTotal,
-          priceLevel: r.priceLevel !== undefined ? '$'.repeat(r.priceLevel + 1) : undefined,
-          openNow: r.openNow,
-          types: r.types,
-          category: this.formatPlaceTypes(r.types),
-          photos: r.photoReference ? [
-            `https://maps.googleapis.com/maps/api/place/photo?maxwidth=400&photo_reference=${r.photoReference}&key=${process.env.GOOGLE_MAPS_API_KEY}`
-          ] : undefined
-        }));
+          hasPhotoRef: !!r.photoReference,
+          photoRef: r.photoReference?.substring(0, 30)
+        })));
+
+        // Transform to frontend-friendly format with photos and category
+        const apiKey = process.env.GOOGLE_MAPS_API_KEY;
+        const transformedRestaurants = restaurants.map((r: PlaceSearchResult) => {
+          const photoUrl = r.photoReference && apiKey
+            ? `https://maps.googleapis.com/maps/api/place/photo?maxwidth=400&photo_reference=${r.photoReference}&key=${apiKey}`
+            : null;
+
+          return {
+            id: r.placeId,
+            name: r.name,
+            address: r.address,
+            rating: r.rating,
+            reviewCount: r.userRatingsTotal,
+            priceLevel: r.priceLevel !== undefined ? '$'.repeat(r.priceLevel + 1) : undefined,
+            openNow: r.openNow,
+            types: r.types,
+            category: this.formatPlaceTypes(r.types),
+            photos: photoUrl ? [photoUrl] : null
+          };
+        });
 
         return {
           success: true,

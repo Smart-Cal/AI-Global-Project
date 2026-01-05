@@ -985,7 +985,7 @@ ${availableSlots.filter(s => s.type === 'negotiable').slice(0, 3).map(s =>
 5. Keep responses concise and clear.`;
 
     const completion = await openai.chat.completions.create({
-      model: 'gpt-4o-mini',
+      model: 'gpt-4o',
       messages: [
         { role: 'system', content: systemPrompt },
         { role: 'user', content: message }

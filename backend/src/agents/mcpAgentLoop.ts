@@ -278,7 +278,7 @@ IMPORTANT:
 
     try {
       const response = await openai.chat.completions.create({
-        model: 'gpt-4o-mini',
+        model: 'gpt-4o',
         messages: [
           { role: 'system', content: systemPrompt },
           { role: 'user', content: userMessage }
@@ -843,7 +843,7 @@ IMPORTANT:
       iteration++;
 
       const response = await openai.chat.completions.create({
-        model: 'gpt-4o-mini',
+        model: 'gpt-4o',
         messages: currentMessages,
         tools: this.allToolDefinitions,
         tool_choice: 'auto',

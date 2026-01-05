@@ -420,21 +420,26 @@ export class GoogleMapsMCP {
     }
   }
 
-  private mapToPlaceSearchResult = (place: any): PlaceSearchResult => ({
-    placeId: place.place_id,
-    name: place.name,
-    address: place.vicinity || place.formatted_address,
-    location: {
-      lat: place.geometry?.location?.lat,
-      lng: place.geometry?.location?.lng
-    },
-    rating: place.rating,
-    userRatingsTotal: place.user_ratings_total,
-    priceLevel: place.price_level,
-    types: place.types || [],
-    openNow: place.opening_hours?.open_now,
-    photoReference: place.photos?.[0]?.photo_reference
-  });
+  private mapToPlaceSearchResult = (place: any): PlaceSearchResult => {
+    const photoRef = place.photos?.[0]?.photo_reference;
+    console.log(`[GoogleMapsMCP] Place "${place.name}" - has photos: ${!!place.photos}, photo_reference: ${photoRef ? 'yes' : 'no'}`);
+
+    return {
+      placeId: place.place_id,
+      name: place.name,
+      address: place.vicinity || place.formatted_address,
+      location: {
+        lat: place.geometry?.location?.lat,
+        lng: place.geometry?.location?.lng
+      },
+      rating: place.rating,
+      userRatingsTotal: place.user_ratings_total,
+      priceLevel: place.price_level,
+      types: place.types || [],
+      openNow: place.opening_hours?.open_now,
+      photoReference: photoRef
+    };
+  };
 
   /**
    * 맛집 추천 (간편 메서드)

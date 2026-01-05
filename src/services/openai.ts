@@ -73,7 +73,7 @@ IMPORTANT: You must ALWAYS generate your response in English, even if the user s
 
   try {
     const response = await openai.chat.completions.create({
-      model: 'gpt-4o-mini',
+      model: 'gpt-4o',
       messages,
       temperature: 0.7,
       max_tokens: 1000,

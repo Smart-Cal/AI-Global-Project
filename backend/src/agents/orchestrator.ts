@@ -250,7 +250,7 @@ IMPORTANT Rules:
 
     try {
       const response = await openai.chat.completions.create({
-        model: 'gpt-4o-mini',
+        model: 'gpt-4o',
         messages: [
           { role: 'system', content: systemPrompt },
           ...this.context.conversation_history.slice(-10) as any,

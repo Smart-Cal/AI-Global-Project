@@ -64,7 +64,7 @@ IMPORTANT: Output valid JSON only. Respond in English.`;
 
   try {
     const response = await openai.chat.completions.create({
-      model: 'gpt-4o-mini',
+      model: 'gpt-4o',
       messages: [
         { role: 'system', content: systemPrompt },
         { role: 'user', content: 'Please create a detailed plan to achieve the goal above.' }
@@ -127,7 +127,7 @@ IMPORTANT: Output valid JSON only. Respond in English.`;
 
   try {
     const response = await openai.chat.completions.create({
-      model: 'gpt-4o-mini',
+      model: 'gpt-4o',
       messages: [
         { role: 'system', content: systemPrompt }
       ],
