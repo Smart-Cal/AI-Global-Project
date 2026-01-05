@@ -2023,14 +2023,14 @@ body {
 }
 
 .modal-footer .btn-danger {
-  background: #DC2626;
-  color: white;
-  border: none;
+  background: #DC2626 !important;
+  color: white !important;
+  border: none !important;
   box-shadow: 0 2px 4px rgba(220, 38, 38, 0.3);
 }
 
 .modal-footer .btn-danger:hover {
-  background: #B91C1C;
+  background: #B91C1C !important;
   box-shadow: 0 3px 6px rgba(220, 38, 38, 0.4);
 }
 
@@ -2370,13 +2370,13 @@ textarea.form-input {
 }
 
 .btn-danger {
-  background: var(--error);
-  color: white;
+  background: #DC2626 !important;
+  color: white !important;
   box-shadow: 0 2px 4px rgba(220, 38, 38, 0.3);
 }
 
 .btn-danger:hover {
-  background: #c53030;
+  background: #B91C1C !important;
   box-shadow: 0 3px 6px rgba(220, 38, 38, 0.4);
 }
 
@@ -3988,9 +3988,9 @@ textarea.form-input {
 .schedule-todo-delete {
   width: 24px;
   height: 24px;
-  border: none;
-  background: var(--danger);
-  color: white;
+  border: none !important;
+  background: #DC2626 !important;
+  color: white !important;
   font-size: 18px;
   cursor: pointer;
   border-radius: 4px;
@@ -4004,8 +4004,8 @@ textarea.form-input {
 }
 
 .schedule-todo-delete:hover {
-  background: #B91C1C;
-  color: white;
+  background: #B91C1C !important;
+  color: white !important;
   box-shadow: 0 2px 4px rgba(220, 38, 38, 0.4);
 }
 
