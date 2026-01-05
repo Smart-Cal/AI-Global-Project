@@ -589,10 +589,25 @@ export async function createMessage(message: {
   role: 'user' | 'assistant' | 'system';
   content: string;
   pending_events?: any;
+  mcp_data?: any;
 }): Promise<Message> {
+  // Store mcp_data inside pending_events JSON field (to avoid schema changes)
+  const messageData: any = {
+    conversation_id: message.conversation_id,
+    role: message.role,
+    content: message.content,
+  };
+
+  if (message.pending_events || message.mcp_data) {
+    messageData.pending_events = {
+      ...(message.pending_events || {}),
+      mcp_data: message.mcp_data
+    };
+  }
+
   const { data, error } = await supabase
     .from('messages')
-    .insert(message)
+    .insert(messageData)
     .select()
     .single();
 

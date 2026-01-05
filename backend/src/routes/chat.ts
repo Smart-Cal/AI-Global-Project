@@ -137,17 +137,20 @@ router.post('/', authenticate, async (req: AuthRequest, res: Response) => {
       console.log('[Chat API] Pending goals:', JSON.stringify(pendingGoals, null, 2));
     }
 
-    // Save AI response message (including pending items)
+    // Save AI response message (including pending items and MCP data)
     const pendingData: any = {};
     if (pendingEvents.length > 0) pendingData.pending_events = pendingEvents;
     if (pendingTodos.length > 0) pendingData.pending_todos = pendingTodos;
     if (pendingGoals.length > 0) pendingData.pending_goals = pendingGoals;
 
+    const mcpData = (response as any).mcp_data;
+
     const assistantMessage = await createMessage({
       conversation_id: conversation.id,
       role: 'assistant',
       content: response.message,
-      pending_events: Object.keys(pendingData).length > 0 ? pendingData : null
+      pending_events: Object.keys(pendingData).length > 0 ? pendingData : null,
+      mcp_data: mcpData || null
     });
 
     res.json({
@@ -437,7 +440,16 @@ router.get('/conversations/:id', authenticate, async (req: AuthRequest, res: Res
       return;
     }
 
-    const messages = await getMessagesByConversation(id);
+    const rawMessages = await getMessagesByConversation(id);
+
+    // Extract mcp_data from pending_events and add it as a separate field
+    const messages = rawMessages.map((msg: any) => {
+      const mcpData = msg.pending_events?.mcp_data;
+      return {
+        ...msg,
+        mcp_data: mcpData || null
+      };
+    });
 
     res.json({
       conversation,

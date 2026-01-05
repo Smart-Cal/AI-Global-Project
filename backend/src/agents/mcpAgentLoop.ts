@@ -554,19 +554,10 @@ IMPORTANT:
     }
 
     const products = result.data.products;
+    const query = info.searchQuery || info.title || 'products';
 
-    let message = `Here are the search results! 🛒\n\n`;
-
-    products.slice(0, 5).forEach((p: any, idx: number) => {
-      message += `${idx + 1}. **${p.title}**\n`;
-      message += `   💰 ${p.price.toLocaleString()} KRW`;
-      if (p.discountRate) message += ` (${p.discountRate}% off)`;
-      message += '\n';
-      if (p.rating) message += `   ⭐ ${p.rating}`;
-      if (p.reviewCount) message += ` (${p.reviewCount} reviews)`;
-      message += '\n';
-      message += `   🏪 ${p.mall}\n\n`;
-    });
+    // Simple, clean response - details are shown in cards below
+    const message = `Here are the search results for "${query}"! 🛒`;
 
     return {
       message,
@@ -598,17 +589,10 @@ IMPORTANT:
     }
 
     const gifts = result.data.gifts;
+    const occasion = info.occasion || 'the occasion';
 
-    let message = `Here are some gift recommendations! 🎁\n\n`;
-
-    gifts.slice(0, 5).forEach((g: any, idx: number) => {
-      message += `${idx + 1}. **${g.title}**\n`;
-      message += `   💰 ${g.price.toLocaleString()} KRW\n`;
-      if (g.rating) message += `   ⭐ ${g.rating}\n`;
-      message += '\n';
-    });
-
-    message += 'Do you like any of these gifts?';
+    // Simple, clean response - details are shown in cards below
+    const message = `Here are some gift ideas for ${occasion}! 🎁`;
 
     return {
       message,

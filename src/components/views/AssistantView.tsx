@@ -147,13 +147,14 @@ const AssistantView: React.FC = () => {
     try {
       const response = await getConversation(id);
       setCurrentConversationId(id);
-      setMessages(response.messages.map((m: Message) => ({
+      setMessages(response.messages.map((m: any) => ({
         id: m.id,
         role: m.role as 'user' | 'assistant',
         content: m.content,
         pending_events: m.pending_events,
         pending_todos: m.pending_todos,
         pending_goals: m.pending_goals,
+        mcp_data: m.mcp_data, // Include saved MCP data (products, places, etc.)
         created_at: m.created_at,
       })));
       resetConfirmationState();
