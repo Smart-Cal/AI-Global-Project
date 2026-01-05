@@ -18,10 +18,8 @@ import { AuthRequest, authenticate } from '../middleware/auth.js';
 import { Event, Todo, Goal, MorningBriefing, EveningBriefing } from '../types/index.js';
 
 const router = Router();
-
-const openai = new OpenAI({
-  apiKey: process.env.OPENAI_API_KEY
-});
+// OpenAI removed to avoid sentence generation as requested
+// const openai = new OpenAI({ ... });
 
 // ==============================================
 // Morning Briefing
@@ -29,8 +27,8 @@ const openai = new OpenAI({
 
 /**
  * GET /api/briefing/morning
- * 아침 브리핑: 오늘 일정, 날씨, 미완료 할일, AI 메시지
- * Query params: lat, lon (optional) - 좌표 기반 날씨 조회
+ * Morning Briefing: Today's schedule, weather, incomplete todos
+ * Query params: lat, lon (optional) - Coordinates based weather
  */
 router.get('/morning', authenticate, async (req: AuthRequest, res: Response) => {
   try {
@@ -44,7 +42,7 @@ router.get('/morning', authenticate, async (req: AuthRequest, res: Response) => 
 
     const today = new Date().toISOString().split('T')[0];
 
-    // 좌표가 있으면 좌표 기반, 없으면 도시명 기반
+    // Use coords if provided, otherwise User location
     const lat = parseFloat(req.query.lat as string);
     const lon = parseFloat(req.query.lon as string);
     const hasCoords = !isNaN(lat) && !isNaN(lon);
@@ -62,30 +60,30 @@ router.get('/morning', authenticate, async (req: AuthRequest, res: Response) => 
       weather = await getCurrentWeather(city);
     }
 
-    // 병렬로 데이터 조회
+    // Fetch data in parallel
     const [events, todos] = await Promise.all([
       getEventsByUser(userId, today, today),
       getTodosByUser(userId)
     ]);
 
-    // 오늘 일정만 필터링
+    // Filter today's events
     const todayEvents = events.filter(e => e.event_date === today);
 
-    // 미완료 Todo (마감이 오늘이거나 지난 것)
+    // Incomplete Todos (Deadline is today or past, or no deadline)
     const incompleteTodos = todos.filter(t => {
       if (t.is_completed) return false;
-      if (!t.deadline) return true; // 마감 없으면 포함
+      if (!t.deadline) return true; // Include if no deadline
       const deadline = t.deadline.split('T')[0];
       return deadline <= today;
     });
 
-    // AI 브리핑 메시지 생성
-    const message = await generateMorningMessage(
-      user.name || user.nickname || '사용자',
+    // Generate Briefing Message (Static, Data-driven)
+    const message = generateMorningMessage(
+      user.name || user.nickname || 'User',
       todayEvents,
       incompleteTodos,
       weather,
-      user.chronotype
+      user.chronotype || 'neutral'
     );
 
     const briefing: MorningBriefing = {
@@ -110,8 +108,8 @@ router.get('/morning', authenticate, async (req: AuthRequest, res: Response) => 
 
 /**
  * GET /api/briefing/evening
- * 저녁 브리핑: 오늘 완료된 일정/할일, 달성률, 내일 첫 일정
- * Query params: lat, lon (optional) - 좌표 기반 날씨 조회
+ * Evening Briefing: Completed tasks, rate, tomorrow's first event
+ * Query params: lat, lon (optional)
  */
 router.get('/evening', authenticate, async (req: AuthRequest, res: Response) => {
   try {
@@ -129,7 +127,7 @@ router.get('/evening', authenticate, async (req: AuthRequest, res: Response) => 
     tomorrow.setDate(tomorrow.getDate() + 1);
     const tomorrowStr = tomorrow.toISOString().split('T')[0];
 
-    // 좌표가 있으면 좌표 기반, 없으면 도시명 기반
+    // Use coords if provided, otherwise User location
     const lat = parseFloat(req.query.lat as string);
     const lon = parseFloat(req.query.lon as string);
     const hasCoords = !isNaN(lat) && !isNaN(lon);
@@ -147,24 +145,24 @@ router.get('/evening', authenticate, async (req: AuthRequest, res: Response) => 
       tomorrowWeather = await getCurrentWeather(city);
     }
 
-    // 데이터 조회
+    // Fetch Data
     const [todayEvents, tomorrowEvents, todos] = await Promise.all([
       getEventsByUser(userId, todayStr, todayStr),
       getEventsByUser(userId, tomorrowStr, tomorrowStr),
       getTodosByUser(userId)
     ]);
 
-    // 오늘 완료된 일정
+    // Completed Events
     const completedEvents = todayEvents.filter(e => e.is_completed);
 
-    // 오늘 완료된 Todo
+    // Completed Todos
     const completedTodos = todos.filter(t => {
       if (!t.is_completed || !t.completed_at) return false;
       const completedDate = t.completed_at.split('T')[0];
       return completedDate === todayStr;
     });
 
-    // 달성률 계산
+    // Calculate Completion Rate
     const totalTodayTasks = todayEvents.length + todos.filter(t => {
       if (!t.deadline) return false;
       return t.deadline.split('T')[0] === todayStr;
@@ -174,14 +172,14 @@ router.get('/evening', authenticate, async (req: AuthRequest, res: Response) => 
       ? Math.round((completedTasks / totalTodayTasks) * 100)
       : 100;
 
-    // 내일 첫 일정
+    // Tomorrow's First Event
     const tomorrowFirstEvent = tomorrowEvents
       .filter(e => e.start_time)
       .sort((a, b) => (a.start_time || '').localeCompare(b.start_time || ''))[0];
 
-    // AI 브리핑 메시지 생성
-    const message = await generateEveningMessage(
-      user.name || user.nickname || '사용자',
+    // Generate Briefing Message (Static, Data-driven)
+    const message = generateEveningMessage(
+      user.name || user.nickname || 'User',
       completedEvents,
       completedTodos,
       completionRate,
@@ -216,7 +214,7 @@ router.get('/evening', authenticate, async (req: AuthRequest, res: Response) => 
 
 /**
  * GET /api/briefing/weather
- * 현재 날씨 조회
+ * Get Current Weather
  */
 router.get('/weather', authenticate, async (req: AuthRequest, res: Response) => {
   try {
@@ -246,7 +244,7 @@ router.get('/weather', authenticate, async (req: AuthRequest, res: Response) => 
 
 /**
  * GET /api/briefing/weather/forecast
- * 날씨 예보 조회 (5일)
+ * Get Weather Forecast (5 days)
  */
 router.get('/weather/forecast', authenticate, async (req: AuthRequest, res: Response) => {
   try {
@@ -269,7 +267,7 @@ router.get('/weather/forecast', authenticate, async (req: AuthRequest, res: Resp
 
 /**
  * GET /api/briefing/weather/coords
- * 좌표 기반 날씨 조회
+ * Get Weather by Coordinates
  */
 router.get('/weather/coords', authenticate, async (req: AuthRequest, res: Response) => {
   try {
@@ -303,7 +301,7 @@ router.get('/weather/coords', authenticate, async (req: AuthRequest, res: Respon
 
 /**
  * GET /api/briefing/geocode/reverse
- * 좌표로 도시명 조회 (역지오코딩)
+ * Reverse Geocoding (Coords -> City)
  */
 router.get('/geocode/reverse', authenticate, async (req: AuthRequest, res: Response) => {
   try {
@@ -335,7 +333,7 @@ router.get('/geocode/reverse', authenticate, async (req: AuthRequest, res: Respo
 
 /**
  * GET /api/briefing/weekly
- * 주간 리뷰: 이번 주 달성률, 완료된 목표, 다음 주 예정
+ * Weekly Review: Completion rate, goals, next week preview
  */
 router.get('/weekly', authenticate, async (req: AuthRequest, res: Response) => {
   try {
@@ -349,7 +347,7 @@ router.get('/weekly', authenticate, async (req: AuthRequest, res: Response) => {
 
     const today = new Date();
     const weekStart = new Date(today);
-    weekStart.setDate(today.getDate() - today.getDay()); // 이번 주 일요일
+    weekStart.setDate(today.getDate() - today.getDay()); // Sunday of this week
     const weekEnd = new Date(weekStart);
     weekEnd.setDate(weekStart.getDate() + 6);
 
@@ -363,7 +361,7 @@ router.get('/weekly', authenticate, async (req: AuthRequest, res: Response) => {
     const nextWeekStartStr = nextWeekStart.toISOString().split('T')[0];
     const nextWeekEndStr = nextWeekEnd.toISOString().split('T')[0];
 
-    // 데이터 조회
+    // Fetch Data
     const [thisWeekEvents, nextWeekEvents, todos, goals] = await Promise.all([
       getEventsByUser(userId, weekStartStr, weekEndStr),
       getEventsByUser(userId, nextWeekStartStr, nextWeekEndStr),
@@ -371,31 +369,31 @@ router.get('/weekly', authenticate, async (req: AuthRequest, res: Response) => {
       getGoalsByUser(userId)
     ]);
 
-    // 이번 주 완료된 일정
+    // Completed Events
     const completedEvents = thisWeekEvents.filter(e => e.is_completed);
 
-    // 이번 주 완료된 Todo
+    // Completed Todos
     const completedTodos = todos.filter(t => {
       if (!t.is_completed || !t.completed_at) return false;
       const completedDate = t.completed_at.split('T')[0];
       return completedDate >= weekStartStr && completedDate <= weekEndStr;
     });
 
-    // 이번 주 완료된 Goal
+    // Completed Goals
     const completedGoals = goals.filter(g => g.status === 'completed');
 
-    // 진행 중인 Goal
+    // Active Goals
     const activeGoals = goals.filter(g => ['planning', 'scheduled', 'in_progress'].includes(g.status));
 
-    // 주간 달성률
+    // Completion Rate
     const totalTasks = thisWeekEvents.length;
     const completionRate = totalTasks > 0
       ? Math.round((completedEvents.length / totalTasks) * 100)
       : 100;
 
-    // AI 주간 리뷰 메시지
-    const message = await generateWeeklyMessage(
-      user.name || user.nickname || '사용자',
+    // Generate Weekly Message (Static, Data-driven)
+    const message = generateWeeklyMessage(
+      user.name || user.nickname || 'User',
       completedEvents.length,
       completedTodos.length,
       completedGoals.length,
@@ -437,78 +435,40 @@ router.get('/weekly', authenticate, async (req: AuthRequest, res: Response) => {
 // AI Message Generators
 // ==============================================
 
-async function generateMorningMessage(
+// ==============================================
+// Data-Driven Message Generators (No AI Sentences)
+// ==============================================
+
+function generateMorningMessage(
   userName: string,
   events: Event[],
   todos: Todo[],
   weather: WeatherData | null,
   chronotype: string
-): Promise<string> {
-  const hour = new Date().getHours();
-  let greeting = '좋은 아침이에요';
-  if (hour < 6) greeting = '일찍 일어나셨네요';
-  else if (hour >= 12) greeting = '좋은 오후예요';
-
-  const prompt = `당신은 친근한 AI 비서입니다. 아래 정보를 바탕으로 따뜻하고 격려하는 아침 브리핑 메시지를 2-3문장으로 작성하세요.
-
-사용자 이름: ${userName}
-사용자 크로노타입: ${chronotype}
-오늘 일정 수: ${events.length}개
-미완료 할일 수: ${todos.length}개
-날씨: ${weather ? `${weather.temperature}°C, ${weather.condition}` : '정보 없음'}
-${weather?.recommendation ? `옷차림 추천: ${weather.recommendation}` : ''}
-
-시간대에 맞는 인사와 함께 오늘 하루를 응원하는 메시지를 작성하세요.
-예시: "${greeting}, ${userName}님! 오늘은 3개의 일정이 있네요. 화이팅!"`;
-
-  try {
-    const response = await openai.chat.completions.create({
-      model: 'gpt-4o-mini',
-      messages: [{ role: 'user', content: prompt }],
-      temperature: 0.7,
-      max_tokens: 150
-    });
-
-    return response.choices[0]?.message?.content || `${greeting}, ${userName}님! 오늘도 좋은 하루 되세요.`;
-  } catch (error) {
-    console.error('Morning message generation error:', error);
-    return `${greeting}, ${userName}님! 오늘 일정 ${events.length}개, 할일 ${todos.length}개가 있어요. 화이팅!`;
+): string {
+  let weatherInfo = 'No weather data.';
+  if (weather) {
+    weatherInfo = `${weather.temperature ? `${weather.temperature}°C` : ''} ${weather.condition || ''}. ${weather.recommendation || ''}`;
   }
+
+  return `Today: ${events.length} Events, ${todos.length} Tasks.\nWeather: ${weatherInfo}`;
 }
 
-async function generateEveningMessage(
+function generateEveningMessage(
   userName: string,
   completedEvents: Event[],
   completedTodos: Todo[],
   completionRate: number,
   tomorrowFirstEvent?: Event
-): Promise<string> {
-  const prompt = `당신은 친근한 AI 비서입니다. 아래 정보를 바탕으로 하루를 마무리하는 저녁 브리핑 메시지를 2-3문장으로 작성하세요.
+): string {
+  const tomorrowPreview = tomorrowFirstEvent
+    ? `Tomorrow starts at ${tomorrowFirstEvent.start_time} with "${tomorrowFirstEvent.title}".`
+    : 'No events scheduled for tomorrow morning.';
 
-사용자 이름: ${userName}
-오늘 완료한 일정: ${completedEvents.length}개
-오늘 완료한 할일: ${completedTodos.length}개
-달성률: ${completionRate}%
-내일 첫 일정: ${tomorrowFirstEvent ? `${tomorrowFirstEvent.start_time} ${tomorrowFirstEvent.title}` : '없음'}
-
-오늘 하루를 격려하고, 내일을 준비할 수 있도록 따뜻한 메시지를 작성하세요.`;
-
-  try {
-    const response = await openai.chat.completions.create({
-      model: 'gpt-4o-mini',
-      messages: [{ role: 'user', content: prompt }],
-      temperature: 0.7,
-      max_tokens: 150
-    });
-
-    return response.choices[0]?.message?.content || `오늘도 수고하셨어요, ${userName}님! 푹 쉬세요.`;
-  } catch (error) {
-    console.error('Evening message generation error:', error);
-    return `오늘 ${completionRate}% 달성하셨네요! 수고하셨어요, ${userName}님.`;
-  }
+  return `Completed: ${completedEvents.length} Events, ${completedTodos.length} Tasks.\nDaily Completion Rate: ${completionRate}%\n${tomorrowPreview}`;
 }
 
-async function generateWeeklyMessage(
+function generateWeeklyMessage(
   userName: string,
   completedEvents: number,
   completedTodos: number,
@@ -516,32 +476,8 @@ async function generateWeeklyMessage(
   activeGoals: number,
   completionRate: number,
   nextWeekEventCount: number
-): Promise<string> {
-  const prompt = `당신은 친근한 AI 비서입니다. 아래 정보를 바탕으로 주간 리뷰 메시지를 2-3문장으로 작성하세요.
-
-사용자 이름: ${userName}
-이번 주 완료 일정: ${completedEvents}개
-이번 주 완료 할일: ${completedTodos}개
-완료한 목표: ${completedGoals}개
-진행 중인 목표: ${activeGoals}개
-주간 달성률: ${completionRate}%
-다음 주 예정된 일정: ${nextWeekEventCount}개
-
-한 주를 정리하고 다음 주를 준비할 수 있도록 격려하는 메시지를 작성하세요.`;
-
-  try {
-    const response = await openai.chat.completions.create({
-      model: 'gpt-4o-mini',
-      messages: [{ role: 'user', content: prompt }],
-      temperature: 0.7,
-      max_tokens: 150
-    });
-
-    return response.choices[0]?.message?.content || `이번 주도 수고하셨어요, ${userName}님!`;
-  } catch (error) {
-    console.error('Weekly message generation error:', error);
-    return `이번 주 달성률 ${completionRate}%! 다음 주도 화이팅, ${userName}님!`;
-  }
+): string {
+  return `Weekly Summary: ${completedEvents} Events / ${completedTodos} Tasks done. (Rate: ${completionRate}%)\nGoals: ${completedGoals} Completed, ${activeGoals} Active.\nNext Week: ${nextWeekEventCount} events scheduled.`;
 }
 
 export default router;

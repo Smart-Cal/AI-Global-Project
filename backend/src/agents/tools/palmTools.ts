@@ -1,4 +1,5 @@
-import { getEventsByUser, getGoalsByUser, getTodosByUser, createTodo, createEvent } from '../../services/database.js';
+import { getEventsByUser, getGoalsByUser, getTodosByUser, createTodo, createEvent, getUserById } from '../../services/database.js';
+import { getCurrentWeather } from '../../services/weather.js';
 import { DBEvent, LegacyEvent, dbEventToLegacy, Goal, Todo, LegacyChronotype } from '../../types/index.js';
 
 /**
@@ -231,26 +232,36 @@ export async function generateBriefing(
   // 오늘/내일 일정 조회
   const todayEvents = await getEventsByUser(userId, todayStr, todayStr);
   const tomorrowEvents = await getEventsByUser(userId, tomorrowStr, tomorrowStr);
+  // Fetch User & Weather
+  const user = await getUserById(userId);
+  const city = user?.location || 'Seoul';
+  const weather = await getCurrentWeather(city);
   const todos = await getTodosByUser(userId);
   const incompleteTodos = todos.filter(t => !t.is_completed);
 
-  let greeting: string;
+  let greeting: string; // Kept for interface compatibility, but value will be simple
   let schedule_summary: string;
   let todo_summary: string;
   const suggestions: string[] = [];
 
+  // Weather String
+  let weatherStr = '';
+  if (weather) {
+    weatherStr = `Location: ${city} | Temp: ${weather.temperature}°C | ${weather.condition}`;
+    if (weather.recommendation) {
+      weatherStr += `\nNote: ${weather.recommendation}`;
+    }
+  } else {
+    weatherStr = `Location: ${city} | Weather info unavailable`;
+  }
+
   if (type === 'morning') {
     // Morning Briefing
-    const hour = today.getHours();
-    if (hour < 10) {
-      greeting = 'Good morning! ☀️';
-    } else {
-      greeting = 'Hello!';
-    }
+    greeting = 'Morning Briefing';
 
     if (todayEvents.length === 0) {
-      schedule_summary = 'No events scheduled for today.';
-      suggestions.push('How about setting some goals for today?');
+      schedule_summary = 'Events: None';
+      suggestions.push('Set a goal for today?');
     } else {
       const events = todayEvents.map(dbEventToEvent);
       const eventList = events
@@ -258,35 +269,30 @@ export async function generateBriefing(
         .slice(0, 3)
         .map(e => {
           const time = new Date(e.datetime).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: false });
-          return `${time} ${e.title}`;
+          return `[${time}] ${e.title}`;
         })
         .join(', ');
-      schedule_summary = `You have ${todayEvents.length} events today: ${eventList}`;
+      schedule_summary = `Events (${todayEvents.length}): ${eventList}`;
     }
 
     if (incompleteTodos.length > 0) {
-      todo_summary = `You have ${incompleteTodos.length} pending tasks.`;
-      suggestions.push('Check your tasks and prioritize them.');
+      todo_summary = `Pending Tasks: ${incompleteTodos.length}`;
     } else {
-      todo_summary = 'All tasks completed! 👏';
+      todo_summary = 'Tasks: All Clear';
     }
 
   } else {
     // Evening Briefing
-    greeting = 'Good evening! 🌙';
+    greeting = 'Evening Briefing';
 
-    // Check completed todos today
+    // Completed today
     const completedToday = todos.filter(t =>
       t.is_completed &&
       t.completed_at &&
       t.completed_at.startsWith(todayStr)
     );
 
-    if (completedToday.length > 0) {
-      schedule_summary = `You completed ${completedToday.length} tasks today.`;
-    } else {
-      schedule_summary = 'Check your schedule done for today.';
-    }
+    schedule_summary = `Completed Today: ${completedToday.length} Tasks`;
 
     // Tomorrow preview
     if (tomorrowEvents.length > 0) {
@@ -295,11 +301,9 @@ export async function generateBriefing(
         new Date(a.datetime).getTime() - new Date(b.datetime).getTime()
       )[0];
       const time = new Date(firstEvent.datetime).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: false });
-      todo_summary = `Tomorrow's first event is "${firstEvent.title}" at ${time}.`;
-      suggestions.push('Check tomorrow\'s schedule and prepare.');
+      todo_summary = `Tomorrow 1st Event: [${time}] "${firstEvent.title}"`;
     } else {
-      todo_summary = 'No events scheduled for tomorrow.';
-      suggestions.push('How about planning for tomorrow?');
+      todo_summary = 'Tomorrow: No events scheduled';
     }
   }
 
@@ -308,7 +312,7 @@ export async function generateBriefing(
     schedule_summary,
     todo_summary,
     suggestions,
-    message: `${greeting}\n\n📅 ${schedule_summary}\n✅ ${todo_summary}`
+    message: `${weatherStr}\n\n${schedule_summary}\n${todo_summary}`
   };
 }
 
