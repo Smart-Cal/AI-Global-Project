@@ -2022,6 +2022,18 @@ body {
   justify-content: flex-end;
 }
 
+.modal-footer .btn-danger {
+  background: #DC2626;
+  color: white;
+  border: none;
+  box-shadow: 0 2px 4px rgba(220, 38, 38, 0.3);
+}
+
+.modal-footer .btn-danger:hover {
+  background: #B91C1C;
+  box-shadow: 0 3px 6px rgba(220, 38, 38, 0.4);
+}
+
 /* Confirm Modal */
 .confirm-modal-overlay {
   position: fixed;
