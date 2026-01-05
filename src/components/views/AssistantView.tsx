@@ -136,20 +136,26 @@ const AssistantView: React.FC<AssistantViewProps> = ({ initialMessage, onInitial
     fetchCategories();
   }, []);
 
+  // Reference for pending initial message to send
+  const pendingInitialMessageRef = useRef<string | null>(null);
+
   // Handle initial message from dashboard
   useEffect(() => {
     if (initialMessage && !isLoading) {
+      pendingInitialMessageRef.current = initialMessage;
       setInput(initialMessage);
       onInitialMessageConsumed?.();
-      // Auto-send after a short delay to ensure input is set
-      setTimeout(() => {
-        const sendButton = document.querySelector('.chat-send-button') as HTMLButtonElement;
-        if (sendButton) {
-          sendButton.click();
-        }
-      }, 100);
     }
   }, [initialMessage]);
+
+  // Auto-send when input is set from initial message
+  useEffect(() => {
+    if (pendingInitialMessageRef.current && input === pendingInitialMessageRef.current && !isLoading) {
+      pendingInitialMessageRef.current = null;
+      // Trigger send
+      handleSendWithMessage(input);
+    }
+  }, [input]);
 
   // Debugging: Check category state
   useEffect(() => {
@@ -232,6 +238,75 @@ const AssistantView: React.FC<AssistantViewProps> = ({ initialMessage, onInitial
   useEffect(() => {
     scrollToBottom();
   }, [messages, activeMessageId, completedResults]);
+
+  // Send message with specific content (for initial message from dashboard)
+  const handleSendWithMessage = async (messageToSend: string) => {
+    if (!messageToSend.trim() || isLoading) return;
+
+    let messageContent = messageToSend.trim();
+    if (selectedGoal) {
+      messageContent = `[Goal: ${selectedGoal.title}] ${messageContent}`;
+    }
+
+    // Add user message locally
+    const userMessage: LocalMessage = {
+      id: crypto.randomUUID(),
+      role: 'user',
+      content: messageToSend.trim(),
+      created_at: new Date().toISOString(),
+    };
+
+    setMessages(prev => [...prev, userMessage]);
+    setInput('');
+    setIsLoading(true);
+    setCompletedResults(null);
+
+    try {
+      const response = await sendChatMessage(messageContent, currentConversationId || undefined, 'auto');
+
+      console.log('[AssistantView] API Response:', response);
+
+      if (!currentConversationId) {
+        setCurrentConversationId(response.conversation_id);
+        loadConversations();
+      }
+
+      let contentMessage = response.message;
+      if (response.pending_events && response.pending_events.length > 0) {
+        contentMessage = 'How about these events?';
+      } else if (response.pending_todos && response.pending_todos.length > 0) {
+        contentMessage = 'How about these todos?';
+      } else if (response.pending_goals && response.pending_goals.length > 0) {
+        contentMessage = 'How about these goals?';
+      }
+
+      const assistantMessage: LocalMessage = {
+        id: response.message_id,
+        role: 'assistant',
+        content: contentMessage,
+        pending_events: response.pending_events,
+        pending_todos: response.pending_todos,
+        pending_goals: response.pending_goals,
+        mcp_data: response.mcp_data,
+        created_at: new Date().toISOString(),
+      };
+      setMessages(prev => [...prev, assistantMessage]);
+
+      if (response.pending_events && response.pending_events.length > 0) {
+        loadEvents();
+      }
+    } catch (error) {
+      console.error('Chat error:', error);
+      setMessages(prev => [...prev, {
+        id: crypto.randomUUID(),
+        role: 'assistant',
+        content: 'An error occurred. Please try again.',
+        created_at: new Date().toISOString(),
+      }]);
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
   // Send message
   const handleSend = async () => {

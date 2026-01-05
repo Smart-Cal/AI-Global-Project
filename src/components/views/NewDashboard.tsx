@@ -526,6 +526,7 @@ export const NewDashboard: React.FC<NewDashboardProps> = ({ onNavigate }) => {
                   }
                 }}
                 placeholder="Ask anything..."
+                className="dashboard-ai-input"
                 style={{
                   flex: 1,
                   padding: '10px 14px',

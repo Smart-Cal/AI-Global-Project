@@ -7952,5 +7952,5 @@ textarea.form-input {
 
 /* Dashboard AI Assistant Input */
 .dashboard-ai-input::placeholder {
-  color: rgba(255, 255, 255, 0.6);
+  color: rgba(255, 255, 255, 0.85);
 }
