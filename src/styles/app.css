@@ -2360,10 +2360,12 @@ textarea.form-input {
 .btn-danger {
   background: var(--error);
   color: white;
+  box-shadow: 0 2px 4px rgba(220, 38, 38, 0.3);
 }
 
 .btn-danger:hover {
   background: #c53030;
+  box-shadow: 0 3px 6px rgba(220, 38, 38, 0.4);
 }
 
 .btn-success {
@@ -3975,8 +3977,8 @@ textarea.form-input {
   width: 24px;
   height: 24px;
   border: none;
-  background: transparent;
-  color: var(--text-muted);
+  background: var(--danger);
+  color: white;
   font-size: 18px;
   cursor: pointer;
   border-radius: 4px;
@@ -3984,17 +3986,15 @@ textarea.form-input {
   align-items: center;
   justify-content: center;
   flex-shrink: 0;
-  opacity: 0;
-  transition: all 0.15s;
-}
-
-.schedule-todo-item:hover .schedule-todo-delete {
   opacity: 1;
+  transition: all 0.15s;
+  box-shadow: 0 1px 3px rgba(220, 38, 38, 0.3);
 }
 
 .schedule-todo-delete:hover {
-  background: var(--danger);
+  background: #B91C1C;
   color: white;
+  box-shadow: 0 2px 4px rgba(220, 38, 38, 0.4);
 }
 
 /* ==================== Goal Tab ==================== */
@@ -6836,10 +6836,12 @@ textarea.form-input {
   background: var(--danger);
   color: white;
   border: none;
+  box-shadow: 0 2px 4px rgba(220, 38, 38, 0.3);
 }
 
 .btn-danger:hover {
   background: #c82333;
+  box-shadow: 0 3px 6px rgba(220, 38, 38, 0.4);
 }
 
 /* ==================== Sidebar Settings Button ==================== */
