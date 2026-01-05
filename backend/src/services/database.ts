@@ -848,6 +848,46 @@ export async function isGroupMember(groupId: string, userId: string): Promise<bo
   return member !== null;
 }
 
+export async function transferGroupOwnership(groupId: string, currentOwnerId: string, newOwnerId: string): Promise<void> {
+  // Verify current owner
+  const currentOwner = await getGroupMember(groupId, currentOwnerId);
+  if (!currentOwner || currentOwner.role !== 'owner') {
+    throw new Error('Only the current owner can transfer ownership');
+  }
+
+  // Verify new owner is a member
+  const newOwner = await getGroupMember(groupId, newOwnerId);
+  if (!newOwner) {
+    throw new Error('New owner must be a member of the group');
+  }
+
+  // Update current owner to member
+  const { error: demoteError } = await supabase
+    .from('group_members')
+    .update({ role: 'member' })
+    .eq('group_id', groupId)
+    .eq('user_id', currentOwnerId);
+
+  if (demoteError) throw new Error(`Failed to demote current owner: ${demoteError.message}`);
+
+  // Update new owner to owner
+  const { error: promoteError } = await supabase
+    .from('group_members')
+    .update({ role: 'owner' })
+    .eq('group_id', groupId)
+    .eq('user_id', newOwnerId);
+
+  if (promoteError) throw new Error(`Failed to promote new owner: ${promoteError.message}`);
+
+  // Update group owner_id
+  const { error: groupError } = await supabase
+    .from('groups')
+    .update({ owner_id: newOwnerId })
+    .eq('id', groupId);
+
+  if (groupError) throw new Error(`Failed to update group owner: ${groupError.message}`);
+}
+
 // ==============================================
 // Group Invitation Operations
 // ==============================================

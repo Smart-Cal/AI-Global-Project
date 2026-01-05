@@ -825,6 +825,13 @@ export async function leaveGroup(groupId: string): Promise<void> {
   await apiRequest(`/groups/${groupId}/leave`, { method: 'POST' });
 }
 
+export async function transferLeadership(groupId: string, newOwnerId: string): Promise<{ message: string }> {
+  return apiRequest<{ message: string }>(`/groups/${groupId}/transfer-leadership`, {
+    method: 'POST',
+    body: JSON.stringify({ new_owner_id: newOwnerId }),
+  });
+}
+
 export async function regenerateInviteCode(groupId: string): Promise<{ invite_code: string }> {
   return apiRequest<{ invite_code: string }>(`/groups/${groupId}/invite-code`, {
     method: 'POST',

@@ -8,6 +8,7 @@ import {
   findMeetingTime,
   createGroupMeeting,
   sendGroupChatMessage,
+  transferLeadership,
   type Group,
   type GroupMember,
   type AvailableSlot,
@@ -223,6 +224,27 @@ const GroupDetailView: React.FC<GroupDetailViewProps> = ({ groupId, onBack }) =>
     return `${date.getMonth() + 1}/${date.getDate()} (${days[date.getDay()]})`;
   };
 
+  const formatJoinDate = (dateStr: string) => {
+    const date = new Date(dateStr);
+    const year = date.getFullYear();
+    const month = String(date.getMonth() + 1).padStart(2, '0');
+    const day = String(date.getDate()).padStart(2, '0');
+    return `${year}/${month}/${day}`;
+  };
+
+  const handleTransferLeadership = async (memberId: string, memberName: string) => {
+    if (!confirm(`Are you sure you want to transfer leadership to ${memberName}? You will become a regular member.`)) return;
+
+    try {
+      await transferLeadership(groupId, memberId);
+      setSuccessMessage('Leadership transferred successfully');
+      setTimeout(() => setSuccessMessage(null), 3000);
+      loadGroupData(); // Reload data to reflect changes
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to transfer leadership');
+    }
+  };
+
   if (isLoading) {
     return (
       <div className="group-detail-view">
@@ -268,6 +290,12 @@ const GroupDetailView: React.FC<GroupDetailViewProps> = ({ groupId, onBack }) =>
         <div className="error-message">
           {error}
           <button onClick={() => setError(null)}>×</button>
+        </div>
+      )}
+
+      {successMessage && (
+        <div className="success-message">
+          {successMessage}
         </div>
       )}
 
@@ -328,22 +356,35 @@ const GroupDetailView: React.FC<GroupDetailViewProps> = ({ groupId, onBack }) =>
                 </div>
                 <div className="member-info">
                   <span className="member-name">
-                    {member.user_name || member.user_email}
+                    {member.user_name || member.user_email || 'Unknown'}
                     {member.role === 'owner' && <span className="badge badge-owner">Leader</span>}
                   </span>
-                  <span className="member-joined">Joined {formatDate(member.joined_at)}</span>
+                  <span className="member-joined">Joined {formatJoinDate(member.joined_at)}</span>
                 </div>
-                {isOwner && member.role !== 'owner' && (
-                  <button
-                    className="btn btn-icon btn-danger-ghost"
-                    onClick={() => handleRemoveMember(member.user_id)}
-                    title="Remove member"
-                  >
-                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
-                      <path d="M6 19C6 20.1 6.9 21 8 21H16C17.1 21 18 20.1 18 19V7H6V19ZM19 4H15.5L14.5 3H9.5L8.5 4H5V6H19V4Z" fill="currentColor"/>
-                    </svg>
-                  </button>
-                )}
+                <div className="member-actions">
+                  {isOwner && member.role !== 'owner' && (
+                    <>
+                      <button
+                        className="btn btn-icon btn-transfer"
+                        onClick={() => handleTransferLeadership(member.user_id, member.user_name || member.user_email || 'this member')}
+                        title="Transfer leadership"
+                      >
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
+                          <path d="M12 2L15.09 8.26L22 9.27L17 14.14L18.18 21.02L12 17.77L5.82 21.02L7 14.14L2 9.27L8.91 8.26L12 2Z" fill="currentColor"/>
+                        </svg>
+                      </button>
+                      <button
+                        className="btn btn-icon btn-danger-ghost"
+                        onClick={() => handleRemoveMember(member.user_id)}
+                        title="Remove member"
+                      >
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
+                          <path d="M6 19C6 20.1 6.9 21 8 21H16C17.1 21 18 20.1 18 19V7H6V19ZM19 4H15.5L14.5 3H9.5L8.5 4H5V6H19V4Z" fill="currentColor"/>
+                        </svg>
+                      </button>
+                    </>
+                  )}
+                </div>
               </div>
             ))}
           </div>
@@ -618,6 +659,14 @@ const GroupDetailView: React.FC<GroupDetailViewProps> = ({ groupId, onBack }) =>
           border: none;
           font-size: 18px;
           cursor: pointer;
+        }
+
+        .success-message {
+          background: #D1FAE5;
+          color: #065F46;
+          padding: 12px 16px;
+          border-radius: 8px;
+          margin-bottom: 16px;
         }
 
         /* Invite Code Section */
@@ -913,6 +962,20 @@ const GroupDetailView: React.FC<GroupDetailViewProps> = ({ groupId, onBack }) =>
         .member-joined {
           font-size: 13px;
           color: #888;
+        }
+
+        .member-actions {
+          display: flex;
+          gap: 4px;
+        }
+
+        .btn-transfer {
+          color: #F59E0B;
+        }
+
+        .btn-transfer:hover {
+          background: #FEF3C7;
+          color: #D97706;
         }
 
         .badge {

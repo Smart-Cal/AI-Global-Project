@@ -83,8 +83,18 @@ router.get('/:id', authenticate, async (req: AuthRequest, res: Response) => {
       return;
     }
 
-    const members = await getGroupMembers(id);
+    const rawMembers = await getGroupMembers(id);
     const isOwner = await isGroupOwner(id, userId);
+
+    // Transform members to include user_name and user_email from joined user data
+    const members = rawMembers.map(member => ({
+      user_id: member.user_id,
+      group_id: member.group_id,
+      role: member.role,
+      joined_at: member.joined_at,
+      user_name: (member as any).user?.name || (member as any).user?.nickname || null,
+      user_email: (member as any).user?.email || null
+    }));
 
     res.json({
       group,
@@ -310,6 +320,33 @@ router.delete('/:id/members/:memberId', authenticate, async (req: AuthRequest, r
 });
 
 /**
+ * POST /api/groups/:id/transfer-leadership
+ * Transfer group leadership to another member (owner only)
+ */
+router.post('/:id/transfer-leadership', authenticate, async (req: AuthRequest, res: Response) => {
+  try {
+    const userId = req.userId!;
+    const { id } = req.params;
+    const { new_owner_id } = req.body;
+
+    if (!new_owner_id) {
+      res.status(400).json({ error: 'new_owner_id is required' });
+      return;
+    }
+
+    // Import transferGroupOwnership
+    const { transferGroupOwnership } = await import('../services/database.js');
+    await transferGroupOwnership(id, userId, new_owner_id);
+
+    res.json({ message: 'Leadership transferred successfully' });
+  } catch (error) {
+    console.error('Transfer leadership error:', error);
+    const message = error instanceof Error ? error.message : 'Failed to transfer leadership';
+    res.status(400).json({ error: message });
+  }
+});
+
+/**
  * POST /api/groups/:id/leave
  * 그룹 나가기 (owner는 그룹 삭제해야 함)
  */
@@ -320,7 +357,7 @@ router.post('/:id/leave', authenticate, async (req: AuthRequest, res: Response) 
 
     const isOwner = await isGroupOwner(id, userId);
     if (isOwner) {
-      res.status(400).json({ error: 'Owner cannot leave. Delete the group instead.' });
+      res.status(400).json({ error: 'Owner cannot leave. Transfer leadership first or delete the group.' });
       return;
     }
 
