@@ -6,7 +6,7 @@
 
 *Beyond conversation — PALM executes tasks, manages your schedule, and connects to real-world services*
 
-[Features](#-key-features) • [Architecture](#-architecture) • [MCP Integration](#-mcp-integration) • [Getting Started](#-getting-started) • [API Reference](#-api-reference)
+[Features](#-key-features) • [Architecture](#-architecture) • [MCP Integration](#-mcp-integration) • [Getting Started](#-getting-started) • [API Reference](#-api-reference) • [Recent Updates](#recent-updates)
 
 </div>
 
@@ -33,7 +33,8 @@ PALM (Personal AI Life Manager) is an **AI-powered life management platform** th
 ### 1. Intelligent Schedule Management
 - **Natural Language Processing**: "Meeting with John tomorrow at 3pm at Starbucks" → automatically creates event
 - **Smart Conflict Detection**: AI checks for scheduling conflicts before creating events
-- **Chronotype Optimization**: Morning person? Night owl? PALM schedules tasks at your optimal times
+- **Multi-day & All-day Events**: Support for events spanning multiple days with visual bars in week view
+- **Fixed Header Week View**: Scrollable time grid with fixed day headers and all-day events bar
 - **Google Calendar Sync**: Two-way sync with your existing Google Calendar
 
 ### 2. Goal-Oriented Task Management
@@ -41,6 +42,8 @@ PALM (Personal AI Life Manager) is an **AI-powered life management platform** th
 - **Progress Tracking**: Visual progress bars and completion rates
 - **Smart Prioritization**: AI suggests which tasks to focus on based on deadlines and importance
 - **Linked Tasks**: Connect TODOs to goals for better organization
+- **Inline TODO Editing**: Edit TODO details directly from the schedule view
+- **Category Management**: Create and assign categories to organize tasks and events
 
 ### 3. Acting AI with MCP (Model Context Protocol)
 
@@ -77,6 +80,19 @@ PALM implements **MCP (Model Context Protocol)** to connect AI with real-world s
 - **Daily Diary**: AI-generated summaries of your day
 - **Activity Tracking**: Automatic logging of completed tasks
 - **Reflection Prompts**: Guided journaling for personal growth
+
+### 6. Modern Dashboard
+- **Quick AI Input**: Direct AI assistant access from dashboard with natural language input
+- **Today's Schedule Overview**: See upcoming events and tasks at a glance
+- **Weather Widget**: Current weather conditions integrated into daily planning
+- **Quick Actions**: Fast access to create events, todos, and goals
+
+### 7. Enhanced UI/UX
+- **Custom Confirm Modals**: Consistent confirmation dialogs throughout the app
+- **Toast Notifications**: Non-intrusive feedback for user actions
+- **Responsive Design**: Works seamlessly on desktop and mobile
+- **Category Color Coding**: Visual organization with customizable colors
+- **Collapsible Sidebars**: Toggle sidebar visibility in calendar and other views
 
 ---
 
@@ -204,13 +220,24 @@ palm/
 │   ├── components/
 │   │   ├── views/
 │   │   │   ├── AssistantView.tsx    # AI Chat with MCP cards
-│   │   │   ├── CalendarView.tsx     # Calendar UI
-│   │   │   ├── DashboardView.tsx    # Dashboard with weather
-│   │   │   └── GoalView.tsx         # Goal management
-│   │   └── ...
+│   │   │   ├── CalendarView.tsx     # Calendar UI with week/month views
+│   │   │   ├── NewDashboard.tsx     # Dashboard with AI input & weather
+│   │   │   ├── ScheduleView.tsx     # TODO list with inline editing
+│   │   │   ├── GoalView.tsx         # Goal management
+│   │   │   └── GroupsView.tsx       # Group collaboration
+│   │   ├── EventModal.tsx           # Event creation/editing with multi-day support
+│   │   ├── TodoModal.tsx            # TODO creation with categories
+│   │   ├── ConfirmModal.tsx         # Custom confirmation dialogs
+│   │   ├── DatePicker.tsx           # Custom date picker component
+│   │   ├── TimePicker.tsx           # Custom time picker component
+│   │   └── Toast.tsx                # Toast notifications
 │   ├── services/
 │   │   └── api.ts                   # Backend API client
 │   └── store/                       # Zustand stores
+│       ├── eventStore.ts            # Event state management
+│       ├── todoStore.ts             # TODO state management
+│       ├── goalStore.ts             # Goal state management
+│       └── categoryStore.ts         # Category state management
 │
 ├── backend/
 │   └── src/
@@ -360,6 +387,28 @@ PALM:
 
 ---
 
+## Recent Updates
+
+### Calendar Enhancements
+- **Multi-day Events**: Events can now span multiple days with separate start and end dates
+- **All-day Events Bar**: All-day and multi-day events displayed as horizontal bars below day headers in week view
+- **Fixed Header Scrolling**: Week view time grid scrolls independently while headers stay fixed
+- **Category Filtering**: Filter calendar events by category with sidebar checkboxes
+
+### Task Management Improvements
+- **Inline TODO Editing**: Edit TODO title, description, deadline, and priority directly in the schedule view
+- **Category Creation**: Add new categories with custom colors directly from TODO/Event creation forms
+- **Duration Selector**: Set task duration in hours and minutes (not just minutes)
+- **Improved Priority Display**: Visual priority indicators with color coding
+
+### UI/UX Updates
+- **Custom Date/Time Pickers**: Consistent, styled date and time input components
+- **Confirm Modal System**: Unified confirmation dialogs replacing browser alerts
+- **Toast Notifications**: Success/error feedback for all user actions
+- **Collapsible Sidebar**: Toggle calendar sidebar visibility with a button
+
+---
+
 ## Roadmap
 
 - [ ] Voice input/output
@@ -368,6 +417,8 @@ PALM:
 - [ ] Team workspace features
 - [ ] AI-powered analytics and insights
 - [ ] Multi-language support
+- [ ] Recurring events support
+- [ ] Drag-and-drop event rescheduling
 
 ---
 
