@@ -241,6 +241,7 @@ export const NewDashboard: React.FC<NewDashboardProps> = ({ onNavigate }) => {
           setBriefing({
             type: 'evening',
             message: data.message,
+            weather: data.weather, // Current weather for display
             completedEvents: data.completed_events,
             completedTodos: data.completed_todos,
             completionRate: data.completion_rate,
@@ -395,7 +396,7 @@ export const NewDashboard: React.FC<NewDashboardProps> = ({ onNavigate }) => {
             {/* 2-Block Layout */}
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
 
-              {/* Block 1: Weather - Simple */}
+              {/* Block 1: Current Weather */}
               <div style={{
                 background: 'rgba(255,255,255,0.6)',
                 backdropFilter: 'blur(4px)',
@@ -415,17 +416,17 @@ export const NewDashboard: React.FC<NewDashboardProps> = ({ onNavigate }) => {
                       <div style={{ fontSize: '24px', fontWeight: 700, color: '#1F2937' }}>
                         {briefing.weather.temperature}°C
                       </div>
-                      <div style={{ fontSize: '14px', color: '#6B7280', marginTop: '2px' }}>
-                        {briefing.weather.condition}
+                      <div style={{ fontSize: '12px', color: '#6B7280', marginTop: '2px' }}>
+                        {briefing.weather.city || briefing.weather.condition}
                       </div>
                     </div>
                   </>
                 ) : (
-                  <div style={{ fontSize: '13px', color: '#9CA3AF' }}>Weather unavailable</div>
+                  <div style={{ fontSize: '13px', color: '#9CA3AF' }}>Loading weather...</div>
                 )}
               </div>
 
-              {/* Block 2: Rain Check - Ultra Simple */}
+              {/* Block 2: Today's Weather - Rain/Snow Check */}
               <div style={{
                 background: 'rgba(255,255,255,0.6)',
                 backdropFilter: 'blur(4px)',
@@ -435,32 +436,35 @@ export const NewDashboard: React.FC<NewDashboardProps> = ({ onNavigate }) => {
                 alignItems: 'center',
                 justifyContent: 'center',
                 flexDirection: 'column',
-                gap: '8px',
+                gap: '6px',
                 border: briefing.precipitation?.willRain || briefing.precipitation?.willSnow ? '2px solid #60A5FA' : 'none'
               }}>
+                <div style={{ fontSize: '11px', color: '#6B7280', fontWeight: 500 }}>
+                  {briefing.type === 'evening' ? "Tomorrow's Weather" : "Today's Weather"}
+                </div>
                 {briefing.precipitation ? (
                   briefing.precipitation.willRain || briefing.precipitation.willSnow ? (
                     <>
-                      <CloudIcon size={28} style={{ color: '#3B82F6' }} />
+                      <CloudIcon size={24} style={{ color: '#3B82F6' }} />
                       <div style={{ fontSize: '15px', fontWeight: 700, color: '#1F2937', textAlign: 'center' }}>
                         {briefing.precipitation.willSnow ? 'Snow' : 'Rain'}
                       </div>
                       {briefing.precipitation.time && (
-                        <div style={{ fontSize: '13px', color: '#6B7280' }}>
-                          {briefing.type === 'evening' ? 'Tomorrow ' : ''}{briefing.precipitation.time}
+                        <div style={{ fontSize: '12px', color: '#6B7280' }}>
+                          Around {briefing.precipitation.time}
                         </div>
                       )}
                     </>
                   ) : (
                     <>
-                      <SunIcon size={28} style={{ color: '#F59E0B' }} />
+                      <SunIcon size={24} style={{ color: '#F59E0B' }} />
                       <div style={{ fontSize: '15px', fontWeight: 600, color: '#1F2937' }}>
-                        Sunny
+                        No Rain
                       </div>
                     </>
                   )
                 ) : (
-                  <div style={{ fontSize: '13px', color: '#9CA3AF' }}>확인 중...</div>
+                  <div style={{ fontSize: '13px', color: '#9CA3AF' }}>Checking...</div>
                 )}
               </div>
 
