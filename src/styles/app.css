@@ -6678,9 +6678,12 @@ textarea.form-input {
   display: flex;
   align-items: center;
   justify-content: center;
-  background: linear-gradient(135deg, #4285f4 0%, #34a853 100%);
-  color: white;
   border-radius: var(--border-radius-md);
+  flex-shrink: 0;
+}
+
+.service-icon.google-calendar-icon {
+  background: transparent;
 }
 
 .service-details {

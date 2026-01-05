@@ -83,11 +83,20 @@ const Settings: React.FC<SettingsProps> = ({ isOpen, onClose }) => {
             <h4>External Services</h4>
             <div className="external-service-card">
               <div className="service-info">
-                <div className="service-icon">
-                  <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
-                    <rect x="3" y="4" width="18" height="18" rx="2" stroke="currentColor" strokeWidth="2"/>
-                    <path d="M3 9h18" stroke="currentColor" strokeWidth="2"/>
-                    <path d="M9 4V2M15 4V2" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/>
+                <div className="service-icon google-calendar-icon">
+                  <svg width="32" height="32" viewBox="0 0 32 32" fill="none">
+                    {/* Google Calendar Official Icon */}
+                    <path d="M24 4H8C5.79 4 4 5.79 4 8V24C4 26.21 5.79 28 8 28H24C26.21 28 28 26.21 28 24V8C28 5.79 26.21 4 24 4Z" fill="#4285F4"/>
+                    <path d="M24 4H20V8H28V8C28 5.79 26.21 4 24 4Z" fill="#1A73E8"/>
+                    <path d="M28 8H20V16H28V8Z" fill="#1A73E8"/>
+                    <path d="M28 16H20V24H28V16Z" fill="#34A853"/>
+                    <path d="M20 24H12V28H24C26.21 28 28 26.21 28 24H20Z" fill="#34A853"/>
+                    <path d="M12 24H4V24C4 26.21 5.79 28 8 28H12V24Z" fill="#FBBC04"/>
+                    <path d="M4 24V16H12V24H4Z" fill="#FBBC04"/>
+                    <path d="M4 16V8H12V16H4Z" fill="#EA4335"/>
+                    <path d="M12 4H8C5.79 4 4 5.79 4 8H12V4Z" fill="#EA4335"/>
+                    <rect x="8" y="8" width="16" height="16" rx="1" fill="white"/>
+                    <text x="16" y="20" textAnchor="middle" fontSize="11" fontWeight="bold" fill="#4285F4">31</text>
                   </svg>
                 </div>
                 <div className="service-details">
