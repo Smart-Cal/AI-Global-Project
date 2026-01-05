@@ -2,11 +2,11 @@ import dotenv from 'dotenv';
 import path from 'path';
 import { fileURLToPath } from 'url';
 
-// ES module에서 __dirname 구하기
+// Get __dirname in ES module
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
-// .env 파일 경로를 명시적으로 지정
+// Explicitly specify .env file path
 dotenv.config({ path: path.resolve(__dirname, '../../.env') });
 
 import { createClient, SupabaseClient } from '@supabase/supabase-js';
@@ -23,7 +23,7 @@ if (!supabaseUrl || !supabaseKey) {
 export const supabase: SupabaseClient = createClient(supabaseUrl, supabaseKey);
 
 // ==============================================
-// User Operations (구글 로그인 전용)
+// User Operations (Google Login Only)
 // ==============================================
 
 export async function getUserById(id: string): Promise<User | null> {
@@ -135,7 +135,7 @@ export async function createEvent(event: Partial<Event>): Promise<Event> {
 
   if (error) throw new Error(`Failed to create event: ${error.message}`);
 
-  // Todo와 연결된 경우, Goal의 total_estimated_time 업데이트
+  // Update Goal's total_estimated_time if linked to Todo
   if (event.related_todo_id) {
     await updateGoalEstimatedTimeFromTodo(event.related_todo_id);
   }
@@ -156,16 +156,16 @@ export async function updateEvent(id: string, updates: Partial<Event>): Promise<
 }
 
 /**
- * Event 완료 시 Todo와 Goal 진행률 업데이트
+ * Update Todo and Goal progress when Event is completed
  */
 export async function completeEvent(id: string): Promise<Event> {
-  // 1. Event 완료 처리
+  // 1. Mark Event as completed
   const event = await updateEvent(id, {
     is_completed: true,
     completed_at: new Date().toISOString()
   });
 
-  // 2. 연결된 Todo가 있으면 completed_time 업데이트
+  // 2. Update completed_time if there's a linked Todo
   if (event.related_todo_id) {
     const duration = calculateEventDuration(event);
     await addTodoCompletedTime(event.related_todo_id, duration);
@@ -175,10 +175,10 @@ export async function completeEvent(id: string): Promise<Event> {
 }
 
 /**
- * Event duration 계산 (분 단위)
+ * Calculate Event duration (in minutes)
  */
 function calculateEventDuration(event: Event): number {
-  if (event.is_all_day || !event.start_time || !event.end_time) return 60; // 기본 1시간
+  if (event.is_all_day || !event.start_time || !event.end_time) return 60; // Default 1 hour
 
   const [startHour, startMin] = event.start_time.split(':').map(Number);
   const [endHour, endMin] = event.end_time.split(':').map(Number);
@@ -219,7 +219,7 @@ export async function createTodo(todo: Partial<Todo>): Promise<Todo> {
 
   if (error) throw new Error(`Failed to create todo: ${error.message}`);
 
-  // Goal과 연결된 경우 진행률 재계산 (total_estimated_time 업데이트)
+  // Recalculate progress if linked to Goal (update total_estimated_time)
   if (data.goal_id) {
     await recalculateGoalProgress(data.goal_id);
   }
@@ -228,7 +228,7 @@ export async function createTodo(todo: Partial<Todo>): Promise<Todo> {
 }
 
 export async function updateTodo(id: string, updates: Partial<Todo>): Promise<Todo> {
-  // 기존 Todo 정보 가져오기 (goal_id 변경 감지용)
+  // Get existing Todo info (to detect goal_id changes)
   const existingTodo = await getTodoById(id);
   const oldGoalId = existingTodo?.goal_id;
 
@@ -241,13 +241,13 @@ export async function updateTodo(id: string, updates: Partial<Todo>): Promise<To
 
   if (error) throw new Error(`Failed to update todo: ${error.message}`);
 
-  // estimated_time이나 goal_id가 변경된 경우 진행률 재계산
+  // Recalculate progress if estimated_time or goal_id changed
   if (updates.estimated_time !== undefined || updates.goal_id !== undefined) {
-    // 이전 Goal 업데이트
+    // Update previous Goal
     if (oldGoalId && oldGoalId !== data.goal_id) {
       await recalculateGoalProgress(oldGoalId);
     }
-    // 현재 Goal 업데이트
+    // Update current Goal
     if (data.goal_id) {
       await recalculateGoalProgress(data.goal_id);
     }
@@ -257,7 +257,7 @@ export async function updateTodo(id: string, updates: Partial<Todo>): Promise<To
 }
 
 export async function deleteTodo(id: string): Promise<void> {
-  // 삭제 전 Todo 정보 가져오기
+  // Get Todo info before deletion
   const todo = await getTodoById(id);
   const goalId = todo?.goal_id;
 
@@ -268,7 +268,7 @@ export async function deleteTodo(id: string): Promise<void> {
 
   if (error) throw new Error(`Failed to delete todo: ${error.message}`);
 
-  // Goal과 연결되어 있었다면 진행률 재계산
+  // Recalculate progress if it was linked to Goal
   if (goalId) {
     await recalculateGoalProgress(goalId);
   }
@@ -280,7 +280,7 @@ export async function completeTodo(id: string): Promise<Todo> {
     completed_at: new Date().toISOString()
   });
 
-  // Goal과 연결된 경우 진행률 업데이트
+  // Update progress if linked to Goal
   if (todo.goal_id) {
     await recalculateGoalProgress(todo.goal_id);
   }
@@ -289,7 +289,7 @@ export async function completeTodo(id: string): Promise<Todo> {
 }
 
 /**
- * Todo에 완료 시간 추가 (Event 완료 시 호출)
+ * Add completed time to Todo (called when Event is completed)
  */
 export async function addTodoCompletedTime(todoId: string, minutes: number): Promise<Todo> {
   const todo = await getTodoById(todoId);
@@ -304,7 +304,7 @@ export async function addTodoCompletedTime(todoId: string, minutes: number): Pro
     completed_at: isNowCompleted ? new Date().toISOString() : undefined
   });
 
-  // Goal과 연결된 경우 진행률 업데이트
+  // Update progress if linked to Goal
   if (updatedTodo.goal_id) {
     await recalculateGoalProgress(updatedTodo.goal_id);
   }
@@ -398,10 +398,10 @@ export async function deleteGoal(id: string): Promise<void> {
 }
 
 /**
- * Goal 진행률 재계산
- * - 연결된 모든 Todo의 completed_time 합산
- * - 연결된 모든 Todo의 estimated_time 합산
- * - 상태 자동 업데이트 (in_progress, completed)
+ * Recalculate Goal progress
+ * - Sum completed_time of all linked Todos
+ * - Sum estimated_time of all linked Todos
+ * - Auto-update status (in_progress, completed)
  */
 export async function recalculateGoalProgress(goalId: string): Promise<Goal> {
   const todos = await getTodosByGoal(goalId);
@@ -409,10 +409,10 @@ export async function recalculateGoalProgress(goalId: string): Promise<Goal> {
   const totalEstimatedTime = todos.reduce((sum, t) => sum + (t.estimated_time || 0), 0);
   const completedTime = todos.reduce((sum, t) => sum + (t.completed_time || 0), 0);
 
-  // 상태 결정
+  // Determine status
   let status: Goal['status'] = 'planning';
   if (todos.length > 0) {
-    const hasScheduledEvents = true; // TODO: Event 확인 로직 추가 가능
+    const hasScheduledEvents = true; // TODO: Can add Event verification logic
     if (completedTime > 0 && completedTime < totalEstimatedTime) {
       status = 'in_progress';
     } else if (totalEstimatedTime > 0 && completedTime >= totalEstimatedTime) {
@@ -430,7 +430,7 @@ export async function recalculateGoalProgress(goalId: string): Promise<Goal> {
 }
 
 /**
- * Todo 생성/수정 시 Goal의 total_estimated_time 업데이트
+ * Update Goal's total_estimated_time when Todo is created/updated
  */
 export async function updateGoalEstimatedTimeFromTodo(todoId: string): Promise<void> {
   const todo = await getTodoById(todoId);
@@ -498,7 +498,7 @@ export async function getOrCreateDefaultCategory(userId: string): Promise<Catego
 
   return createCategory({
     user_id: userId,
-    name: '기본',
+    name: 'Default',
     color: '#9CA3AF',
     is_default: true
   });
@@ -535,7 +535,7 @@ export async function createConversation(userId: string, title?: string): Promis
     .from('conversations')
     .insert({
       user_id: userId,
-      title: title || '새 대화',
+      title: title || 'New conversation',
       updated_at: new Date().toISOString()
     })
     .select()
@@ -558,7 +558,7 @@ export async function updateConversation(id: string, updates: Partial<Conversati
 }
 
 export async function deleteConversation(id: string): Promise<void> {
-  // 먼저 해당 대화의 메시지들 삭제
+  // First delete all messages in this conversation
   await supabase.from('messages').delete().eq('conversation_id', id);
 
   const { error } = await supabase
@@ -598,7 +598,7 @@ export async function createMessage(message: {
 
   if (error) throw new Error(`Failed to create message: ${error.message}`);
 
-  // 대화 업데이트 시간 갱신
+  // Update conversation timestamp
   await supabase
     .from('conversations')
     .update({ updated_at: new Date().toISOString() })
@@ -621,7 +621,7 @@ export async function updateMessagePendingEvents(messageId: string, pendingEvent
 // ==============================================
 
 export async function getGroupsByUser(userId: string): Promise<Group[]> {
-  // 사용자가 멤버인 그룹 목록 조회
+  // Get list of groups where user is a member
   const { data: memberships, error: memberError } = await supabase
     .from('group_members')
     .select('group_id')
@@ -654,9 +654,9 @@ export async function getGroupById(id: string): Promise<Group | null> {
   return data;
 }
 
-// 랜덤 초대 코드 생성 (디스코드 스타일: 6자리 영숫자)
+// Generate random invite code (Discord style: 6-character alphanumeric)
 function generateInviteCode(): string {
-  const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789'; // 혼동되는 문자 제외 (0/O, 1/I/L)
+  const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789'; // Exclude confusing characters (0/O, 1/I/L)
   let code = '';
   for (let i = 0; i < 6; i++) {
     code += chars.charAt(Math.floor(Math.random() * chars.length));
@@ -665,7 +665,7 @@ function generateInviteCode(): string {
 }
 
 export async function createGroup(name: string, creatorId: string): Promise<Group> {
-  // 1. 유니크한 초대 코드 생성
+  // 1. Generate unique invite code
   let inviteCode = generateInviteCode();
   let attempts = 0;
   while (attempts < 10) {
@@ -675,7 +675,7 @@ export async function createGroup(name: string, creatorId: string): Promise<Grou
     attempts++;
   }
 
-  // 2. 그룹 생성
+  // 2. Create group
   const { data: group, error: groupError } = await supabase
     .from('groups')
     .insert({ name, created_by: creatorId, invite_code: inviteCode })
@@ -684,7 +684,7 @@ export async function createGroup(name: string, creatorId: string): Promise<Grou
 
   if (groupError) throw new Error(`Failed to create group: ${groupError.message}`);
 
-  // 3. 생성자를 owner로 추가
+  // 3. Add creator as owner
   const { error: memberError } = await supabase
     .from('group_members')
     .insert({
@@ -698,7 +698,7 @@ export async function createGroup(name: string, creatorId: string): Promise<Grou
   return group;
 }
 
-// 초대 코드로 그룹 조회
+// Get group by invite code
 export async function getGroupByInviteCode(inviteCode: string): Promise<Group | null> {
   const { data, error } = await supabase
     .from('groups')
@@ -710,20 +710,20 @@ export async function getGroupByInviteCode(inviteCode: string): Promise<Group | 
   return data;
 }
 
-// 초대 코드로 그룹 가입
+// Join group by invite code
 export async function joinGroupByInviteCode(inviteCode: string, userId: string): Promise<Group> {
   const group = await getGroupByInviteCode(inviteCode);
   if (!group) {
-    throw new Error('유효하지 않은 초대 코드입니다.');
+    throw new Error('Invalid invite code.');
   }
 
-  // 이미 멤버인지 확인
+  // Check if already a member
   const existingMember = await getGroupMember(group.id, userId);
   if (existingMember) {
-    throw new Error('이미 이 그룹의 멤버입니다.');
+    throw new Error('Already a member of this group.');
   }
 
-  // 멤버로 추가
+  // Add as member
   const { error } = await supabase
     .from('group_members')
     .insert({
@@ -737,7 +737,7 @@ export async function joinGroupByInviteCode(inviteCode: string, userId: string):
   return group;
 }
 
-// 초대 코드 재생성 (owner만)
+// Regenerate invite code (owner only)
 export async function regenerateInviteCode(groupId: string): Promise<string> {
   let newCode = generateInviteCode();
   let attempts = 0;
@@ -771,7 +771,7 @@ export async function updateGroup(id: string, updates: Partial<Group>): Promise<
 }
 
 export async function deleteGroup(id: string): Promise<void> {
-  // 관련 데이터 순차 삭제
+  // Delete related data sequentially
   await supabase.from('group_invitations').delete().eq('group_id', id);
   await supabase.from('group_members').delete().eq('group_id', id);
 
@@ -890,7 +890,7 @@ export async function getInvitationById(id: string): Promise<GroupInvitation | n
 }
 
 export async function createInvitation(groupId: string, inviterId: string, inviteeEmail: string): Promise<GroupInvitation> {
-  // 이미 보낸 초대가 있는지 확인
+  // Check if invitation already sent
   const { data: existing } = await supabase
     .from('group_invitations')
     .select('*')
@@ -903,7 +903,7 @@ export async function createInvitation(groupId: string, inviterId: string, invit
     throw new Error('Invitation already sent to this email');
   }
 
-  // 이미 멤버인지 확인
+  // Check if already a member
   const user = await getUserByEmail(inviteeEmail);
   if (user) {
     const isMember = await isGroupMember(groupId, user.id);
@@ -946,7 +946,7 @@ export async function respondToInvitation(invitationId: string, accept: boolean,
 
   if (error) throw new Error(`Failed to respond to invitation: ${error.message}`);
 
-  // 수락한 경우 멤버로 추가
+  // Add as member if accepted
   if (accept) {
     await addGroupMember(invitation.group_id, userId, 'member');
   }
@@ -968,13 +968,13 @@ export async function cancelInvitation(invitationId: string): Promise<void> {
 // ==============================================
 
 /**
- * 그룹 멤버들의 공통 빈 시간대 찾기
- * @param groupId 그룹 ID
- * @param startDate 시작 날짜 (YYYY-MM-DD)
- * @param endDate 종료 날짜 (YYYY-MM-DD)
- * @param minDuration 최소 시간 (분)
- * @param workStartHour 업무 시작 시간 (기본 9)
- * @param workEndHour 업무 종료 시간 (기본 21)
+ * Find common available time slots for group members
+ * @param groupId Group ID
+ * @param startDate Start date (YYYY-MM-DD)
+ * @param endDate End date (YYYY-MM-DD)
+ * @param minDuration Minimum duration (minutes)
+ * @param workStartHour Work start hour (default 9)
+ * @param workEndHour Work end hour (default 21)
  */
 export async function findGroupAvailableSlots(
   groupId: string,
@@ -984,20 +984,20 @@ export async function findGroupAvailableSlots(
   workStartHour: number = 9,
   workEndHour: number = 21
 ): Promise<import('../types/index.js').GroupMatchSlot[]> {
-  // 1. 그룹 멤버 목록 가져오기
+  // 1. Get group member list
   const members = await getGroupMembers(groupId);
   if (members.length === 0) return [];
 
   const memberIds = members.map(m => m.user_id);
 
-  // 2. 모든 멤버의 일정 가져오기
+  // 2. Get all members' events
   const allEvents: (Event & { user_id: string })[] = [];
   for (const memberId of memberIds) {
     const events = await getEventsByUser(memberId, startDate, endDate);
     allEvents.push(...events.map(e => ({ ...e, user_id: memberId })));
   }
 
-  // 3. 날짜별로 가용 슬롯 계산
+  // 3. Calculate available slots by date
   const slots: import('../types/index.js').GroupMatchSlot[] = [];
   const start = new Date(startDate);
   const end = new Date(endDate);
@@ -1006,14 +1006,14 @@ export async function findGroupAvailableSlots(
     const dateStr = d.toISOString().split('T')[0];
     const dayEvents = allEvents.filter(e => e.event_date === dateStr);
 
-    // 시간대별 바쁜 멤버 추적 (분 단위)
+    // Track busy members by time slot (in minutes)
     const busyMap: Map<number, { fixed: string[]; flexible: string[] }> = new Map();
 
     for (let minute = workStartHour * 60; minute < workEndHour * 60; minute++) {
       busyMap.set(minute, { fixed: [], flexible: [] });
     }
 
-    // 각 이벤트에 대해 해당 시간대 표시
+    // Mark time slots for each event
     for (const event of dayEvents) {
       if (!event.start_time || !event.end_time) continue;
 
@@ -1034,7 +1034,7 @@ export async function findGroupAvailableSlots(
       }
     }
 
-    // 연속 가용 슬롯 찾기
+    // Find continuous available slots
     let slotStart: number | null = null;
     let slotType: 'available' | 'negotiable' | null = null;
     let conflictingMembers: Set<string> = new Set();
@@ -1068,13 +1068,13 @@ export async function findGroupAvailableSlots(
       let currentType: 'available' | 'negotiable' | 'blocked';
 
       if (fixedCount > 0) {
-        // 고정 일정이 있으면 해당 시간은 불가
+        // Time is blocked if there's a fixed event
         currentType = 'blocked';
       } else if (flexibleCount > 0) {
-        // 유동 일정만 있으면 협의 가능
+        // Negotiable if only flexible events
         currentType = 'negotiable';
       } else {
-        // 아무도 바쁘지 않으면 가용
+        // Available if no one is busy
         currentType = 'available';
       }
 

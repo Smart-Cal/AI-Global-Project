@@ -10,7 +10,7 @@ interface TodosViewProps {
   onAddTodo: () => void;
 }
 
-// deadline에서 날짜와 시간 추출
+// Extract date and time from deadline
 function getDeadlineDate(deadline?: string): string | undefined {
   if (!deadline) return undefined;
   return deadline.split('T')[0];
@@ -77,40 +77,40 @@ export const TodosView: React.FC<TodosViewProps> = ({ onAddTodo }) => {
   };
 
   const handleDelete = (todoId: string) => {
-    if (confirm('이 할 일을 삭제하시겠습니까?')) {
+    if (confirm('Are you sure you want to delete this todo?')) {
       deleteTodo(todoId);
     }
   };
 
   const handleDeleteCategory = async (categoryId: string, categoryName: string, isDefault: boolean) => {
     if (isDefault) {
-      showToast('기본 카테고리는 삭제할 수 없습니다', 'error');
+      showToast('Cannot delete default category', 'error');
       return;
     }
-    if (confirm(`"${categoryName}" 카테고리를 삭제하시겠습니까?`)) {
+    if (confirm(`Are you sure you want to delete category "${categoryName}"?`)) {
       try {
         await deleteCategory(categoryId);
-        showToast(`"${categoryName}" 카테고리가 삭제되었습니다`, 'success');
+        showToast(`Category "${categoryName}" deleted`, 'success');
       } catch (error) {
-        showToast('카테고리 삭제에 실패했습니다', 'error');
+        showToast('Failed to delete category', 'error');
       }
     }
   };
 
   const filters = [
-    { id: 'all', label: '전체', count: getPendingTodos().length },
-    { id: 'today', label: '오늘', count: todayTodos.length },
-    { id: 'upcoming', label: '예정', count: getUpcomingTodos(7).length },
-    { id: 'overdue', label: '지연', count: overdueTodos.length },
-    { id: 'completed', label: '완료', count: getCompletedTodos().length },
+    { id: 'all', label: 'All', count: getPendingTodos().length },
+    { id: 'today', label: 'Today', count: todayTodos.length },
+    { id: 'upcoming', label: 'Upcoming', count: getUpcomingTodos(7).length },
+    { id: 'overdue', label: 'Overdue', count: overdueTodos.length },
+    { id: 'completed', label: 'Completed', count: getCompletedTodos().length },
   ];
 
   return (
     <div className="goals-container">
       <div className="goals-header">
-        <h1 className="goals-title">할 일</h1>
+        <h1 className="goals-title">Todos</h1>
         <button className="btn btn-primary" onClick={onAddTodo}>
-          + 새 할 일
+          + New Todo
         </button>
       </div>
 
@@ -126,7 +126,7 @@ export const TodosView: React.FC<TodosViewProps> = ({ onAddTodo }) => {
         <span style={{ fontSize: '18px', color: 'var(--text-muted)' }}>+</span>
         <input
           type="text"
-          placeholder="할 일 추가..."
+          placeholder="Add todo..."
           value={newTodoTitle}
           onChange={(e) => setNewTodoTitle(e.target.value)}
           onKeyDown={(e) => {
@@ -137,7 +137,7 @@ export const TodosView: React.FC<TodosViewProps> = ({ onAddTodo }) => {
         />
         {newTodoTitle && (
           <button className="btn btn-primary btn-sm" onClick={handleQuickAdd}>
-            추가
+            Add
           </button>
         )}
       </div>
@@ -181,7 +181,7 @@ export const TodosView: React.FC<TodosViewProps> = ({ onAddTodo }) => {
         }}
       >
         <span style={{ fontSize: '13px', color: 'var(--text-secondary)', marginRight: '4px' }}>
-          카테고리:
+          Categories:
         </span>
         {categories.map((cat) => (
           <div
@@ -224,7 +224,7 @@ export const TodosView: React.FC<TodosViewProps> = ({ onAddTodo }) => {
                   justifyContent: 'center',
                   padding: 0,
                 }}
-                title={`${cat.name} 삭제`}
+                title={`Delete ${cat.name}`}
               >
                 −
               </button>
@@ -247,7 +247,7 @@ export const TodosView: React.FC<TodosViewProps> = ({ onAddTodo }) => {
             justifyContent: 'center',
             padding: 0,
           }}
-          title="카테고리 관리"
+          title="Manage categories"
         >
           ⚙
         </button>
@@ -258,13 +258,13 @@ export const TodosView: React.FC<TodosViewProps> = ({ onAddTodo }) => {
         <div className="empty-state">
           <div className="empty-state-title">
             {filter === 'completed'
-              ? '완료된 할 일이 없어요'
+              ? 'No completed todos'
               : filter === 'overdue'
-              ? '지연된 할 일이 없어요!'
-              : '할 일이 없어요'}
+              ? 'No overdue todos!'
+              : 'No todos'}
           </div>
           <div className="empty-state-text">
-            {filter !== 'completed' && filter !== 'overdue' && '새 할 일을 추가해보세요'}
+            {filter !== 'completed' && filter !== 'overdue' && 'Add a new todo to get started'}
           </div>
         </div>
       ) : (
@@ -291,7 +291,7 @@ export const TodosView: React.FC<TodosViewProps> = ({ onAddTodo }) => {
                     <span className={`todo-priority ${todo.priority}`} />
                     {deadlineDate && (
                       <span style={{ color: isOverdue ? '#E03E3E' : 'inherit' }}>
-                        {isOverdue ? '기한 초과: ' : ''}
+                        {isOverdue ? 'Overdue: ' : ''}
                         {deadlineDate}
                         {deadlineTime && ` ${deadlineTime}`}
                       </span>
@@ -309,7 +309,7 @@ export const TodosView: React.FC<TodosViewProps> = ({ onAddTodo }) => {
                     )}
                     {todo.is_recurring && (
                       <span style={{ color: 'var(--text-muted)' }}>
-                        {todo.recurrence_pattern === 'daily' ? '매일' : todo.recurrence_pattern === 'weekly' ? '매주' : '매월'}
+                        {todo.recurrence_pattern === 'daily' ? 'Daily' : todo.recurrence_pattern === 'weekly' ? 'Weekly' : 'Monthly'}
                       </span>
                     )}
                   </div>
@@ -319,7 +319,7 @@ export const TodosView: React.FC<TodosViewProps> = ({ onAddTodo }) => {
                   onClick={() => handleDelete(todo.id!)}
                   style={{ color: 'var(--text-muted)' }}
                 >
-                  삭제
+                  Delete
                 </button>
               </div>
             );
@@ -332,7 +332,7 @@ export const TodosView: React.FC<TodosViewProps> = ({ onAddTodo }) => {
         <div className="todo-section" style={{ marginTop: '24px' }}>
           <div className="todo-section-header">
             <div className="todo-section-title">
-              <span>완료됨</span>
+              <span>Completed</span>
               <span className="todo-count">{getCompletedTodos().length}</span>
             </div>
           </div>

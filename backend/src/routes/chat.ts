@@ -29,12 +29,12 @@ import {
   legacyToDbEvent
 } from '../types/index.js';
 
-// DBEvent를 LegacyEvent로 변환하는 헬퍼 함수
+// Helper function to convert DBEvent to LegacyEvent
 function dbEventToEvent(dbEvent: DBEvent): LegacyEvent {
   return dbEventToLegacy(dbEvent);
 }
 
-// LegacyEvent를 DBEvent로 변환
+// Convert LegacyEvent to DBEvent
 function eventToDbEvent(event: Partial<LegacyEvent>): Partial<DBEvent> {
   return legacyToDbEvent(event);
 }
@@ -43,7 +43,7 @@ const router = Router();
 
 /**
  * POST /api/chat
- * AI 비서와 대화
+ * Chat with AI assistant
  */
 router.post('/', authenticate, async (req: AuthRequest, res: Response) => {
   try {
@@ -55,7 +55,7 @@ router.post('/', authenticate, async (req: AuthRequest, res: Response) => {
       return;
     }
 
-    // 대화 세션 가져오기 또는 생성
+    // Get or create conversation session
     let conversation: Conversation;
     if (conversation_id) {
       const existing = await getConversationById(conversation_id);
@@ -65,19 +65,19 @@ router.post('/', authenticate, async (req: AuthRequest, res: Response) => {
       }
       conversation = existing;
     } else {
-      // 새 대화 생성 (첫 메시지 기반 제목)
+      // Create new conversation (title based on first message)
       const title = message.length > 30 ? message.substring(0, 30) + '...' : message;
       conversation = await createConversation(userId, title);
     }
 
-    // 사용자 메시지 저장
+    // Save user message
     await createMessage({
       conversation_id: conversation.id,
       role: 'user',
       content: message
     });
 
-    // 사용자 데이터 로드
+    // Load user data
     const [dbEvents, todos, goals, categories] = await Promise.all([
       getEventsByUser(userId),
       getTodosByUser(userId),
@@ -85,17 +85,17 @@ router.post('/', authenticate, async (req: AuthRequest, res: Response) => {
       getCategoriesByUser(userId)
     ]);
 
-    // DBEvent를 LegacyEvent로 변환
+    // Convert DBEvent to LegacyEvent
     const events: LegacyEvent[] = dbEvents.map(dbEventToEvent);
 
-    // 이전 대화 기록 로드 (최근 20개)
+    // Load previous conversation history (last 20 messages)
     const dbMessages = await getMessagesByConversation(conversation.id);
     const history: ChatMessage[] = dbMessages.slice(-20).map(m => ({
       role: m.role,
       content: m.content
     }));
 
-    // Orchestrator 컨텍스트 생성
+    // Create Orchestrator context
     const context: OrchestratorContext = {
       user_id: userId,
       events,
@@ -105,21 +105,21 @@ router.post('/', authenticate, async (req: AuthRequest, res: Response) => {
       conversation_history: history
     };
 
-    // Agent 선택: MCP 모드 또는 기본 모드
+    // Agent selection: MCP mode or basic mode
     // mode: 'auto' | 'mcp' | 'basic'
-    // - 'mcp': MCP 통합 에이전트 사용 (장소 추천, 그룹 일정, 쇼핑 등 지원)
-    // - 'basic': 기존 에이전트 사용
-    // - 'auto': 기본적으로 MCP 에이전트 사용 (더 많은 기능 지원)
+    // - 'mcp': Use MCP integrated agent (supports location recommendations, group schedules, shopping, etc.)
+    // - 'basic': Use legacy agent
+    // - 'auto': Use MCP agent by default (supports more features)
     const useMCP = mode !== 'basic';
 
     let response;
     if (useMCP) {
-      // MCP 통합 에이전트 ("말하는 AI" → "행동하는 AI")
+      // MCP integrated agent ("Talking AI" → "Acting AI")
       console.log('[Chat API] Using MCP Agent Loop');
       const mcpAgent = createMCPAgentLoop(context);
       response = await mcpAgent.processMessage(message, mode);
     } else {
-      // 기존 에이전트
+      // Legacy agent
       console.log('[Chat API] Using Basic Agent Loop');
       const agent = createAgentLoop(context);
       response = await agent.processMessage(message, mode);
@@ -127,7 +127,7 @@ router.post('/', authenticate, async (req: AuthRequest, res: Response) => {
 
     console.log('[Chat API] Agent response:', JSON.stringify(response, null, 2));
 
-    // 응답에서 pending 항목들 추출
+    // Extract pending items from response
     const pendingEvents = response.events_to_create || [];
     const pendingTodos = response.todos_to_create || [];
     const pendingGoals = response.goals_to_create || [];
@@ -137,7 +137,7 @@ router.post('/', authenticate, async (req: AuthRequest, res: Response) => {
       console.log('[Chat API] Pending goals:', JSON.stringify(pendingGoals, null, 2));
     }
 
-    // AI 응답 메시지 저장 (pending 항목들 포함)
+    // Save AI response message (including pending items)
     const pendingData: any = {};
     if (pendingEvents.length > 0) pendingData.pending_events = pendingEvents;
     if (pendingTodos.length > 0) pendingData.pending_todos = pendingTodos;
@@ -160,7 +160,7 @@ router.post('/', authenticate, async (req: AuthRequest, res: Response) => {
       scheduled_items: response.todos_to_schedule,
       needs_user_input: response.needs_user_input,
       suggestions: response.suggestions,
-      // MCP 데이터 (장소 추천, 상품 검색 결과 등)
+      // MCP data (location recommendations, product search results, etc.)
       mcp_data: (response as any).mcp_data
     });
   } catch (error) {
@@ -170,32 +170,32 @@ router.post('/', authenticate, async (req: AuthRequest, res: Response) => {
 });
 
 /**
- * 카테고리 이름으로 가장 적합한 카테고리 ID 찾기
+ * Find the most appropriate category ID by category name
  */
 function findCategoryId(categories: { id: string; name: string }[], categoryName?: string): string | undefined {
   if (!categoryName || !categories.length) {
-    // 기본 카테고리 반환
-    const defaultCat = categories.find(c => c.name === '기본');
+    // Return default category
+    const defaultCat = categories.find(c => c.name === 'Default' || c.name === '기본');
     return defaultCat?.id;
   }
 
-  // 정확히 매칭
+  // Exact match
   const exactMatch = categories.find(c => c.name === categoryName);
   if (exactMatch) return exactMatch.id;
 
-  // 부분 매칭 (카테고리 이름이 검색어를 포함하거나 검색어가 카테고리 이름을 포함)
+  // Partial match (category name contains search term or search term contains category name)
   const partialMatch = categories.find(c =>
     c.name.includes(categoryName) || categoryName.includes(c.name)
   );
   if (partialMatch) return partialMatch.id;
 
-  // 키워드 기반 매칭
+  // Keyword-based matching
   const categoryKeywords: { [key: string]: string[] } = {
-    '운동': ['운동', '건강', '헬스', '조깅', '요가', '체육'],
-    '업무': ['업무', '회의', '미팅', '출근', '프로젝트', '발표', '일'],
-    '공부': ['공부', '학습', '수업', '강의', '시험', '자격증', '독서'],
-    '약속': ['약속', '친구', '데이트', '모임', '파티', '만남'],
-    '개인': ['개인', '취미', '휴식', '영화', '쇼핑', '여행']
+    'Exercise': ['exercise', 'health', 'fitness', 'gym', 'workout', 'yoga', 'sports', '운동', '건강', '헬스', '조깅', '요가', '체육'],
+    'Work': ['work', 'meeting', 'office', 'project', 'presentation', 'business', '업무', '회의', '미팅', '출근', '프로젝트', '발표', '일'],
+    'Study': ['study', 'learning', 'class', 'lecture', 'exam', 'certification', 'reading', '공부', '학습', '수업', '강의', '시험', '자격증', '독서'],
+    'Social': ['appointment', 'friend', 'date', 'gathering', 'party', 'meeting', '약속', '친구', '데이트', '모임', '파티', '만남'],
+    'Personal': ['personal', 'hobby', 'rest', 'movie', 'shopping', 'travel', '개인', '취미', '휴식', '영화', '쇼핑', '여행']
   };
 
   for (const category of categories) {
@@ -205,14 +205,14 @@ function findCategoryId(categories: { id: string; name: string }[], categoryName
     }
   }
 
-  // 기본 카테고리 반환
-  const defaultCat = categories.find(c => c.name === '기본');
+  // Return default category
+  const defaultCat = categories.find(c => c.name === 'Default' || c.name === '기본');
   return defaultCat?.id;
 }
 
 /**
  * POST /api/chat/save-result
- * 일정 확정 결과 메시지를 대화 기록에 저장
+ * Save schedule confirmation result message to conversation history
  */
 router.post('/save-result', authenticate, async (req: AuthRequest, res: Response) => {
   try {
@@ -238,7 +238,7 @@ router.post('/save-result', authenticate, async (req: AuthRequest, res: Response
 
 /**
  * POST /api/chat/confirm-events
- * 확인된 일정들을 저장
+ * Save confirmed events
  */
 router.post('/confirm-events', authenticate, async (req: AuthRequest, res: Response) => {
   try {
@@ -252,7 +252,7 @@ router.post('/confirm-events', authenticate, async (req: AuthRequest, res: Respo
       return;
     }
 
-    // 사용자의 카테고리 목록 가져오기
+    // Get user's category list
     const categories = await getCategoriesByUser(userId);
     console.log('[confirm-events] User categories:', categories.map(c => ({ id: c.id, name: c.name })));
 
@@ -260,7 +260,7 @@ router.post('/confirm-events', authenticate, async (req: AuthRequest, res: Respo
 
     for (const event of events) {
       console.log('[confirm-events] Processing event:', { title: event.title, category: event.category });
-      // AI가 추천한 카테고리 이름으로 category_id 찾기
+      // Find category_id by AI-recommended category name
       const categoryId = findCategoryId(categories, event.category);
       console.log('[confirm-events] Found categoryId:', categoryId, 'for category name:', event.category);
 
@@ -275,7 +275,7 @@ router.post('/confirm-events', authenticate, async (req: AuthRequest, res: Respo
     }
 
     res.json({
-      message: `${createdEvents.length}개의 일정이 저장되었습니다.`,
+      message: `${createdEvents.length} event(s) saved successfully.`,
       events: createdEvents
     });
   } catch (error) {
@@ -286,7 +286,7 @@ router.post('/confirm-events', authenticate, async (req: AuthRequest, res: Respo
 
 /**
  * POST /api/chat/confirm-todos
- * 확인된 TODO들을 저장
+ * Save confirmed TODOs
  */
 router.post('/confirm-todos', authenticate, async (req: AuthRequest, res: Response) => {
   try {
@@ -298,18 +298,18 @@ router.post('/confirm-todos', authenticate, async (req: AuthRequest, res: Respon
       return;
     }
 
-    // 사용자의 카테고리 목록 가져오기
+    // Get user's category list
     const categories = await getCategoriesByUser(userId);
 
     const createdTodos: Todo[] = [];
 
     for (const todo of todos) {
-      // 카테고리 이름으로 category_id 찾기
+      // Find category_id by category name
       // const categoryId = findCategoryId(categories, todo.category);
 
       const todoData: Partial<Todo> = {
         user_id: userId,
-        // category_id: categoryId,  // Todo 타입에는 category_id가 없음
+        // category_id: categoryId,  // Todo type doesn't have category_id
         title: todo.title,
         description: todo.description || undefined,
         priority: todo.priority || 'medium',
@@ -320,7 +320,7 @@ router.post('/confirm-todos', authenticate, async (req: AuthRequest, res: Respon
         is_divisible: true
       };
 
-      // deadline 설정
+      // Set deadline
       if (todo.deadline) {
         todoData.deadline = todo.deadline;
       }
@@ -330,7 +330,7 @@ router.post('/confirm-todos', authenticate, async (req: AuthRequest, res: Respon
     }
 
     res.json({
-      message: `${createdTodos.length}개의 할 일이 저장되었습니다.`,
+      message: `${createdTodos.length} todo(s) saved successfully.`,
       todos: createdTodos
     });
   } catch (error) {
@@ -341,7 +341,7 @@ router.post('/confirm-todos', authenticate, async (req: AuthRequest, res: Respon
 
 /**
  * POST /api/chat/confirm-goals
- * 확인된 Goal들을 저장
+ * Save confirmed Goals
  */
 router.post('/confirm-goals', authenticate, async (req: AuthRequest, res: Response) => {
   try {
@@ -353,13 +353,13 @@ router.post('/confirm-goals', authenticate, async (req: AuthRequest, res: Respon
       return;
     }
 
-    // 카테고리 목록 가져오기
+    // Get category list
     const categories = await getCategoriesByUser(userId);
 
     const createdGoals: Goal[] = [];
 
     for (const goal of goals) {
-      // 카테고리 이름으로 ID 찾기
+      // Find ID by category name
       const categoryId = findCategoryId(categories, goal.category);
 
       const goalData: Partial<Goal> = {
@@ -377,7 +377,7 @@ router.post('/confirm-goals', authenticate, async (req: AuthRequest, res: Respon
       const created = await createGoal(goalData);
       createdGoals.push(created);
 
-      // Goal에 연결된 TODO들도 생성
+      // Also create TODOs linked to Goal
       if (goal.decomposed_todos && goal.decomposed_todos.length > 0) {
         for (const todo of goal.decomposed_todos) {
           const todoData: Partial<Todo> = {
@@ -398,7 +398,7 @@ router.post('/confirm-goals', authenticate, async (req: AuthRequest, res: Respon
     }
 
     res.json({
-      message: `${createdGoals.length}개의 목표가 저장되었습니다.`,
+      message: `${createdGoals.length} goal(s) saved successfully.`,
       goals: createdGoals
     });
   } catch (error) {
@@ -409,7 +409,7 @@ router.post('/confirm-goals', authenticate, async (req: AuthRequest, res: Respon
 
 /**
  * GET /api/chat/conversations
- * 대화 목록 조회
+ * Get conversation list
  */
 router.get('/conversations', authenticate, async (req: AuthRequest, res: Response) => {
   try {
@@ -425,7 +425,7 @@ router.get('/conversations', authenticate, async (req: AuthRequest, res: Respons
 
 /**
  * GET /api/chat/conversations/:id
- * 특정 대화 조회 (메시지 포함)
+ * Get specific conversation (including messages)
  */
 router.get('/conversations/:id', authenticate, async (req: AuthRequest, res: Response) => {
   try {
@@ -451,7 +451,7 @@ router.get('/conversations/:id', authenticate, async (req: AuthRequest, res: Res
 
 /**
  * POST /api/chat/conversations
- * 새 대화 생성
+ * Create new conversation
  */
 router.post('/conversations', authenticate, async (req: AuthRequest, res: Response) => {
   try {
@@ -469,7 +469,7 @@ router.post('/conversations', authenticate, async (req: AuthRequest, res: Respon
 
 /**
  * PUT /api/chat/conversations/:id
- * 대화 제목 수정
+ * Update conversation title
  */
 router.put('/conversations/:id', authenticate, async (req: AuthRequest, res: Response) => {
   try {
@@ -487,7 +487,7 @@ router.put('/conversations/:id', authenticate, async (req: AuthRequest, res: Res
 
 /**
  * DELETE /api/chat/conversations/:id
- * 대화 삭제
+ * Delete conversation
  */
 router.delete('/conversations/:id', authenticate, async (req: AuthRequest, res: Response) => {
   try {

@@ -14,7 +14,7 @@ const router = Router();
 
 /**
  * GET /api/events
- * 일정 목록 조회
+ * Get event list
  */
 router.get('/', authenticate, async (req: AuthRequest, res: Response) => {
   try {
@@ -27,13 +27,13 @@ router.get('/', authenticate, async (req: AuthRequest, res: Response) => {
       end_date as string | undefined
     );
 
-    // is_fixed 필터링
+    // Filter by is_fixed
     if (is_fixed !== undefined) {
       const fixed = is_fixed === 'true';
       events = events.filter(e => e.is_fixed === fixed);
     }
 
-    // 완료된 일정 제외 (기본값)
+    // Exclude completed events (default)
     if (include_completed !== 'true') {
       events = events.filter(e => !e.is_completed);
     }
@@ -47,7 +47,7 @@ router.get('/', authenticate, async (req: AuthRequest, res: Response) => {
 
 /**
  * GET /api/events/:id
- * 단일 일정 조회
+ * Get single event
  */
 router.get('/:id', authenticate, async (req: AuthRequest, res: Response) => {
   try {
@@ -68,7 +68,7 @@ router.get('/:id', authenticate, async (req: AuthRequest, res: Response) => {
 
 /**
  * POST /api/events
- * 일정 생성
+ * Create event
  */
 router.post('/', authenticate, async (req: AuthRequest, res: Response) => {
   try {
@@ -101,7 +101,7 @@ router.post('/', authenticate, async (req: AuthRequest, res: Response) => {
       end_time,
       is_all_day: is_all_day || false,
       location,
-      is_fixed: is_fixed !== false, // 기본값 true
+      is_fixed: is_fixed !== false, // Default true
       priority: priority || 3,
       category_id,
       related_todo_id,
@@ -117,18 +117,18 @@ router.post('/', authenticate, async (req: AuthRequest, res: Response) => {
 
 /**
  * PUT /api/events/:id
- * 일정 수정
+ * Update event
  */
 router.put('/:id', authenticate, async (req: AuthRequest, res: Response) => {
   try {
     const { id } = req.params;
     const updates = req.body;
 
-    // 수정 불가 필드 제거
+    // Remove non-editable fields
     delete updates.id;
     delete updates.user_id;
     delete updates.created_at;
-    delete updates.completed_at; // 별도 API로만 수정
+    delete updates.completed_at; // Only modifiable via separate API
 
     const event = await updateEvent(id, updates);
     res.json({ event });
@@ -140,7 +140,7 @@ router.put('/:id', authenticate, async (req: AuthRequest, res: Response) => {
 
 /**
  * DELETE /api/events/:id
- * 일정 삭제
+ * Delete event
  */
 router.delete('/:id', authenticate, async (req: AuthRequest, res: Response) => {
   try {
@@ -155,7 +155,7 @@ router.delete('/:id', authenticate, async (req: AuthRequest, res: Response) => {
 
 /**
  * PATCH /api/events/:id/complete
- * 일정 완료 처리 (연결된 Todo, Goal 진행률도 업데이트)
+ * Complete event (also updates linked Todo and Goal progress)
  */
 router.patch('/:id/complete', authenticate, async (req: AuthRequest, res: Response) => {
   try {
@@ -165,13 +165,13 @@ router.patch('/:id/complete', authenticate, async (req: AuthRequest, res: Respon
     let event: Event;
 
     if (is_completed === false) {
-      // 완료 취소
+      // Cancel completion
       event = await updateEvent(id, {
         is_completed: false,
         completed_at: undefined
       });
     } else {
-      // 완료 처리 (Todo, Goal 진행률 업데이트 포함)
+      // Mark as complete (includes Todo and Goal progress update)
       event = await completeEvent(id);
     }
 
