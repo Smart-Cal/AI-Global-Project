@@ -7402,6 +7402,7 @@ textarea.form-input {
   scroll-snap-align: start;
   transition: transform 0.2s, box-shadow 0.2s;
   cursor: pointer;
+  position: relative;
 }
 
 .mcp-card:hover {

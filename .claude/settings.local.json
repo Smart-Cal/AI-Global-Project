@@ -24,7 +24,12 @@
       "Bash(git fetch:*)",
       "Bash(npm run dev:*)",
       "Bash(npm run build:backend:*)",
-      "Bash(npm run build:frontend:*)"
+      "Bash(npm run build:frontend:*)",
+      "Bash(dir \"C:\\Users\\kikikiju\\Desktop\\global internship\\project\\palm\" /B)",
+      "Bash(tree:*)",
+      "Bash(cat:*)",
+      "Bash(npm run install:all:*)",
+      "Bash(timeout 10 npm run dev:all:*)"
     ]
   }
 }

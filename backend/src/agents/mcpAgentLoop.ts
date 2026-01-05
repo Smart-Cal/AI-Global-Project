@@ -447,24 +447,14 @@ IMPORTANT:
       };
     }
 
-    // 결과 포맷팅
-    let message = `Here are some recommendations for ${info.area || 'the area'}! 🍽️\n\n`;
+    const area = info.area || info.location || 'the area';
+    const cuisine = info.cuisine ? `${info.cuisine} ` : '';
 
-    restaurants.slice(0, 5).forEach((r: any, idx: number) => {
-      const medal = idx === 0 ? '🥇' : idx === 1 ? '🥈' : idx === 2 ? '🥉' : `${idx + 1}.`;
-      message += `${medal} **${r.name}**\n`;
-      if (r.rating) message += `   ⭐ ${r.rating}`;
-      if (r.userRatingsTotal) message += ` (${r.userRatingsTotal} reviews)`;
-      message += '\n';
-      if (r.address) message += `   📍 ${r.address}\n`;
-      message += '\n';
-    });
-
-    message += 'Where would you like to go? Shall I add it to your schedule?';
+    // Simple, clean response - details are shown in cards below
+    const message = `Here are some ${cuisine}restaurant recommendations for ${area}! 🍽️`;
 
     return {
       message,
-      suggestions: restaurants.slice(0, 3).map((r: any) => r.name),
       mcp_data: { restaurants }
     };
   }

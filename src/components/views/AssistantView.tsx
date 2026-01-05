@@ -1495,13 +1495,13 @@ const AssistantView: React.FC = () => {
             </h4>
             {renderCarousel('places', placeItems, (place: MCPPlaceResult, idx: number, globalIdx: number) => (
               <div key={place.id || globalIdx} className="mcp-card mcp-place-card">
+                <div className="mcp-card-rank">{globalIdx + 1}</div>
                 {place.photos && place.photos[0] && (
                   <div className="mcp-card-image">
                     <img src={place.photos[0]} alt={place.name} />
                   </div>
                 )}
                 <div className="mcp-card-content">
-                  <div className="mcp-card-rank">{globalIdx + 1}</div>
                   <div className="mcp-card-title">{place.name}</div>
                   <div className="mcp-card-details">
                     {place.rating && <span className="mcp-rating">⭐ {place.rating}</span>}
