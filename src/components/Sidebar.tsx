@@ -3,6 +3,7 @@ import { useAuthStore } from '../store/authStore';
 import { useGoalStore, calculateGoalProgress } from '../store/goalStore';
 import { useTodoStore } from '../store/todoStore';
 import { useCategoryStore } from '../store/categoryStore';
+import { useConfirm } from './ConfirmModal';
 import type { SidebarView, Goal } from '../types';
 import { getIcon, PlusIcon, CalendarIcon, SettingsIcon } from './Icons';
 
@@ -38,6 +39,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
   const { goals } = useGoalStore();
   const { todos } = useTodoStore();
   const { getCategoryById } = useCategoryStore();
+  const { confirm } = useConfirm();
 
   const activeGoals = goals.filter(isGoalActive);
   const pendingTodos = todos.filter((t) => !t.is_completed);
@@ -47,8 +49,14 @@ export const Sidebar: React.FC<SidebarProps> = ({
     return deadlineDate < new Date().toISOString().split('T')[0];
   });
 
-  const handleLogout = () => {
-    if (confirm('Are you sure you want to log out?')) {
+  const handleLogout = async () => {
+    const confirmed = await confirm({
+      title: 'Log Out',
+      message: 'Are you sure you want to log out?',
+      confirmText: 'Log Out',
+      confirmVariant: 'danger'
+    });
+    if (confirmed) {
       logout();
     }
   };

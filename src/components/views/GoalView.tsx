@@ -2,6 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { useGoalStore, calculateGoalProgress } from '../../store/goalStore';
 import { useCategoryStore } from '../../store/categoryStore';
 import { useTodoStore } from '../../store/todoStore';
+import { useConfirm } from '../ConfirmModal';
 import { DEFAULT_CATEGORY_COLOR, type Goal } from '../../types';
 import GoalDecomposition from '../GoalDecomposition';
 
@@ -19,6 +20,7 @@ const GoalView: React.FC<GoalViewProps> = ({ onGoalClick, onAddGoal }) => {
   const { goals, fetchGoals, updateGoal, deleteGoal } = useGoalStore();
   const { getCategoryById } = useCategoryStore();
   const { getTodosByGoal } = useTodoStore();
+  const { confirm } = useConfirm();
 
   const [selectedGoal, setSelectedGoal] = useState<Goal | null>(null);
   const [showFilter, setShowFilter] = useState<'all' | 'active' | 'completed'>('all');
@@ -269,9 +271,17 @@ const GoalView: React.FC<GoalViewProps> = ({ onGoalClick, onAddGoal }) => {
                 <button
                   className="btn btn-danger"
                   onClick={async () => {
-                    if (selectedGoal.id && window.confirm('Are you sure you want to delete this goal?')) {
-                      await deleteGoal(selectedGoal.id);
-                      setSelectedGoal(null);
+                    if (selectedGoal.id) {
+                      const confirmed = await confirm({
+                        title: 'Delete Goal',
+                        message: 'Are you sure you want to delete this goal?',
+                        confirmText: 'Delete',
+                        confirmVariant: 'danger'
+                      });
+                      if (confirmed) {
+                        await deleteGoal(selectedGoal.id);
+                        setSelectedGoal(null);
+                      }
                     }
                   }}
                 >

@@ -6,6 +6,7 @@ import { type CalendarEvent, DEFAULT_CATEGORY_COLOR, CATEGORY_COLORS } from '../
 import TimePicker from './TimePicker';
 import DatePicker from './DatePicker';
 import { useToast } from './Toast';
+import { useConfirm } from './ConfirmModal';
 
 interface EventModalProps {
   isOpen: boolean;
@@ -24,6 +25,7 @@ export const EventModal: React.FC<EventModalProps> = ({
   const { addEvent, editEvent, removeEvent } = useEventStore();
   const { categories, addCategory, getDefaultCategory } = useCategoryStore();
   const { showToast } = useToast();
+  const { confirm } = useConfirm();
 
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
@@ -109,7 +111,13 @@ export const EventModal: React.FC<EventModalProps> = ({
 
   const handleDelete = async () => {
     if (!event?.id) return;
-    if (confirm('Are you sure you want to delete this event?')) {
+    const confirmed = await confirm({
+      title: 'Delete Event',
+      message: 'Are you sure you want to delete this event?',
+      confirmText: 'Delete',
+      confirmVariant: 'danger'
+    });
+    if (confirmed) {
       await removeEvent(event.id);
       showToast('Event deleted', 'success');
       onClose();

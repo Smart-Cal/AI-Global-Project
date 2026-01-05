@@ -7,12 +7,14 @@ import {
   getGroupByCode,
   type Group,
 } from '../../services/api';
+import { useConfirm } from '../ConfirmModal';
 
 interface GroupsViewProps {
   onGroupClick: (groupId: string) => void;
 }
 
 const GroupsView: React.FC<GroupsViewProps> = ({ onGroupClick }) => {
+  const { confirm } = useConfirm();
   const [groups, setGroups] = useState<Group[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -102,7 +104,13 @@ const GroupsView: React.FC<GroupsViewProps> = ({ onGroupClick }) => {
 
   const handleDeleteGroup = async (groupId: string, e: React.MouseEvent) => {
     e.stopPropagation();
-    if (!confirm('Are you sure you want to delete this group?')) return;
+    const confirmed = await confirm({
+      title: 'Delete Group',
+      message: 'Are you sure you want to delete this group?',
+      confirmText: 'Delete',
+      confirmVariant: 'danger'
+    });
+    if (!confirmed) return;
 
     try {
       await deleteGroup(groupId);

@@ -3,6 +3,7 @@ import { useEventStore } from '../../store/eventStore';
 import { useTodoStore } from '../../store/todoStore';
 import { useCategoryStore } from '../../store/categoryStore';
 import { useToast } from '../Toast';
+import { useConfirm } from '../ConfirmModal';
 import { DEFAULT_CATEGORY_COLOR, type CalendarEvent } from '../../types';
 
 // Extract date and time from deadline
@@ -28,6 +29,7 @@ const ScheduleView: React.FC<ScheduleViewProps> = ({ onEventClick, onAddEvent, o
   const { todos, fetchTodos, toggleComplete, deleteTodo } = useTodoStore();
   const { categories, fetchCategories, getCategoryById, deleteCategory } = useCategoryStore();
   const { showToast } = useToast();
+  const { confirm } = useConfirm();
 
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
   const [viewType, setViewType] = useState<'events' | 'todos' | 'all'>('all');
@@ -90,7 +92,13 @@ const ScheduleView: React.FC<ScheduleViewProps> = ({ onEventClick, onAddEvent, o
       showToast('Cannot delete default category', 'error');
       return;
     }
-    if (confirm(`Are you sure you want to delete category "${categoryName}"?`)) {
+    const confirmed = await confirm({
+      title: 'Delete Category',
+      message: `Are you sure you want to delete category "${categoryName}"?`,
+      confirmText: 'Delete',
+      confirmVariant: 'danger'
+    });
+    if (confirmed) {
       try {
         await deleteCategory(categoryId);
         showToast(`Category "${categoryName}" deleted`, 'success');
@@ -345,11 +353,19 @@ const ScheduleView: React.FC<ScheduleViewProps> = ({ onEventClick, onAddEvent, o
                         </div>
                         <button
                           className="schedule-todo-delete"
-                          onClick={(e) => {
+                          onClick={async (e) => {
                             e.stopPropagation();
-                            if (todo.id && confirm('Delete this todo?')) {
-                              deleteTodo(todo.id);
-                              showToast('Todo deleted', 'success');
+                            if (todo.id) {
+                              const confirmed = await confirm({
+                                title: 'Delete Todo',
+                                message: 'Are you sure you want to delete this todo?',
+                                confirmText: 'Delete',
+                                confirmVariant: 'danger'
+                              });
+                              if (confirmed) {
+                                deleteTodo(todo.id);
+                                showToast('Todo deleted', 'success');
+                              }
                             }
                           }}
                           title="Delete todo"

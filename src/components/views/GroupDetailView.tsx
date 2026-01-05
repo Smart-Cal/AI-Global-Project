@@ -13,6 +13,7 @@ import {
   type GroupMember,
   type AvailableSlot,
 } from '../../services/api';
+import { useConfirm } from '../ConfirmModal';
 
 interface GroupDetailViewProps {
   groupId: string;
@@ -22,6 +23,7 @@ interface GroupDetailViewProps {
 type TabType = 'members' | 'schedule' | 'meeting';
 
 const GroupDetailView: React.FC<GroupDetailViewProps> = ({ groupId, onBack }) => {
+  const { confirm } = useConfirm();
   const [group, setGroup] = useState<Group | null>(null);
   const [members, setMembers] = useState<GroupMember[]>([]);
   const [isOwner, setIsOwner] = useState(false);
@@ -99,7 +101,13 @@ const GroupDetailView: React.FC<GroupDetailViewProps> = ({ groupId, onBack }) =>
 
   // Regenerate invite code (owner only)
   const handleRegenerateCode = async () => {
-    if (!confirm('Generating a new invite code will invalidate the current one. Continue?')) return;
+    const confirmed = await confirm({
+      title: 'Regenerate Invite Code',
+      message: 'Generating a new invite code will invalidate the current one. Continue?',
+      confirmText: 'Generate',
+      confirmVariant: 'primary'
+    });
+    if (!confirmed) return;
 
     setIsRegenerating(true);
     try {
@@ -115,7 +123,13 @@ const GroupDetailView: React.FC<GroupDetailViewProps> = ({ groupId, onBack }) =>
   };
 
   const handleRemoveMember = async (memberId: string) => {
-    if (!confirm('Are you sure you want to remove this member?')) return;
+    const confirmed = await confirm({
+      title: 'Remove Member',
+      message: 'Are you sure you want to remove this member?',
+      confirmText: 'Remove',
+      confirmVariant: 'danger'
+    });
+    if (!confirmed) return;
 
     try {
       await removeGroupMember(groupId, memberId);
@@ -126,7 +140,13 @@ const GroupDetailView: React.FC<GroupDetailViewProps> = ({ groupId, onBack }) =>
   };
 
   const handleLeaveGroup = async () => {
-    if (!confirm('Are you sure you want to leave this group?')) return;
+    const confirmed = await confirm({
+      title: 'Leave Group',
+      message: 'Are you sure you want to leave this group?',
+      confirmText: 'Leave',
+      confirmVariant: 'danger'
+    });
+    if (!confirmed) return;
 
     try {
       await leaveGroup(groupId);
@@ -233,7 +253,13 @@ const GroupDetailView: React.FC<GroupDetailViewProps> = ({ groupId, onBack }) =>
   };
 
   const handleTransferLeadership = async (memberId: string, memberName: string) => {
-    if (!confirm(`Are you sure you want to transfer leadership to ${memberName}? You will become a regular member.`)) return;
+    const confirmed = await confirm({
+      title: 'Transfer Leadership',
+      message: `Are you sure you want to transfer leadership to ${memberName}? You will become a regular member.`,
+      confirmText: 'Transfer',
+      confirmVariant: 'primary'
+    });
+    if (!confirmed) return;
 
     try {
       await transferLeadership(groupId, memberId);

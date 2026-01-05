@@ -1,6 +1,7 @@
 import React from 'react';
 import { useEventStore } from '../store/eventStore';
 import { useCategoryStore } from '../store/categoryStore';
+import { useConfirm } from './ConfirmModal';
 import { type CalendarEvent, DEFAULT_CATEGORY_COLOR } from '../types';
 
 interface EventDetailModalProps {
@@ -18,6 +19,7 @@ export const EventDetailModal: React.FC<EventDetailModalProps> = ({
 }) => {
   const { events, removeEvent, toggleComplete } = useEventStore();
   const { getCategoryById } = useCategoryStore();
+  const { confirm } = useConfirm();
 
   if (!isOpen || !propEvent) return null;
 
@@ -34,7 +36,13 @@ export const EventDetailModal: React.FC<EventDetailModalProps> = ({
   };
 
   const handleDelete = async () => {
-    if (confirm('Are you sure you want to delete this event?')) {
+    const confirmed = await confirm({
+      title: 'Delete Event',
+      message: 'Are you sure you want to delete this event?',
+      confirmText: 'Delete',
+      confirmVariant: 'danger'
+    });
+    if (confirmed) {
       await removeEvent(event.id!);
       onClose();
     }

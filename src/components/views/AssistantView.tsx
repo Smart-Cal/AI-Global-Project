@@ -25,6 +25,7 @@ import {
 import DatePicker from '../DatePicker';
 import TimePicker from '../TimePicker';
 import { useToast } from '../Toast';
+import { useConfirm } from '../ConfirmModal';
 import type { Goal } from '../../types';
 
 interface LocalMessage {
@@ -55,6 +56,7 @@ const AssistantView: React.FC = () => {
   const { loadEvents, events } = useEventStore();
   const { categories, fetchCategories, addCategory } = useCategoryStore();
   const { showToast } = useToast();
+  const { confirm } = useConfirm();
 
   // Conversations state
   const [conversations, setConversations] = useState<Conversation[]>([]);
@@ -184,7 +186,13 @@ const AssistantView: React.FC = () => {
 
   const handleDeleteConversation = async (id: string, e: React.MouseEvent) => {
     e.stopPropagation();
-    if (!confirm('Are you sure you want to delete this conversation?')) return;
+    const confirmed = await confirm({
+      title: 'Delete Conversation',
+      message: 'Are you sure you want to delete this conversation?',
+      confirmText: 'Delete',
+      confirmVariant: 'danger'
+    });
+    if (!confirmed) return;
 
     try {
       await deleteConversation(id);
