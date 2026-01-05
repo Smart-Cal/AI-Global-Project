@@ -381,7 +381,7 @@ export const Dashboard: React.FC<DashboardProps> = ({
                   {renderScheduleCards(msg)}
                 </div>
               </div>
-            )}
+            ))}
 
             {isLoading && (
               <div className="chat-message assistant">

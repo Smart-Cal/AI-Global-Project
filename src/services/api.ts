@@ -808,3 +808,45 @@ export async function joinGroupByCode(code: string): Promise<{ message: string; 
 export async function getGroupByCode(code: string): Promise<{ group: { id: string; name: string; member_count: number } }> {
   return apiRequest(`/groups/code/${code}`);
 }
+
+export async function leaveGroup(groupId: string): Promise<void> {
+  await apiRequest(`/groups/${groupId}/leave`, { method: 'POST' });
+}
+
+export async function regenerateInviteCode(groupId: string): Promise<{ invite_code: string }> {
+  return apiRequest<{ invite_code: string }>(`/groups/${groupId}/invite-code`, {
+    method: 'POST',
+  });
+}
+
+export async function getGroupAvailableSlots(
+  groupId: string,
+  startDate?: string,
+  endDate?: string
+): Promise<{ slots: AvailableSlot[]; date_range: { start: string; end: string } }> {
+  let url = `/groups/${groupId}/available-slots`;
+  const params = new URLSearchParams();
+  if (startDate) params.append('start_date', startDate);
+  if (endDate) params.append('end_date', endDate);
+  if (params.toString()) url += `?${params.toString()}`;
+
+  return apiRequest(url);
+}
+
+export async function findMeetingTime(groupId: string): Promise<{ recommendations: any[] }> {
+  return apiRequest(`/groups/${groupId}/recommendations`);
+}
+
+export async function createGroupMeeting(groupId: string, meetingData: any): Promise<void> {
+  await apiRequest(`/groups/${groupId}/meeting`, {
+    method: 'POST',
+    body: JSON.stringify(meetingData),
+  });
+}
+
+export async function sendGroupChatMessage(groupId: string, message: string): Promise<{ message: string }> {
+  return apiRequest(`/groups/${groupId}/chat`, {
+    method: 'POST',
+    body: JSON.stringify({ message }),
+  });
+}
