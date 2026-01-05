@@ -1,11 +1,11 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { useAuthStore } from '../store/authStore';
 import { useGoalStore, calculateGoalProgress } from '../store/goalStore';
 import { useTodoStore } from '../store/todoStore';
 import { useCategoryStore } from '../store/categoryStore';
 import { useConfirm } from './ConfirmModal';
 import type { SidebarView, Goal } from '../types';
-import { getIcon, PlusIcon, CalendarIcon, SettingsIcon } from './Icons';
+import { getIcon, PlusIcon, CalendarIcon, SettingsIcon, SparkleIcon } from './Icons';
 
 // Check if goal is active
 function isGoalActive(goal: Goal): boolean {
@@ -40,6 +40,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
   const { todos } = useTodoStore();
   const { getCategoryById } = useCategoryStore();
   const { confirm } = useConfirm();
+  const [showPricingModal, setShowPricingModal] = useState(false);
 
   const activeGoals = goals.filter(isGoalActive);
   const pendingTodos = todos.filter((t) => !t.is_completed);
@@ -112,6 +113,14 @@ export const Sidebar: React.FC<SidebarProps> = ({
           )}
         </nav>
 
+        {/* Pricing Button */}
+        <div className="sidebar-pricing">
+          <button className="pricing-btn" onClick={() => setShowPricingModal(true)}>
+            <SparkleIcon size={18} />
+            <span>Upgrade Plan</span>
+          </button>
+        </div>
+
         <div className="sidebar-goals">
           <div className="nav-section-title">My Goals</div>
           {activeGoals.slice(0, 5).map((goal) => {
@@ -155,6 +164,74 @@ export const Sidebar: React.FC<SidebarProps> = ({
           </div>
         )}
       </aside>
+
+      {/* Pricing Modal */}
+      {showPricingModal && (
+        <div className="modal-overlay" onClick={() => setShowPricingModal(false)}>
+          <div className="modal" onClick={(e) => e.stopPropagation()} style={{ maxWidth: '400px' }}>
+            <div className="modal-header">
+              <div className="modal-title">PALM Pricing</div>
+              <button className="modal-close" onClick={() => setShowPricingModal(false)}>×</button>
+            </div>
+            <div className="modal-body" style={{ textAlign: 'center', padding: '32px 24px' }}>
+              <div style={{
+                display: 'inline-flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                width: '64px',
+                height: '64px',
+                borderRadius: '50%',
+                background: 'linear-gradient(135deg, #10B981 0%, #34D399 100%)',
+                marginBottom: '20px'
+              }}>
+                <SparkleIcon size={32} style={{ color: 'white' }} />
+              </div>
+              <h2 style={{ margin: '0 0 8px', fontSize: '24px', fontWeight: 700 }}>
+                Launch Period Special
+              </h2>
+              <div style={{
+                display: 'inline-block',
+                padding: '6px 16px',
+                background: '#ECFDF5',
+                color: '#059669',
+                borderRadius: '20px',
+                fontSize: '14px',
+                fontWeight: 600,
+                marginBottom: '16px'
+              }}>
+                FREE
+              </div>
+              <p style={{ color: '#6B7280', fontSize: '15px', lineHeight: 1.6, margin: 0 }}>
+                Enjoy all premium features for free during our launch period!
+                We'll notify you before any changes to pricing.
+              </p>
+              <div style={{
+                marginTop: '24px',
+                padding: '16px',
+                background: '#F9FAFB',
+                borderRadius: '12px',
+                textAlign: 'left'
+              }}>
+                <div style={{ fontSize: '13px', fontWeight: 600, marginBottom: '12px', color: '#374151' }}>
+                  Included Features:
+                </div>
+                <ul style={{ margin: 0, paddingLeft: '20px', fontSize: '13px', color: '#6B7280', lineHeight: 1.8 }}>
+                  <li>Unlimited AI Assistant usage</li>
+                  <li>Google Calendar sync</li>
+                  <li>Place & restaurant recommendations</li>
+                  <li>Smart scheduling</li>
+                  <li>Group collaboration</li>
+                </ul>
+              </div>
+            </div>
+            <div className="modal-footer">
+              <button className="btn btn-primary" onClick={() => setShowPricingModal(false)} style={{ width: '100%' }}>
+                Got it!
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </>
   );
 };

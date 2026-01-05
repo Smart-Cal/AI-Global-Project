@@ -220,6 +220,37 @@ body {
   font-weight: 500;
 }
 
+/* Pricing Button in Sidebar */
+.sidebar-pricing {
+  padding: 8px;
+  border-top: 1px solid var(--border-light);
+}
+
+.pricing-btn {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  padding: 10px 12px;
+  background: linear-gradient(135deg, #6366F1 0%, #8B5CF6 100%);
+  color: white;
+  border: none;
+  border-radius: var(--border-radius);
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.pricing-btn:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(99, 102, 241, 0.3);
+}
+
+.pricing-btn svg {
+  flex-shrink: 0;
+}
+
 /* Goals in Sidebar */
 .sidebar-goals {
   padding: 8px;
