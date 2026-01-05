@@ -4009,6 +4009,91 @@ textarea.form-input {
   opacity: 1;
 }
 
+/* Todo Edit Button */
+.schedule-todo-edit {
+  width: 24px;
+  height: 24px;
+  border: none !important;
+  background: transparent !important;
+  color: var(--primary) !important;
+  font-size: 16px;
+  cursor: pointer;
+  border-radius: 4px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  opacity: 0.7;
+  transition: all 0.15s;
+}
+
+.schedule-todo-edit:hover {
+  background: transparent !important;
+  color: var(--primary-dark) !important;
+  opacity: 1;
+}
+
+/* Todo Edit Form */
+.schedule-todo-item.editing {
+  padding: 12px;
+  background: var(--bg-sidebar);
+}
+
+.schedule-todo-edit-form {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  width: 100%;
+}
+
+.schedule-todo-edit-input {
+  width: 100%;
+  padding: 8px 12px;
+  border: 1px solid var(--border-light);
+  border-radius: var(--border-radius);
+  font-size: 14px;
+  background: var(--bg-main);
+}
+
+.schedule-todo-edit-input:focus {
+  outline: none;
+  border-color: var(--primary);
+}
+
+.schedule-todo-edit-row {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+
+.schedule-todo-edit-date,
+.schedule-todo-edit-time,
+.schedule-todo-edit-priority {
+  padding: 6px 10px;
+  border: 1px solid var(--border-light);
+  border-radius: var(--border-radius);
+  font-size: 13px;
+  background: var(--bg-main);
+}
+
+.schedule-todo-edit-date {
+  flex: 1;
+}
+
+.schedule-todo-edit-time {
+  width: 100px;
+}
+
+.schedule-todo-edit-priority {
+  width: 100px;
+}
+
+.schedule-todo-edit-actions {
+  display: flex;
+  gap: 8px;
+  justify-content: flex-end;
+}
+
 /* ==================== Goal Tab ==================== */
 
 .goal-tab {

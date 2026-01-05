@@ -26,7 +26,7 @@ interface ScheduleViewProps {
 
 const ScheduleView: React.FC<ScheduleViewProps> = ({ onEventClick, onAddEvent, onAddTodo }) => {
   const { events, loadEvents } = useEventStore();
-  const { todos, fetchTodos, toggleComplete, deleteTodo } = useTodoStore();
+  const { todos, fetchTodos, toggleComplete, deleteTodo, updateTodo } = useTodoStore();
   const { categories, fetchCategories, getCategoryById, deleteCategory, addCategory } = useCategoryStore();
   const { showToast } = useToast();
   const { confirm } = useConfirm();
@@ -37,6 +37,13 @@ const ScheduleView: React.FC<ScheduleViewProps> = ({ onEventClick, onAddEvent, o
   const [showAddCategory, setShowAddCategory] = useState(false);
   const [newCategoryName, setNewCategoryName] = useState('');
   const [newCategoryColor, setNewCategoryColor] = useState('#4A90D9');
+
+  // Todo edit state
+  const [editingTodoId, setEditingTodoId] = useState<string | null>(null);
+  const [editTitle, setEditTitle] = useState('');
+  const [editDeadlineDate, setEditDeadlineDate] = useState('');
+  const [editDeadlineTime, setEditDeadlineTime] = useState('');
+  const [editPriority, setEditPriority] = useState<'high' | 'medium' | 'low'>('medium');
 
   const categoryColors = [
     '#EB5757', '#F2994A', '#F2C94C', '#27AE60', '#2F80ED', '#9B51E0', '#56CCF2', '#828282'
@@ -107,6 +114,47 @@ const ScheduleView: React.FC<ScheduleViewProps> = ({ onEventClick, onAddEvent, o
       case 'medium': return '#FECA57';
       case 'low': return '#1DD1A1';
       default: return '#9CA3AF';
+    }
+  };
+
+  const startEditTodo = (todo: typeof todos[0]) => {
+    setEditingTodoId(todo.id || null);
+    setEditTitle(todo.title);
+    setEditDeadlineDate(getDeadlineDate(todo.deadline) || '');
+    setEditDeadlineTime(getDeadlineTime(todo.deadline) || '');
+    setEditPriority(todo.priority);
+  };
+
+  const cancelEditTodo = () => {
+    setEditingTodoId(null);
+    setEditTitle('');
+    setEditDeadlineDate('');
+    setEditDeadlineTime('');
+    setEditPriority('medium');
+  };
+
+  const saveEditTodo = async () => {
+    if (!editingTodoId || !editTitle.trim()) {
+      showToast('Title is required', 'error');
+      return;
+    }
+
+    try {
+      const deadline = editDeadlineDate
+        ? editDeadlineTime
+          ? `${editDeadlineDate}T${editDeadlineTime}:00`
+          : `${editDeadlineDate}T23:59:00`
+        : undefined;
+
+      await updateTodo(editingTodoId, {
+        title: editTitle.trim(),
+        deadline,
+        priority: editPriority,
+      });
+      showToast('Todo updated', 'success');
+      cancelEditTodo();
+    } catch (error) {
+      showToast('Failed to update todo', 'error');
     }
   };
 
@@ -446,6 +494,66 @@ const ScheduleView: React.FC<ScheduleViewProps> = ({ onEventClick, onAddEvent, o
                 <div className="schedule-todos-list">
                   {filteredTodos.map(todo => {
                     const todoCategory = todo.category_id ? getCategoryById(todo.category_id) : null;
+                    const isEditing = editingTodoId === todo.id;
+
+                    if (isEditing) {
+                      return (
+                        <div key={todo.id} className="schedule-todo-item editing">
+                          <div className="schedule-todo-edit-form">
+                            <input
+                              type="text"
+                              value={editTitle}
+                              onChange={(e) => setEditTitle(e.target.value)}
+                              placeholder="Todo title"
+                              className="schedule-todo-edit-input"
+                              autoFocus
+                              onKeyDown={(e) => {
+                                if (e.key === 'Enter') saveEditTodo();
+                                if (e.key === 'Escape') cancelEditTodo();
+                              }}
+                            />
+                            <div className="schedule-todo-edit-row">
+                              <input
+                                type="date"
+                                value={editDeadlineDate}
+                                onChange={(e) => setEditDeadlineDate(e.target.value)}
+                                className="schedule-todo-edit-date"
+                              />
+                              <input
+                                type="time"
+                                value={editDeadlineTime}
+                                onChange={(e) => setEditDeadlineTime(e.target.value)}
+                                className="schedule-todo-edit-time"
+                              />
+                              <select
+                                value={editPriority}
+                                onChange={(e) => setEditPriority(e.target.value as 'high' | 'medium' | 'low')}
+                                className="schedule-todo-edit-priority"
+                              >
+                                <option value="high">High</option>
+                                <option value="medium">Medium</option>
+                                <option value="low">Low</option>
+                              </select>
+                            </div>
+                            <div className="schedule-todo-edit-actions">
+                              <button
+                                onClick={saveEditTodo}
+                                className="btn btn-primary btn-xs"
+                              >
+                                Save
+                              </button>
+                              <button
+                                onClick={cancelEditTodo}
+                                className="btn btn-secondary btn-xs"
+                              >
+                                Cancel
+                              </button>
+                            </div>
+                          </div>
+                        </div>
+                      );
+                    }
+
                     return (
                       <div
                         key={todo.id}
@@ -486,6 +594,16 @@ const ScheduleView: React.FC<ScheduleViewProps> = ({ onEventClick, onAddEvent, o
                         >
                           {todo.priority === 'high' ? 'High' : todo.priority === 'medium' ? 'Medium' : 'Low'}
                         </div>
+                        <button
+                          className="schedule-todo-edit"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            startEditTodo(todo);
+                          }}
+                          title="Edit todo"
+                        >
+                          ✎
+                        </button>
                         <button
                           className="schedule-todo-delete"
                           onClick={async (e) => {
