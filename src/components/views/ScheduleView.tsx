@@ -27,13 +27,36 @@ interface ScheduleViewProps {
 const ScheduleView: React.FC<ScheduleViewProps> = ({ onEventClick, onAddEvent, onAddTodo }) => {
   const { events, loadEvents } = useEventStore();
   const { todos, fetchTodos, toggleComplete, deleteTodo } = useTodoStore();
-  const { categories, fetchCategories, getCategoryById, deleteCategory } = useCategoryStore();
+  const { categories, fetchCategories, getCategoryById, deleteCategory, addCategory } = useCategoryStore();
   const { showToast } = useToast();
   const { confirm } = useConfirm();
 
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
   const [viewType, setViewType] = useState<'events' | 'todos' | 'all'>('all');
   const [showCategoryManager, setShowCategoryManager] = useState(false);
+  const [showAddCategory, setShowAddCategory] = useState(false);
+  const [newCategoryName, setNewCategoryName] = useState('');
+  const [newCategoryColor, setNewCategoryColor] = useState('#4A90D9');
+
+  const categoryColors = [
+    '#EB5757', '#F2994A', '#F2C94C', '#27AE60', '#2F80ED', '#9B51E0', '#56CCF2', '#828282'
+  ];
+
+  const handleAddCategory = async () => {
+    if (!newCategoryName.trim()) {
+      showToast('Please enter a category name', 'error');
+      return;
+    }
+    try {
+      await addCategory(newCategoryName.trim(), newCategoryColor);
+      showToast(`Category "${newCategoryName}" created`, 'success');
+      setNewCategoryName('');
+      setNewCategoryColor('#4A90D9');
+      setShowAddCategory(false);
+    } catch (error) {
+      showToast('Failed to create category', 'error');
+    }
+  };
 
   useEffect(() => {
     loadEvents();
@@ -198,6 +221,118 @@ const ScheduleView: React.FC<ScheduleViewProps> = ({ onEventClick, onAddEvent, o
               </div>
             );
           })}
+
+          {/* Add Category Button */}
+          {showCategoryManager && !showAddCategory && (
+            <button
+              onClick={() => setShowAddCategory(true)}
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: '8px',
+                width: '100%',
+                padding: '8px 12px',
+                border: '1px dashed var(--border-medium)',
+                borderRadius: 'var(--border-radius)',
+                backgroundColor: 'transparent',
+                color: 'var(--text-secondary)',
+                fontSize: '13px',
+                cursor: 'pointer',
+                marginTop: '8px',
+              }}
+            >
+              <span style={{ fontSize: '16px' }}>+</span>
+              Add Category
+            </button>
+          )}
+
+          {/* Add Category Form */}
+          {showAddCategory && (
+            <div
+              style={{
+                marginTop: '8px',
+                padding: '12px',
+                border: '1px solid var(--border-light)',
+                borderRadius: 'var(--border-radius)',
+                backgroundColor: 'var(--bg-main)',
+              }}
+            >
+              <input
+                type="text"
+                placeholder="Category name"
+                value={newCategoryName}
+                onChange={(e) => setNewCategoryName(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter') handleAddCategory();
+                  if (e.key === 'Escape') {
+                    setShowAddCategory(false);
+                    setNewCategoryName('');
+                  }
+                }}
+                style={{
+                  width: '100%',
+                  padding: '8px',
+                  border: '1px solid var(--border-light)',
+                  borderRadius: '4px',
+                  fontSize: '13px',
+                  marginBottom: '8px',
+                }}
+                autoFocus
+              />
+              <div style={{ display: 'flex', gap: '4px', marginBottom: '8px', flexWrap: 'wrap' }}>
+                {categoryColors.map((color) => (
+                  <button
+                    key={color}
+                    onClick={() => setNewCategoryColor(color)}
+                    style={{
+                      width: '24px',
+                      height: '24px',
+                      borderRadius: '50%',
+                      backgroundColor: color,
+                      border: newCategoryColor === color ? '2px solid var(--text-primary)' : '2px solid transparent',
+                      cursor: 'pointer',
+                      padding: 0,
+                    }}
+                  />
+                ))}
+              </div>
+              <div style={{ display: 'flex', gap: '8px' }}>
+                <button
+                  onClick={handleAddCategory}
+                  style={{
+                    flex: 1,
+                    padding: '6px 12px',
+                    backgroundColor: 'var(--primary)',
+                    color: 'white',
+                    border: 'none',
+                    borderRadius: '4px',
+                    fontSize: '12px',
+                    cursor: 'pointer',
+                  }}
+                >
+                  Add
+                </button>
+                <button
+                  onClick={() => {
+                    setShowAddCategory(false);
+                    setNewCategoryName('');
+                  }}
+                  style={{
+                    flex: 1,
+                    padding: '6px 12px',
+                    backgroundColor: 'var(--bg-hover)',
+                    color: 'var(--text-secondary)',
+                    border: 'none',
+                    borderRadius: '4px',
+                    fontSize: '12px',
+                    cursor: 'pointer',
+                  }}
+                >
+                  Cancel
+                </button>
+              </div>
+            </div>
+          )}
         </div>
 
         <div className="schedule-sidebar-divider" />

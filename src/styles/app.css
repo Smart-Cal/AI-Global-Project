@@ -3989,24 +3989,24 @@ textarea.form-input {
   width: 24px;
   height: 24px;
   border: none !important;
-  background: #DC2626 !important;
-  color: white !important;
-  font-size: 18px;
+  background: transparent !important;
+  color: #DC2626 !important;
+  font-size: 20px;
+  font-weight: 600;
   cursor: pointer;
   border-radius: 4px;
   display: flex;
   align-items: center;
   justify-content: center;
   flex-shrink: 0;
-  opacity: 1;
+  opacity: 0.8;
   transition: all 0.15s;
-  box-shadow: 0 1px 3px rgba(220, 38, 38, 0.3);
 }
 
 .schedule-todo-delete:hover {
-  background: #B91C1C !important;
-  color: white !important;
-  box-shadow: 0 2px 4px rgba(220, 38, 38, 0.4);
+  background: transparent !important;
+  color: #B91C1C !important;
+  opacity: 1;
 }
 
 /* ==================== Goal Tab ==================== */
